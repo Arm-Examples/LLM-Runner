@@ -45,7 +45,7 @@ JNIEXPORT jlong JNICALL Java_com_arm_llm_Llama_loadModel(JNIEnv *env, jobject, j
 JNIEXPORT void JNICALL
 Java_com_arm_llm_Llama_kvCacheClear(JNIEnv, jobject, jlong contextPtr)
 {
-    llama_kv_cache_clear(reinterpret_cast<llama_context *>(contextPtr));
+    llama_kv_self_clear(reinterpret_cast<llama_context *>(contextPtr));
 }
 
 /**
@@ -57,8 +57,7 @@ Java_com_arm_llm_Llama_kvCacheClear(JNIEnv, jobject, jlong contextPtr)
 JNIEXPORT void JNICALL
 Java_com_arm_llm_Llama_kvCacheSeqRm(JNIEnv, jobject, jlong contextPtr, jint start_pos, jint last_pos)
 {
-
-    llama_kv_cache_seq_rm(reinterpret_cast<llama_context *>(contextPtr), -1, start_pos, last_pos);
+    llama_kv_self_seq_rm(reinterpret_cast<llama_context *>(contextPtr), -1, start_pos, last_pos);
 }
 
 /**

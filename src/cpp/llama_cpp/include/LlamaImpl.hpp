@@ -11,7 +11,6 @@
 #include "llama.h"
 #include "common.h"
 #include "LLM.hpp"
-#include "llama-sampling.h"
 
 #define LOG_INF(...) do { fprintf(stdout, __VA_ARGS__); } while (0)
 
