@@ -1,9 +1,8 @@
 #
-# SPDX-FileCopyrightText: Copyright 2024-2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+# SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-
 import json
 import hashlib
 from pathlib import Path
@@ -12,7 +11,6 @@ import urllib.request
 import logging
 import sys
 from argparse import ArgumentParser
-
 def download_file(url: str, dest: Path) -> None:
     """
     Download a file
@@ -69,7 +67,7 @@ def download_resources(resources_file: Path, download_dir: Path) -> None:
                 logging.info(f'SHA256:  {resource_data["sha256sum"]}')
 
                 url = resource_data['url']
-                dest =  resource_dir / resource_data['destination']
+                dest = resource_dir / resource_data['destination']
 
                 if dest.exists():
                     logging.info(f'{dest} exists; skipping download')
@@ -103,9 +101,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     req_file = Path(args.requirements_file)
-    download_directory = Path(args.download_dir)
+    download_dir = Path(args.download_dir)
 
     if not req_file.exists():
         raise FileNotFoundError(f'{req_file} does not exist')
 
-    download_resources(req_file, download_directory)
+    download_resources(req_file, download_dir)

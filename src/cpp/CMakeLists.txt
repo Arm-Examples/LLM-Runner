@@ -6,24 +6,40 @@
 
 # Declare project
 project(arm-llm-cpp-prj
-        VERSION     0.0.1
-        DESCRIPTION "An LLM CPP interface"
+        DESCRIPTION "An LLM CPP library"
         LANGUAGES   C CXX ASM)
 
-# Add the LLM API interface library
-# NOTE: This is an interface library right now because our wrapper is
-#       only a header file. If we need to add source files later, this
-#       would change to a SHARED or STATIC library.
-add_library(arm-llm-cpp INTERFACE)
-target_include_directories(arm-llm-cpp INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# Add interface:
+add_subdirectory(interface)
 
-if (${LLM_DEP_NAME} STREQUAL "llama.cpp")
-    add_subdirectory(llama_cpp)
-#elseif(${LLM_DEP_NAME} STREQUAL "executorch")
-#    # TODO
-#elseif(${LLM_DEP_NAME} STREQUAL "mediapipe")
-#    # TODO
-else()
-    message(FATAL_ERROR "${LLM_DEP_NAME} is currently not supported :(")
+# Add configuration lib:
+add_subdirectory(config)
+
+# Add frameworks lib:
+add_subdirectory(frameworks)
+
+# Actual API library that depends on framework
+add_library(arm-llm-cpp STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/Llm.cpp)
+
+# Libraries needed
+target_link_libraries(arm-llm-cpp PUBLIC
+    arm-llm-interface
+    arm-llm-config
+    arm-llm-framework)
+
+# If building with JNI support, build a separate
+# target to provide these bindings.
+if (BUILD_JNI_LIB)
+    # Make sure JNI include directories have been set.
+    include(find-jni)
+
+    add_library(arm-llm-jni SHARED
+        ${CMAKE_CURRENT_SOURCE_DIR}/LlmJni.cpp)
+
+    target_link_libraries(arm-llm-jni PUBLIC arm-llm-cpp)
+
+    target_include_directories(arm-llm-jni PUBLIC
+        ${JNI_INCLUDE_DIRS} # Populated by FindJNI CMake module
+    )
 endif()

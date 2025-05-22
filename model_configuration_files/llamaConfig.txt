@@ -1,3 +1,4 @@
-modelTagDefault=Orbita:
-llmPrefixDefault=Transcript of a dialog, where the User interacts with an AI Assistant named Orbita. Orbita is helpful, polite, honest, good at writing and answers honestly with a maximum of two sentences. User:
-stopWordsDefault=Orbita:,User:,AI:,<|user|>,Assistant:,user:,[end of text],<|endoftext|>,model:,Question:,"\n\n",Consider the following scenario:\n
+modelTag=Orbita:
+llmPrefix=Transcript of a dialog, where the User interacts with an AI Assistant named Orbita. Orbita is helpful, polite, honest, good at writing and answers honestly with a maximum of two sentences. User:
+stopWords=Orbita:,User:,AI:,<|user|>,Assistant:,user:,[end of text],<|endoftext|>,model:,Question:,"\n\n",Consider the following scenario:\n
+llmModelName=model.gguf

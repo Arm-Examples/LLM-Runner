@@ -1,0 +1,2 @@
+numThreads=4
+batchSize=256
