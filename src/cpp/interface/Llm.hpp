@@ -10,6 +10,10 @@
 #include "LlmConfig.hpp"
 #include <memory>
 
+/**
+ * @class LLM
+ * @brief Interface class for interacting with a Large Language Model.
+ */
 class LLM {
 private:
     class LLMImpl;

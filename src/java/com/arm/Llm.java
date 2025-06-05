@@ -11,6 +11,9 @@ import java.util.concurrent.Flow;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Llm class that extends the SubmissionPublisher
+ */
 public class Llm extends SubmissionPublisher<String>
 {
     static
@@ -37,21 +40,21 @@ public class Llm extends SubmissionPublisher<String>
     private int numThreads = 4;
     private int batchSize = 256;
 
-    // Native method declarations
     /**
-    Method to create LlmConfig cpp instance from params.
-    @param modelTag name used to refer the Model
-    @param modelPath path to load model from
-    @param llmPrefix Initial-prompt to load into llm before query
-    @param numThreads Number of threads for inference
-    @param batchSize batch size used to chunk queries
-    */
+     * Method to create LlmConfig cpp instance from params.
+     * @param modelTag name used to refer the model
+     * @param modelPath path to load model from
+     * @param llmPrefix Initial-prompt to load into llm before query
+     * @param numThreads Number of threads for inference
+     * @param batchSize batch size used to chunk queries
+     * @return pointer to llm config
+     */
     public native long createLlmConfig(String modelTag, String modelPath, String llmPrefix,
                                        int numThreads, int batchSize);
     /**
      * Method for loading LLM model
-     @param pathToModel file path for loading model
-     @return pointer to loaded model
+     * @param LlmConfig load model from LlmConfig
+     * @return pointer to loaded model
      */
     public native long loadModel(long LlmConfig);
 
@@ -73,10 +76,10 @@ public class Llm extends SubmissionPublisher<String>
      */
     public native float getDecodeRate();
 
-   /**
+    /**
      * Private method for resetting conversation history
-    */
-   public native void resetContext();
+     */
+    public native void resetContext();
 
     /**
      * Method for resetting timing information
@@ -90,16 +93,17 @@ public class Llm extends SubmissionPublisher<String>
     private native void encode(String text);
 
     /**
-    * Method to get Next Token once encoding is done.
-    * This Method needs to be called in a loop while monitoring for Stop-Words.
-    * @return next Token as String
-    */
+     * Method to get Next Token once encoding is done.
+     * This Method needs to be called in a loop while monitoring for Stop-Words.
+     * @return next Token as String
+     */
     private native String getNextToken();
 
     /**
      * Method to get chat Progress in percentage
+     * @return chat progess as int
      */
-     public native int getChatProgress();
+    public native int getChatProgress();
 
     /**
      * Method to decode answers one by one, once prefill stage is completed
@@ -108,6 +112,7 @@ public class Llm extends SubmissionPublisher<String>
      * @param nEvalPrompts number of generated tokens for benchmarking
      * @param nMaxSeq      sequence number
      * @param nRep         number of repetitions
+     * @return string containing results of the benchModel
      */
     public native String benchModel(
             int nPrompts,
@@ -117,8 +122,8 @@ public class Llm extends SubmissionPublisher<String>
     );
 
     /**
-     *Method to separate Initialization from constructor
-     *@param llmConfig type configuration file to load model
+     * Method to separate Initialization from constructor
+     * @param llmConfig type configuration file to load model
      */
     public void llmInit(LlmConfig llmConfig)
     {
@@ -131,6 +136,11 @@ public class Llm extends SubmissionPublisher<String>
                                          this.llmPrefix,this.numThreads,this.batchSize);
         this.llmPtr = loadModel(configPtr);
     }
+
+    /**
+     * Method to set subscriber
+     * @param subscriber set from llama
+     */
     public void setSubscriber(Flow.Subscriber<String> subscriber)
     {
         System.out.println("subscribed set from llama");
@@ -141,7 +151,7 @@ public class Llm extends SubmissionPublisher<String>
      * Method to get response of a query asynchronously
      * @param Query the prompt asked
      */
-    public  void  sendAsync(String Query)
+    public void  sendAsync(String Query)
     {
         String query = "";
         AtomicBoolean stop = new AtomicBoolean(false);
@@ -195,13 +205,13 @@ public class Llm extends SubmissionPublisher<String>
         return response;
     }
 
-   /**
-   * Method to find any stop-Words or partial stop-Word present in current token
-   * @param str current token decoded
-   * @return boolean for detection of stop word
-   */
-   private boolean inspectWord(String str)
-   {
+    /**
+     * Method to find any stop-Words or partial stop-Word present in current token
+     * @param str current token decoded
+     * @return boolean for detection of stop word
+     */
+    private boolean inspectWord(String str)
+    {
        boolean stopWordTriggered = false;
        String evaluationString = this.cachedToken + str;
        // if stopWord is in evaluationString break loop.
@@ -237,24 +247,26 @@ public class Llm extends SubmissionPublisher<String>
        }
        this.cachedToken = emitToken.isEmpty() ? evaluationString : "";
        return stopWordTriggered;
-   }
+    }
 
     /**
-    * Sets the LLM prefix used for query processing.
-    * @param llmPrefix initial prompt for llm
-    */
+     * Sets the LLM prefix used for query processing.
+     * @param llmPrefix initial prompt for llm
+     */
     public void setLlmPrefix(String llmPrefix)
     {
       this.llmPrefix = llmPrefix;
     }
 
     /**
-    * Sets the LLM ModelTag
-    */
+     * Sets the LLM ModelTag
+     * @param newTag tag to set for the model
+     */
     public void setLlmModelTag(String newTag)
     {
        this.modelTag = newTag;
     }
+
     /**
      * Method to free model from memory
      */

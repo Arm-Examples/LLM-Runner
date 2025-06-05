@@ -8,6 +8,10 @@
 
 #include <string>
 
+/**
+ * @class LlmConfig
+ * @brief Config class for the Large Language Model settings.
+ */
 class LlmConfig {
 private:
     std::string m_modelTag{};
@@ -17,6 +21,14 @@ private:
     int m_batchSize{};
 
 public:
+    /**
+     * LlmConfig
+     * @param modelTag    Model tag for the LLM model
+     * @param modelPath   Path to the model
+     * @param llmPrefix   LLM prefix to use
+     * @param numThreads  Number of threads to use
+     * @param batchSize   Batch size to use
+     */
     LlmConfig(const std::string& modelTag,
               const std::string& modelPath,
               const std::string& llmPrefix,
@@ -32,14 +44,14 @@ public:
     std::string GetModelTag() const;
 
     /**
-     *  Returns the path to the model file.
-     *  @return modelPath
+     * Returns the path to the model file.
+     * @return modelPath
      */
     std::string GetModelPath() const;
 
     /**
-     *  Returns the LLM prompt prefix string.
-     *  @return llmPrefix
+     * Returns the LLM prompt prefix string.
+     * @return llmPrefix
      */
     std::string GetLlmPrefix() const;
 
@@ -50,14 +62,14 @@ public:
     int GetNumThreads() const;
 
     /**
-     *  Returns the batch size used for querying.
-     *  @return batch size
+     * Returns the batch size used for querying.
+     * @return batch size
      */
     int GetBatchSize() const;
 
     /**
-     *  Sets the model tag (The name to appear in conversation with the LLM)..
-     *  @param modelIdentifier is the tag name added at the end of each user question to make model
+     * Sets the model tag (The name to appear in conversation with the LLM).
+     * @param modelIdentifier is the tag name added at the end of each user question to make model
      * respond appropriately
      */
     void SetModelTag(const std::string& modelIdentifier);
@@ -76,15 +88,15 @@ public:
     void SetLlmPrefix(const std::string& llmInitialPrompt);
 
     /**
-    Sets the number of threads to use for LLM model inference
-    @param threads number of threads used inference of model
-    */
+     * Sets the number of threads to use for LLM model inference.
+     * @param threads number of threads used inference of model
+     */
     void SetNumThreads(int threads);
 
     /**
-    Sets the batch size for inference. Throws std::invalid_argument if the value is not positive.
-    @param batchSz chunk-size of each batch used to split query-encoding
-    */
+     * Sets the batch size for inference. Throws std::invalid_argument if the value is not positive.
+     * @param batchSz chunk-size of each batch used to split query-encoding
+     */
     void SetBatchSize(int batchSz);
 };
 
