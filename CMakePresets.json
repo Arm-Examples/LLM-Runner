@@ -81,6 +81,82 @@
         "unit-tests-disabled",
         "build-shared-disabled"
       ]
+    },
+    {
+      "name": "linux-x86_64-default",
+      "displayName": "Linux x86_64 (no KleidiAI)",
+      "description": "Native Linux build on x86_64, KleidiAI=OFF",
+      "generator": "Ninja",
+      "inherits": [
+        "build-type-rel",
+        "kleidi-off"
+      ]
+    },
+    {
+      "name": "linux-arm64-kleidi",
+      "displayName": "Linux ARM64 (KleidiAI=ON)",
+      "description": "Native ARM64 build on Linux (auto defaults to v8.2a+dotprod+i8mm)",
+      "generator": "Ninja",
+      "inherits": [
+        "build-type-rel",
+        "kleidi-on"
+      ]
+    },
+    {
+      "name": "android-arm64-release-kleidi-off",
+      "description": "Android ARM64 Release (KleidiAI=OFF)",
+      "generator": "Ninja",
+      "inherits": [
+        "build-type-rel",
+        "kleidi-off"
+      ],
+      "cacheVariables": {
+        "ANDROID_ABI":      { "type": "STRING", "value": "arm64-v8a" },
+        "ANDROID_PLATFORM": { "type": "STRING", "value": "android-33" }
+      }
+    },
+    {
+      "name": "android-arm64-release-kleidi-on-v82a-dotprod-i8mm",
+      "description": "Android ARM64 Release (KleidiAI=ON, march=v8.2a+dotprod+i8mm)",
+      "generator": "Ninja",
+      "inherits": [
+        "build-type-rel",
+        "kleidi-on"
+      ],
+      "cacheVariables": {
+        "ANDROID_ABI":        { "type": "STRING", "value": "arm64-v8a" },
+        "ANDROID_PLATFORM":   { "type": "STRING", "value": "android-33" },
+        "CMAKE_C_FLAGS":      { "type": "STRING", "value": "-march=armv8.2a+dotprod+i8mm" },
+        "CMAKE_CXX_FLAGS":    { "type": "STRING", "value": "-march=armv8.2a+dotprod+i8mm" }
+      }
+    },
+    {
+      "name": "android-arm64-debug-kleidi-off",
+      "description": "Android ARM64 Debug (KleidiAI=OFF)",
+      "generator": "Ninja",
+      "inherits": [
+        "build-type-dbg",
+        "kleidi-off"
+      ],
+      "cacheVariables": {
+        "ANDROID_ABI":      { "type": "STRING", "value": "arm64-v8a" },
+        "ANDROID_PLATFORM": { "type": "STRING", "value": "android-33" }
+      }
+    },
+    {
+      "name": "android-arm64-debug-kleidi-on-v82a-dotprod-i8mm",
+      "description": "Android ARM64 Debug (KleidiAI=ON, march=v8.2a+dotprod+i8mm)",
+      "generator": "Ninja",
+      "inherits": [
+        "build-type-dbg",
+        "kleidi-on"
+      ],
+      "cacheVariables": {
+        "ANDROID_ABI":        { "type": "STRING", "value": "arm64-v8a" },
+        "ANDROID_PLATFORM":   { "type": "STRING", "value": "android-33" },
+        "CMAKE_C_FLAGS":      { "type": "STRING", "value": "-march=armv8.2a+dotprod+i8mm" },
+        "CMAKE_CXX_FLAGS":    { "type": "STRING", "value": "-march=armv8.2a+dotprod+i8mm" }
+      }
     }
   ]
 }

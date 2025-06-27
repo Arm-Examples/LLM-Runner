@@ -82,6 +82,28 @@
           "value": "OFF"
         }
       }
+    },
+    {
+      "name": "kleidi-on",
+      "description": "Enable KleidiAI.",
+      "hidden": true,
+      "cacheVariables": {
+        "USE_KLEIDIAI": {
+          "type": "BOOL",
+          "value": "ON"
+        }
+      }
+    },
+    {
+      "name": "kleidi-off",
+      "description": "Disable KleidiAI.",
+      "hidden": true,
+      "cacheVariables": {
+        "USE_KLEIDIAI": {
+          "type": "BOOL",
+          "value": "OFF"
+        }
+      }
     }
   ]
 }

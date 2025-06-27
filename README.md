@@ -159,7 +159,7 @@ These files are essential for loading and running ONNX models effectively.
 > **NOTE**: Currently only int4 and block size 32 models are accelerated by Arm® KleidiAI™ kernels in `onnxruntime-genai`.
 
 ### To build for Android
-For Android™ build, ensure the `NDK_PATH` is set to installed Android™ NDK, specify Android™ ABI and platform needed:
+For Android™ build, ensure the `NDK_PATH` is set to installed Android™ NDK, specify Android™ ABI and platform if required or use a default preset e.g. android-arm64-release-kleidi-on-v82a-dotprod-i8mm
 ```shell
 cmake -B build \
     -DCMAKE_TOOLCHAIN_FILE=${NDK_PATH}/build/cmake/android.toolchain.cmake \

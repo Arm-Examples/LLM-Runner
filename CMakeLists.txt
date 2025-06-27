@@ -21,6 +21,17 @@ project(arm-llm-wrapper
         DESCRIPTION "An LLM interface library"
         LANGUAGES   C CXX ASM)
 
+if (USE_KLEIDIAI)
+    # Ensure target or host is Arm
+    if (NOT CMAKE_CROSSCOMPILING)
+        string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" SYSTEM_PROC_LOWER)
+        if (NOT SYSTEM_PROC_LOWER MATCHES "^(aarch64|arm64)$")
+            message(WARNING
+                    "KleidiAI=ON but not on an Arm host (${CMAKE_SYSTEM_PROCESSOR}).")
+        endif()
+    endif()
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/scripts/cmake")
 
 # Set the runtime and lib directories
