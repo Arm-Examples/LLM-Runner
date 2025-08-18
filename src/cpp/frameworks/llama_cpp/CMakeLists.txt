@@ -30,6 +30,7 @@ set(LLAMA_GIT_SHA "a4090d1"
         "Git commit SHA for llama.cpp repo")
 
 set(LLAMA_BUILD_EXAMPLES ${BUILD_EXECUTABLE} CACHE BOOL "Build llama.cpp examples")
+set(LLAMA_BUILD_TOOLS    ${BUILD_EXECUTABLE} CACHE BOOL "Build llama.cpp tools")
 set(LLAMA_CURL           OFF CACHE BOOL "llama: use libcurl to download model from an URL")
 
 # KleidiAI configuration
