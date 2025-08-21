@@ -1,9 +1,14 @@
 {
-  "modelTag": "\\nOrbita:",
-  "userTag": "",
-  "endTag": "",
-  "llmPrefix": "Transcript of a dialog, where the User interacts with an AI Assistant named Orbita. Orbita is helpful, polite, honest, good at writing and answers honestly with a maximum of two sentences. User:",
-  "stopWords": [
+  "llmModelName" : "llama.cpp/model.gguf",
+  "batchSize"    : 256,
+  "numThreads"   : 5,
+  "systemPrompt" : "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",
+  "applyDefaultChatTemplate" : true,
+  "defaultChatTemplate" : {
+    "systemTemplate" : "system: %s",
+    "userTemplate"   : "user: %s\nassistant:"
+  },
+  "stopWords" : [
     "Orbita:",
     "User:",
     "AI:",
@@ -12,14 +17,15 @@
     "user:",
     "[end of text]",
     "<|endoftext|>",
+    "<|start_header_id|>",
+    "<eos>",
+    "<|end|>",
     "model:",
     "Question:",
     "\\n\\n",
+    "<end_of_turn>",
     "Consider the following scenario:\\n"
   ],
-  "llmModelName": "llama.cpp/model.gguf",
   "inputModalities" : ["text"],
-  "outputModalities" : ["text"],
-  "batchSize" : 256,
-  "numThreads" : 4
+  "outputModalities" : ["text"]
 }

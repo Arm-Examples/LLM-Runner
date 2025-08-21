@@ -10,7 +10,6 @@
 #include <iostream>
 #include <filesystem>
 
-
 #define LOG_INF(...)                  \
     do {                              \
         fprintf(stdout, __VA_ARGS__); \
@@ -112,13 +111,62 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config)
             throw std::runtime_error("Mediapipe Session creation failed");
         }
 
-        this->m_llmPrefix           = this->m_config.GetLlmPrefix();
+        this->m_systemPrompt      = config.GetSystemPrompt();
+        this->m_isDefaultTemplate = config.IsDefaultTemplate();
+        this->m_systemTemplate    = config.GetSystemTemplate();
+        this->m_userTemplate      = config.GetUserTemplate();
+
         this->m_conversationContext = "";
         this->m_llmInitialized      = true;
         this->m_callbackContext.m_nCur = 0;
     } catch (const std::exception& e) {
         throw std::runtime_error("LLM initialization failed: " + std::string(e.what()));
     }
+}
+
+std::string LLM::LLMImpl::ApplyAutoChatTemplate(const std::string& prompt)
+{
+    // TODO: Implement ApplyAutoChatTemplate function when it's available in Mediapipe
+    LOG_INF("Mediapipe does not provide chat templating, falling back to default chat template.");
+    return ApplyDefaultChatTemplate(prompt);
+}
+
+std::string LLM::LLMImpl::ApplyDefaultChatTemplate(const std::string& prompt)
+{
+    constexpr const char* kPlaceholder = "%s";
+    constexpr size_t kPlaceholderSize = std::char_traits<char>::length(kPlaceholder);
+
+    std::string userTurn = this->m_userTemplate;
+    if (auto pos = userTurn.find(kPlaceholder); pos != std::string::npos) {
+        userTurn.replace(pos, kPlaceholderSize, std::string(prompt));
+    } else {
+        throw std::runtime_error(
+            "Placeholder not found in user template. Please include " + std::string(kPlaceholder) +
+            " in the 'userTemplate' section of the configuration file.");}
+
+    if (!this->m_isConversationStart) {
+        return userTurn;
+    }
+
+    this->m_isConversationStart = false;
+    std::string systemTurn = this->m_systemTemplate;
+
+    if (auto pos = systemTurn.find(kPlaceholder); pos != std::string::npos) {
+       systemTurn.replace(pos, kPlaceholderSize, std::string(this->m_systemPrompt));
+    } else {
+        throw std::runtime_error(
+            "Placeholder not found in system template. Please include " + std::string(kPlaceholder) +
+            " in the 'systemTemplate' section of the configuration file.");}
+
+    return systemTurn + userTurn;
+}
+
+std::string LLM::LLMImpl::QueryBuilder(EncodePayload& payload) {
+    if(this->m_isDefaultTemplate) {
+        return ApplyDefaultChatTemplate(payload.textPrompt);
+    }
+
+    return ApplyAutoChatTemplate(payload.textPrompt);
 }
 
 void LLM::LLMImpl::Encode(EncodePayload& prompt)
@@ -198,12 +246,6 @@ void LLM::LLMImpl::KVCacheClear()
     this->m_conversationContext.clear();
 }
 
-std::string LLM::LLMImpl::QueryBuilder(EncodePayload& payload)
-{
-    const std::string prefix = payload.isFirstMessage ? this->m_config.GetLlmPrefix() : "";
-    return prefix + this->m_config.GetUserTag() + payload.textPrompt + this->m_config.GetEndTag() + this->m_config.GetModelTag();
-}
-
 int32_t LLM::LLMImpl::GetInitialPromptLength(const char* text)
 {
 
@@ -219,11 +261,11 @@ int32_t LLM::LLMImpl::GetInitialPromptLength(const char* text)
 
 void LLM::LLMImpl::ResetContext()
 {
-    if (!this->m_llmPrefix.empty()) {
+    if (!this->m_systemPrompt.empty()) {
         try {
-            auto n_prefix               = GetInitialPromptLength(this->m_llmPrefix.c_str());
+            auto n_prefix               = GetInitialPromptLength(this->m_systemPrompt.c_str());
             this->m_callbackContext.m_nCur                = n_prefix;
-            this->m_conversationContext = this->m_llmPrefix;
+            this->m_conversationContext = this->m_systemPrompt;
         } catch (const std::exception& e) {
             LOG_INF("Context reset failed: %s", e.what());
         }
@@ -231,6 +273,7 @@ void LLM::LLMImpl::ResetContext()
         KVCacheClear();
         this->m_callbackContext.m_nCur  = 0;
         this->m_conversationContext = "";
+        this->m_isConversationStart = true;
     }
 }
 
@@ -255,6 +298,7 @@ void LLM::LLMImpl::FreeLlm()
         LlmInferenceEngine_Engine_Delete(this->m_llmEngine);
         this->m_llmEngine = nullptr;
     }
+    this->m_isConversationStart = true;
 }
 
 std::string LLM::LLMImpl::BenchModel(int& prompts, int& eval_prompts, int& n_max_sq, int& n_rep)

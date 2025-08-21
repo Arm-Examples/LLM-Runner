@@ -137,6 +137,12 @@ protected:
     std::string m_llmPrefix{""};              /**< Prefix prepended to prompts. */
     bool m_llmInitialized{false};             /**< Indicates whether the LLM is initialized. */
     size_t m_nCur{0};                         /**< Current token index in the context. */
+    bool m_isConversationStart{true};         /**< Flag indicating whether this is starting of the conversation (used to decide if the system prompt should be encoded). */
+    bool m_isDefaultTemplate{false};          /**< Flag indicating whether a default chat template should be used. */
+    std::string m_systemPrompt{""};           /**< System prompt to be encoded with first query. */
+    std::string m_systemTemplate{""};         /**< Default template for system message. */
+    std::string m_userTemplate{""};           /**< Default template for user message. */
+    std::string m_eos = "<|endoftext|>";      /**< Used as a general signal in our LLM module to terminate response. */
     LlmConfig m_config;                       /**< Configuration for model. */
 
     /**
@@ -239,4 +245,18 @@ protected:
      * is produced or if the current length reaches the maximum length.
      */
     std::string CompletionLoop();
+
+    /**
+     * Applies a default chat template to the given prompt.
+     * @param prompt The input prompt to apply the template to.
+     * @return The prompt with the default chat template applied.
+     */
+    std::string ApplyDefaultChatTemplate(const std::string& prompt);
+
+    /**
+     * Applies the automatic chat template to the given prompt.
+     * @param prompt The input prompt to apply the template to.
+     * @return The prompt with the automatic chat template applied.
+     */
+    std::string ApplyAutoChatTemplate(const std::string& prompt);
 };

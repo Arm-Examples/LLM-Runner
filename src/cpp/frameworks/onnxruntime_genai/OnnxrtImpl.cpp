@@ -5,6 +5,7 @@
 //
 #include "LlmImpl.hpp"
 #include <chrono>
+#include <nlohmann/json.hpp>
 
 #define LOG_INF(...)                  \
     do {                              \
@@ -62,16 +63,16 @@ void LLM::LLMImpl::InitConfigs()
     // Ref: https://github.com/microsoft/onnxruntime-genai/blob/79d1d8470b74564fc4e723312a476e692057b600/src/config.h#L64
     std::string patch =
         std::string(R"json({
-          "model": {
-            "decoder": {
-              "session_options": {
-                "intra_op_num_threads": )json")
-        + std::to_string(this->m_numOfThreads)
-        + R"json(
-              }
+            "model": {
+                "decoder": {
+                "session_options": {
+                    "intra_op_num_threads": )json") + std::to_string(this->m_numOfThreads) +
+                R"json(,
+                    "inter_op_num_threads": 1
+                }
+                }
             }
-          }
-        })json";
+            })json";
 
     this->m_llmConfigsPtr->Overlay(patch.c_str());
     LOG_INF("Configs Initialized\n");
@@ -95,6 +96,11 @@ void LLM::LLMImpl::InitGenerator()
     }
 
     this->m_llmGntParamsPtr->SetSearchOption("max_length", this->m_nCtx);
+    this->m_llmGntParamsPtr->SetSearchOption("temperature", 0.0);
+    this->m_llmGntParamsPtr->SetSearchOption("top_k", 0.0);
+    this->m_llmGntParamsPtr->SetSearchOption("top_p", 1.0);
+    this->m_llmGntParamsPtr->SetSearchOptionBool("do_sample", false);
+    this->m_llmGntParamsPtr->SetSearchOption("batch_size", this->m_batchSz);
 
     this->m_llmGeneratorPtr = OgaGenerator::Create(* this->m_llmModelPtr, * this->m_llmGntParamsPtr);
 
@@ -172,11 +178,14 @@ void LLM::LLMImpl::FreeModel()
 void LLM::LLMImpl::LlmInit(const LlmConfig& config)
 {
     try {
-        this->m_config = config;
-        this->m_batchSz = this->m_config.GetBatchSize();
-        this->m_numOfThreads = this->m_config.GetNumThreads();
-        this->m_modelPath = this->m_config.GetModelPath().c_str();
-        this->m_llmPrefix = this->m_config.GetLlmPrefix();
+        this->m_config            = config;
+        this->m_numOfThreads      = config.GetNumThreads();
+        this->m_modelPath         = config.GetModelPath().c_str();
+        this->m_systemPrompt      = config.GetSystemPrompt();
+        this->m_isDefaultTemplate = config.IsDefaultTemplate();
+        this->m_systemTemplate    = config.GetSystemTemplate();
+        this->m_userTemplate      = config.GetUserTemplate();
+        this->m_batchSz           = config.GetBatchSize();
 
         InitConfigs();
 
@@ -217,6 +226,7 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config)
 void LLM::LLMImpl::FreeLlm()
 {
     if (this->m_llmInitialized) {
+        ResetContext();
         FreeConfigs();
         FreeModel();
         FreeGenerator();
@@ -231,23 +241,78 @@ void LLM::LLMImpl::FreeLlm()
 void LLM::LLMImpl::ResetContext()
 {
     this->m_llmGeneratorPtr->RewindTo(0);
-    this->m_ctxResetted = true;
+    this->m_isConversationStart = true;
+    ResetTimings();
+    this->m_contextFilled = 0;
     LOG_INF("Reset Context\n");
 }
 
 std::string LLM::LLMImpl::QueryBuilder(EncodePayload& payload)
 {
-    return this->m_config.GetUserTag() + payload.textPrompt + this->m_config.GetEndTag() + this->m_config.GetModelTag();
+    if(this->m_isDefaultTemplate) {
+        return ApplyDefaultChatTemplate(payload.textPrompt);
+    }
+    return ApplyAutoChatTemplate(payload.textPrompt);
+}
+
+std::string LLM::LLMImpl::ApplyDefaultChatTemplate(const std::string& prompt)
+{
+    constexpr const char* kPlaceholder = "%s";
+    constexpr size_t kPlaceholderSize = std::char_traits<char>::length(kPlaceholder);
+
+    std::string userTurn = this->m_userTemplate;
+    if (auto pos = userTurn.find(kPlaceholder); pos != std::string::npos) {
+        userTurn.replace(pos, kPlaceholderSize, std::string(prompt));
+    } else {
+        throw std::runtime_error(
+            "Placeholder not found in user template. Please include " + std::string(kPlaceholder) +
+            " in the 'userTemplate' section of the configuration file.");}
+
+    if (!this->m_isConversationStart) {
+        return userTurn;
+    }
+
+    this->m_isConversationStart = false;
+    std::string systemTurn = this->m_systemTemplate;
+
+    if (auto pos = systemTurn.find(kPlaceholder); pos != std::string::npos) {
+       systemTurn.replace(pos, kPlaceholderSize, std::string(this->m_systemPrompt));
+    } else {
+        throw std::runtime_error(
+            "Placeholder not found in system template. Please include " + std::string(kPlaceholder) +
+            " in the 'systemTemplate' section of the configuration file.");}
+
+    return systemTurn + userTurn;
+}
+
+std::string LLM::LLMImpl::ApplyAutoChatTemplate(const std::string& prompt)
+{
+    nlohmann::json messages = nlohmann::json::array();
+    std::string out{""};
+    if (this->m_isConversationStart) {
+        messages.push_back({
+            {"role", "system"},
+            {"content", this->m_systemPrompt}
+        });
+    }
+    messages.push_back({{"role", "user"},{"content", prompt}});
+    const std::string messages_json = messages.dump();
+    std::string first_err;
+    try {
+        // Auto-pick template from config if present
+        out = std::string(m_tokenizerPtr->ApplyChatTemplate("", messages_json.c_str(), "", true));
+    } catch (const std::exception& e) {
+        // Fallback to default implementation if auto failed or produced empty output
+        LOG_INF("ApplyChatTemplate failed. Falling back to default template");
+        out = ApplyDefaultChatTemplate(prompt);
+    }
+    this->m_isConversationStart = false;
+    return out.c_str();
 }
 
 void LLM::LLMImpl::Encode(EncodePayload& payload)
 {
     std::string prompt = payload.textPrompt;
-    if (this->m_ctxResetted) {
-        prompt = this->m_llmPrefix + prompt;
-        this->m_ctxResetted = false;
-    }
-
     // Time start
     TimePoint startTimeStampEncoder = Clock::now();
 
@@ -285,7 +350,7 @@ std::string LLM::LLMImpl::NextToken()
     }
 
     else {
-        return "<|endoftext|>";
+        return this->m_eos;
     }
 }
 

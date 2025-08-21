@@ -34,7 +34,6 @@ public:
         bool isFirstMessage{false}; ///< Whether this is the first conversation message
     };
 
-
     class LLMImpl; // Forward declaration for PImpl
 
     /**
@@ -90,8 +89,8 @@ public:
     [[nodiscard]] std::string SystemInfo() const;
 
     /**
-     * Reset conversation history while preserving any model character prefix
-     * if defined; otherwise clears the entire history.
+     * Method to reset conversation history and preserve encoded system prompt.
+     * If system prompt is not defined all conversation history would be cleared
      */
     void ResetContext();
 

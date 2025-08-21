@@ -15,19 +15,18 @@
  */
 class LlmConfig {
 private:
-    std::string m_modelTag{};
-    std::string m_mediaTag{};
-    std::string m_userTag{};
-    std::string m_endTag{};
     std::string m_modelPath{};
     std::string m_mmProjModelPath{};
-    std::string m_llmPrefix{};
     std::vector<std::string> m_inputModalities;
     std::vector<std::string> m_outputModalities;
     std::string m_framework;
+    bool m_isDefaultTemplate{};
+    std::string m_systemPrompt{};
     std::vector<std::string> m_stopWords;
     int m_numThreads{};
     int m_batchSize{};
+    std::string m_systemTemplate{};
+    std::string m_userTemplate{};
 
     template <typename Container, typename T>
     bool Contains(const Container& container, const T& value);
@@ -42,28 +41,22 @@ public:
     LlmConfig() =default;
 
     /**
-     * Returns the end tag string.
-     * @return endTag
+     * Checks whether the current template is a default template.
+     * @return true if it is a default template, false otherwise.
      */
-    std::string GetEndTag() const;
+    [[nodiscard]] bool IsDefaultTemplate() const;
 
     /**
-     * Returns the user tag string.
-     * @return userTag
+     * Returns the system template string.
+     * @return The system template as a string.
      */
-    std::string GetUserTag() const;
+    [[nodiscard]] std::string GetSystemTemplate() const;
 
     /**
-     * Returns the model tag string (The name to appear in conversation with the LLM).
-     * @return modelTag
+     * Returns the user template string.
+     * @return The user template as a string.
      */
-    std::string GetModelTag() const;
-
-    /**
-     * Returns the media tag string.
-     * @return modelTag
-     */
-    std::string GetMediaTag() const;
+    [[nodiscard]] std::string GetUserTemplate() const;
 
     /**
      * Returns the path to the projection model file.
@@ -78,14 +71,10 @@ public:
     std::string GetModelPath() const;
 
     /**
-     * Returns the path to the projection model file.
-     * @return modelPath
+     * Returns the LLM system prompt string.
+     * @return systemPrompt
      */
-    /**
-     * Returns the LLM prompt prefix string.
-     * @return llmPrefix
-     */
-    std::string GetLlmPrefix() const;
+    std::string GetSystemPrompt() const;
 
     /**
      * Returns the number of threads configured for inference.
@@ -120,27 +109,6 @@ public:
     std::vector<std::string> GetOutputModalities() const;
 
     /**
-     * Sets the model tag (The name to appear in conversation with the LLM).
-     * @param modelIdentifier is the tag name added at the end of each user question to make model
-     * respond appropriately
-     */
-    void SetModelTag(const std::string& modelIdentifier);
-
-    /**
-     * Sets the user tag
-     * @param userTag is the user tag added at the beginning of each user question to make model
-     * respond appropriately
-     */
-    void SetUserTag(const std::string& userTag);
-
-    /**
-     * Sets the end tag
-     * @param endTag is the end tag added at the end of each user question to make model
-     * respond appropriately
-     */
-    void SetEndTag(const std::string& endTag);
-
-    /**
      * Sets the file path to the model.
      * @param basePath absolute path to load llm model
      */
@@ -154,17 +122,15 @@ public:
 
     /**
      * Sets the framework backend to be used by the LLM.
-     *
      * @param framework Name of the framework (e.g., "llama.cpp", "onnxruntime-genai").
      */
     void SetFramework(const std::string& framework);
 
     /**
-     * Method sets the prompt prefix used for LLM inputs.
-     * @param llmInitialPrompt LLM's need to prompt engineered to respond intelligently.
-     * Provide an engineered initial-prompt here.
+     * Method sets the system prompt used for LLM inputs.
+     * @param systemPrompt A prompt that guides the LLM’s behavior and responses.
      */
-    void SetLlmPrefix(const std::string& llmInitialPrompt);
+    void SetSystemPrompt(const std::string& systemPrompt);
 
     /**
      * Sets the number of threads to use for LLM model inference.

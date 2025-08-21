@@ -58,8 +58,11 @@ void LlamaVisionImpl::LlmInit(const LlmConfig& config) {
 
     try {
         this->m_config = config;
-        this->m_llmPrefix = this->m_config.GetLlmPrefix();
         this->m_batchSz = this->m_config.GetBatchSize();
+        this->m_systemPrompt = this->m_config.GetSystemPrompt();
+        this->m_isDefaultTemplate = this->m_config.IsDefaultTemplate();
+        this->m_userTemplate = this->m_config.GetUserTemplate();
+        this->m_systemTemplate = config.GetSystemTemplate();
 
         LoadModel();
         NewContext();
@@ -77,21 +80,10 @@ void LlamaVisionImpl::ResetVisionContext() {
     this->m_mtmdContext->n_past = this->m_nCur;
     this->m_contextFilled = (100 * this->m_nCur) / this->m_nCtx;
     this->m_mtmdContext->bitmaps.entries.clear();
+    this->m_imageIndex = 0;
     common_batch_clear(this->m_mtmdContext->batch);
     llama_perf_context_reset(this->m_llmContext);
     common_sampler_reset(this->m_commonSampler);
-}
-
-std::string LlamaVisionImpl::QueryBuilder(LLM::EncodePayload& payload)
-{
-    const std::string prefix = payload.isFirstMessage ? this->m_config.GetLlmPrefix() : "";
-
-    if(payload.imagePath == "") {
-        return prefix + this->m_config.GetUserTag() + payload.textPrompt + this->m_config.GetEndTag() + this->m_config.GetModelTag();
-    } else {
-        this->m_imageIndex += 1;
-        return prefix + this->m_config.GetUserTag() + payload.textPrompt + "#" + std::to_string(this->m_imageIndex) + this->m_config.GetMediaTag() + this->m_config.GetEndTag() + this->m_config.GetModelTag();
-    }
 }
 
 void LlamaVisionImpl::LoadModel()

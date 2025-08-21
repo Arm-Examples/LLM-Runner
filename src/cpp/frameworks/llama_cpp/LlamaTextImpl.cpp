@@ -73,7 +73,10 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config)
         LoadModel();
         BackendInit();
 
-        this->m_llmPrefix = this->m_config.GetLlmPrefix();
+        this->m_systemPrompt      = config.GetSystemPrompt();
+        this->m_isDefaultTemplate = config.IsDefaultTemplate();
+        this->m_systemTemplate    = config.GetSystemTemplate();
+        this->m_userTemplate      = config.GetUserTemplate();
 
         if (this->m_llmModel != nullptr) {
             NewContext();
@@ -94,6 +97,7 @@ void LLM::LLMImpl::FreeLlm()
         this->m_nCur = 0;
         FreeSampler();
         this->m_llmInitialized = false;
+        this->m_isConversationStart = true;
     }
 }
 
@@ -163,14 +167,15 @@ int32_t LLM::LLMImpl::GetInitialPromptLength(const char* text,
 
 void LLM::LLMImpl::ResetContext()
 {
-    if (!this->m_llmPrefix.empty()) {
+    if (!this->m_systemPrompt.empty()) {
         auto n_prefix = GetInitialPromptLength(
-                this->m_llmPrefix.c_str(), this->m_llmPrefix.length(), false, true);
+            this->m_systemPrompt.c_str(), this->m_systemPrompt.length(), true, false);
         KVCacheSeqRm(n_prefix, -1);
         this->m_nCur = n_prefix;
     } else {
         KVCacheClear();
         this->m_nCur = 0;
+        this->m_isConversationStart = true;
     }
 }
 
@@ -185,6 +190,100 @@ void LLM::LLMImpl::NewSampler()
     sparams.no_perf     = false;
     this->m_pLlmSampler = llama_sampler_chain_init(sparams);
     llama_sampler_chain_add(this->m_pLlmSampler, llama_sampler_init_greedy());
+}
+
+std::string LLM::LLMImpl::ApplyAutoChatTemplate(const std::string& prompt)
+{
+    const char* tmpl = llama_model_chat_template(this->m_llmModel, /*name*/ nullptr);
+
+    // if no template on the model, fall back to default implementation
+    if (!tmpl) {
+        LOG_INF("ApplyAutoChatTemplate: no template found. Falling back to default template.\n");
+        return ApplyDefaultChatTemplate(prompt);
+    }
+
+    std::vector<llama_chat_message> msgs;
+    if (this->m_isConversationStart) {
+        llama_chat_message sys{};
+        sys.role    = "system";
+        sys.content = this->m_systemPrompt.c_str();
+        msgs.push_back(sys);
+        this->m_isConversationStart = false;
+    }
+
+    llama_chat_message usr{};
+    usr.role    = "user";
+    usr.content = prompt.c_str();
+    msgs.push_back(usr);
+
+    std::string templated;
+
+    // initial call to determine the templated size before executing the actual chat template
+    int32_t requiredMemory = llama_chat_apply_template(
+        tmpl,
+        msgs.data(),
+        msgs.size(),
+        /*add_assistant_prefix=*/true,
+        templated.data(),
+        static_cast<int>(templated.size())
+    );
+
+    if (requiredMemory < 0) {
+        LOG_INF("ApplyAutoChatTemplate failed. Falling back to default template\n");
+        return ApplyDefaultChatTemplate(prompt);
+    }
+
+    templated.resize(requiredMemory);
+
+    // apply chat template
+    llama_chat_apply_template(
+        tmpl,
+        msgs.data(),
+        msgs.size(),
+        /*add_assistant_prefix=*/true,
+        templated.data(),
+        static_cast<int>(templated.size())
+    );
+
+    return templated;
+}
+
+std::string LLM::LLMImpl::ApplyDefaultChatTemplate(const std::string& prompt)
+{
+    constexpr const char* kPlaceholder = "%s";
+    constexpr size_t kPlaceholderSize = std::char_traits<char>::length(kPlaceholder);
+
+    std::string userTurn = this->m_userTemplate;
+    if (auto pos = userTurn.find(kPlaceholder); pos != std::string::npos) {
+        userTurn.replace(pos, kPlaceholderSize, std::string(prompt));
+    } else {
+        throw std::runtime_error(
+            "Placeholder not found in user template. Please include " + std::string(kPlaceholder) +
+            " in the 'userTemplate' section of the configuration file.");}
+
+    if (!this->m_isConversationStart) {
+        return userTurn;
+    }
+
+    this->m_isConversationStart = false;
+    std::string systemTurn = this->m_systemTemplate;
+
+    if (auto pos = systemTurn.find(kPlaceholder); pos != std::string::npos) {
+       systemTurn.replace(pos, kPlaceholderSize, std::string(this->m_systemPrompt));
+    } else {
+        throw std::runtime_error(
+            "Placeholder not found in system template. Please include " + std::string(kPlaceholder) +
+            " in the 'systemTemplate' section of the configuration file.");}
+
+    return systemTurn + userTurn;
+}
+
+std::string LLM::LLMImpl::QueryBuilder(EncodePayload& payload) {
+    if(this->m_isDefaultTemplate) {
+        return ApplyDefaultChatTemplate(payload.textPrompt);
+    }
+
+    return ApplyAutoChatTemplate(payload.textPrompt);
 }
 
 void LLM::LLMImpl::Encode(const EncodePayload& payload)
@@ -248,7 +347,7 @@ std::string LLM::LLMImpl::CompletionLoop()
     const auto new_token_id = llama_sampler_sample(this->m_pLlmSampler, this->m_llmContext, -1);
 
     if ((llama_vocab_eos(vocab) == new_token_id) || (this->m_nCur == this->m_nCtx)) {
-        return "<|endoftext|>";
+        return this->m_eos;
     }
 
     auto new_token_chars = common_token_to_piece(this->m_llmContext, new_token_id);
@@ -276,7 +375,7 @@ std::string LLM::LLMImpl::CompletionLoop()
 std::string LLM::LLMImpl::NextToken()
 {
     std::string result = CompletionLoop();
-    if ((result == "<|endoftext|>") && (this->m_nCur >= this->m_nCtx)) {
+    if ((result == this->m_eos) && (this->m_nCur >= this->m_nCtx)) {
         this->m_contextFilled = 100;
         return "ctx_full";
     } else {
@@ -293,12 +392,6 @@ size_t LLM::LLMImpl::GetChatProgress() const
 std::string LLM::LLMImpl::GetFrameworkType()
 {
     return this->m_frameworkType;
-}
-
-std::string LLM::LLMImpl::QueryBuilder(EncodePayload& payload)
-{
-    const std::string prefix = payload.isFirstMessage ? this->m_config.GetLlmPrefix() : "";
-    return prefix + this->m_config.GetUserTag() + payload.textPrompt + this->m_config.GetEndTag() + this->m_config.GetModelTag();
 }
 
 std::string LLM::LLMImpl::BenchModel(int& prompts, int& eval_prompts, int& n_max_sq, int& n_rep)

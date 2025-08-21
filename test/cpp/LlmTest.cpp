@@ -168,7 +168,6 @@ TEST_CASE("Test Llm-Wrapper class")
                 break;
             response += s;
         }
-
         CHECK(response.find("Paris") != std::string::npos);
     }
 

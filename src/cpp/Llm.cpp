@@ -22,7 +22,6 @@ void LLM::LlmInit(const LlmConfig &llmConfig)
 {
     this->m_config = llmConfig;
     this->m_maxStopWordLength = 0;
-    this->m_evaluatedOnce.store(false);
     const auto &stopWords = this->m_config.GetStopWords();
 
     // Find the size of token buffer to hold tokens before emitting.
@@ -43,7 +42,6 @@ void LLM::LlmInit(const LlmConfig &llmConfig)
 void LLM::FreeLlm()
 {
     this->m_impl->FreeLlm();
-    this->m_evaluatedOnce.store(false);
     this->m_maxStopWordLength = 1;
 }
 
@@ -90,8 +88,7 @@ void LLM::Encode(EncodePayload& payload) {
             throw std::runtime_error("Error. Attempting to Encode an unsupported Image payload");
         }
     }
-
-    std::string query = QueryBuilder(payload);
+    std::string query = this->m_impl->QueryBuilder(payload);
     payload.textPrompt = query;
     m_impl->Encode(payload);
 }
@@ -132,11 +129,6 @@ std::string LLM::BenchModel(int &nPrompts, int &nEvalPrompts, int &nMaxSeq, int 
 std::string LLM::GetFrameworkType() const
 {
     return this->m_impl->GetFrameworkType();
-}
-
-std::string LLM::QueryBuilder(EncodePayload& prompt) const
-{
-    return this->m_impl->QueryBuilder(prompt);
 }
 
 std::vector<std::string> LLM::SupportedInputModalities() const

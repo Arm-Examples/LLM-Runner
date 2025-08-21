@@ -16,17 +16,19 @@ LlmConfig::LlmConfig(const std::string& jsonStr)
         throw std::invalid_argument(std::string("Invalid JSON input: ") + e.what());
     }
 
-    m_modelTag  = modelConfig.value("modelTag", "");
-    m_userTag   = modelConfig.value("userTag", "");
-    m_endTag    = modelConfig.value("endTag", "");
-    m_mediaTag   = modelConfig.value("mediaTag", "");
+    m_isDefaultTemplate = modelConfig.value("applyDefaultChatTemplate", false);
+
+    // Default chat templates
+    const auto tmpl = modelConfig.value("defaultChatTemplate", nlohmann::json::object());
+    m_systemTemplate = tmpl.value("systemTemplate", "%s");
+    m_userTemplate   = tmpl.value("userTemplate",   "%s");
 
     if (!modelConfig.contains("llmModelName")) {
         throw std::runtime_error("Missing required parameter: modelPath");
     }
     m_modelPath = modelConfig["llmModelName"];
-    m_llmPrefix = modelConfig.value("llmPrefix", "");
     m_framework = modelConfig.value("framework", "");
+    m_systemPrompt = modelConfig.value("systemPrompt", "");
 
     // Stop-words should be a non-empty array of string with no null strings.
 
@@ -77,24 +79,19 @@ LlmConfig::LlmConfig(const std::string& jsonStr)
     SetBatchSize(modelConfig.value("batchSize", 256));
 }
 
-std::string LlmConfig::GetEndTag() const
+bool LlmConfig::IsDefaultTemplate() const
 {
-    return this->m_endTag;
+    return this->m_isDefaultTemplate;
 }
 
-std::string LlmConfig::GetUserTag() const
+std::string LlmConfig::GetSystemTemplate() const
 {
-    return this->m_userTag;
+    return this->m_systemTemplate;
 }
 
-std::string LlmConfig::GetModelTag() const
+std::string LlmConfig::GetUserTemplate() const
 {
-    return this->m_modelTag;
-}
-
-std::string LlmConfig::GetMediaTag() const
-{
-    return this->m_mediaTag;
+    return this->m_userTemplate;
 }
 
 std::string LlmConfig::GetModelPath() const
@@ -107,9 +104,9 @@ std::string LlmConfig::GetMMPROJModelPath() const
     return this->m_mmProjModelPath;
 }
 
-std::string LlmConfig::GetLlmPrefix() const
+std::string LlmConfig::GetSystemPrompt() const
 {
-    return this->m_llmPrefix;
+    return this->m_systemPrompt;
 }
 
 int LlmConfig::GetNumThreads() const
@@ -137,21 +134,6 @@ std::vector<std::string> LlmConfig::GetOutputModalities() const
     return this->m_outputModalities;
 }
 
-void LlmConfig::SetModelTag(const std::string& modelIdentifier)
-{
-    this->m_modelTag = modelIdentifier;
-}
-
-void LlmConfig::SetUserTag(const std::string& userTag)
-{
-    this->m_userTag = userTag;
-}
-
-void LlmConfig::SetEndTag(const std::string& endTag)
-{
-    this->m_endTag = endTag;
-}
-
 void LlmConfig::SetModelPath(const std::string& basePath)
 {
     this->m_modelPath = basePath;
@@ -167,9 +149,9 @@ void LlmConfig::SetFramework(const std::string& framework)
     this->m_framework = framework;
 }
 
-void LlmConfig::SetLlmPrefix(const std::string& llmInitialPrompt)
+void LlmConfig::SetSystemPrompt(const std::string& systemPrompt)
 {
-    this->m_llmPrefix = llmInitialPrompt;
+    this->m_systemPrompt = systemPrompt;
 }
 
 void LlmConfig::SetNumThreads(int threads)

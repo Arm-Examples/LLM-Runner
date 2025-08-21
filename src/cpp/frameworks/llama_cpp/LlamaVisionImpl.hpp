@@ -187,7 +187,14 @@ public:
      * @param prompt Input payload containing text, optional image, and conversation metadata.
      * @return The constructed query string to be passed to the model backend.
      */
-    std::string QueryBuilder(LLM::EncodePayload& prompt) override;
+    std::string QueryBuilder(LLM::EncodePayload& prompt) override {
+        if(prompt.imagePath != "") {
+            this->m_imageIndex += 1;
+            prompt.textPrompt = prompt.textPrompt + "#" + std::to_string(this->m_imageIndex) + this->m_mediaMarker;
+        }
+        return LLM::LLMImpl::QueryBuilder(prompt);
+        
+    };
 
     /**
      * @brief List supported input modalities.
@@ -226,6 +233,9 @@ private:
 
     /** Resets the vision-specific application context. */
     void ResetVisionContext();
+
+    /** Media marker which llama mtmd needs to tokenize the image */
+    const std::string m_mediaMarker = mtmd_default_marker();
 };
 
 #endif // ARM_LLM_WRAPPER_LLAMAVISIONIMPL_HPP

@@ -58,8 +58,7 @@ public:
     std::string SystemInfo();
 
     /**
-     * Method to reset conversation history and preserve model's character prefix.
-     * If model's prefix is not defined all conversation history would be cleared
+     * Method to reset the whole conversation history
      */
     void ResetContext();
 
@@ -68,6 +67,13 @@ public:
      * @param prompt Query to LLM
      */
     void Encode(EncodePayload& prompt);
+
+    /**
+     * Builds a query string for the LLM based on the given prompt.
+     * @param prompt The prompt to structure into a query.
+     * @return The constructed query string.
+     */
+    std::string QueryBuilder(std::string&prompt);
 
     /**
      * Method to produce next token
@@ -153,22 +159,29 @@ private:
     bool m_llmInitialized{false};
     // Proportion of the context window currently filled (as % of total tokens)
     size_t m_contextFilled{0};
-    // Prefix text prepended to each generation request.
-    std::string m_llmPrefix{""};
-    // Flag indicating if the context window has been reset.
-    bool m_ctxResetted = true;
     // Total number of decoded tokens
-    size_t m_totalDecodedTokens = 0;
+    size_t m_totalDecodedTokens{0};
     // Total number of encoded tokens
-    size_t m_totalEncodedTokens = 0;
+    size_t m_totalEncodedTokens{0};
     // Total time for decoder
-    double m_totalDecoderTime = 0.0;
+    double m_totalDecoderTime{0.0};
     // Total time for encoder
-    double m_totalEncoderTime = 0.0;
+    double m_totalEncoderTime = {0.0};
     // Configuration for model
     LlmConfig m_config;
 
-
+    // Flag indicating whether this is starting of the conversation (used to decide if the system prompt should be encoded)
+    bool m_isConversationStart{true};
+    // Flag indicating whether a custom chat template should be used
+    bool m_isDefaultTemplate{false};
+    // System prompt to be encoded with first query
+    std::string m_systemPrompt{""};
+    // Default template for system message
+    std::string m_systemTemplate{""};
+    // Default template for user message
+    std::string m_userTemplate{""};
+    // Used as a general signal in our LLM module to terminate response
+    std::string m_eos = "<|endoftext|>";
 
     /**
      * Function to initialize the LLM model sequence
@@ -219,6 +232,20 @@ private:
      * Frees the memory holding the ONNX model
      */
     void FreeModel();
+
+    /**
+     * Applies a default chat template to the given prompt.
+     * @param prompt The input prompt to apply the template to.
+     * @return The prompt with the default chat template applied.
+     */
+    std::string ApplyDefaultChatTemplate(const std::string& prompt);
+
+    /**
+     * Applies the automatic chat template to the given prompt.
+     * @param prompt The input prompt to apply the template to.
+     * @return The prompt with the automatic chat template applied.
+     */
+    std::string ApplyAutoChatTemplate(const std::string& prompt);
 };
 
 #endif /* LLM_IMPL_HPP */

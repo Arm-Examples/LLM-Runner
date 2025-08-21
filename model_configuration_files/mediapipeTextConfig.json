@@ -1,8 +1,13 @@
 {
-  "modelTag": "\n<start_of_turn>model:",
-  "userTag": "<end_of_turn> \n<start_of_turn>user:",
-  "endTag": "<end_of_turn>",
-  "llmPrefix": "You are an AI assistant named Orbita (meaning Orbit in English), you always answer the User's requests with precision. Your answer should be a maximum of two sentences.",
+  "llmModelName" : "mediapipe/gemma-2b-it-cpu-int4.tflite",
+  "batchSize"    : 256,
+  "numThreads"   : 5,
+  "systemPrompt" : "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",
+  "applyDefaultChatTemplate" : true,
+  "defaultChatTemplate" : {
+    "systemTemplate" : "<start_of_turn>system:%s<end_of_turn>",
+    "userTemplate"   : "\n<start_of_turn>user:%s<end_of_turn>\n<start_of_turn>model:"
+  },
   "stopWords": [
     "Orbita:",
     "User:",
@@ -14,9 +19,6 @@
     "model:",
     "Question:"
   ],
-  "llmModelName": "mediapipe/gemma-2b-it-cpu-int4.tflite",
   "inputModalities" : ["text"],
-  "outputModalities" : ["text"],
-  "batchSize" : 256,
-  "numThreads" : 4
+  "outputModalities" : ["text"]
 }
