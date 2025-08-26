@@ -42,7 +42,8 @@ if (BUILD_JNI_LIB)
     include(find-jni)
 
     add_library(arm-llm-jni SHARED
-        ${CMAKE_CURRENT_SOURCE_DIR}/LlmJni.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/LlmJni.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/LlmCache.cpp)
 
     target_link_libraries(arm-llm-jni PUBLIC arm-llm-cpp)
 

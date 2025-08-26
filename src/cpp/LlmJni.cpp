@@ -3,15 +3,15 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
+
+#include <jni.h>
+
 #include "LlmConfig.hpp"
 #include "LlmImpl.hpp"
 #include "Logger.hpp"
-#include <iostream>
-#include <jni.h>
 #include "LlmBridge.hpp"
+#include "LlmCache.hpp"
 
-
-static std::unique_ptr<LLM> llm;
 
 /**
 * @brief inline method to throw error in java
@@ -41,6 +41,8 @@ auto GetUtfChars = [](JNIEnv* env, jstring jStr) {
     return std::unique_ptr<const char, Deleter>(chars, deleter);
 };
 
+const char* ILLEGAL_STATE_EXCEPTION_JAVA_CLASS_NAME = "java/lang/IllegalStateException";
+const char* ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE = "LLMHandle invalid, no LLM associated with llmHandle";
 
 #ifdef __cplusplus
 extern "C" {
@@ -78,57 +80,89 @@ const char *g_nativeBridgeClassName = "com/arm/voiceassistant/utils/NativeBridge
         } while (0)
 
 
-
-JNIEXPORT void JNICALL Java_com_arm_Llm_llmInit(JNIEnv* env,
-                                                         jobject /* this */,
-                         jstring jsonConfig,
-                         jstring sharedLibraryPath) {
+/**
+ * @brief JNI entry point to initialize an LLM instance and return a handle.
+ * @param env JNI environment variable passed from JVM layer
+ * @param jsonConfig java string containing the LLM config JSON
+ * @param sharedLibraryPath java string containing the path to the framework shared library
+ * @return native handle (jlong) to the cached LLM instance, or 0 on failure & Java exception thrown 
+ */
+JNIEXPORT jlong JNICALL Java_com_arm_Llm_llmInitJNI(JNIEnv* env,
+                        jobject /* this */,
+                        jstring jsonConfig,
+                        jstring sharedLibraryPath) {
     try {
         if (jsonConfig == nullptr) {
                 ThrowJavaException(env, "Failed to initialize LLM module, error in config json string ");
-                return;
+                return 0;
         }
         auto modelCStr = GetUtfChars(env, jsonConfig);
         if (modelCStr.get() == nullptr) {
             ThrowJavaException(env, "Failed to initialize LLM module, jstring to utf conversion failed for config json");
-            return;
+            return 0;
         }
-
         if (sharedLibraryPath == nullptr) {
-            ThrowJavaException(env, "Failed to initialize LLM module, jstring shared-library-path is null ");
-            return;
+            ThrowJavaException(env, "Failed to initialize LLM module, jstring shared-library-path is null");
+            return 0;
         }
         auto sharedLibraryPathNative = GetUtfChars(env,sharedLibraryPath);
         if (sharedLibraryPathNative.get() == nullptr) {
-            ThrowJavaException(env, "Failed to initialize LLM module, unable to parse shared-library-path into string ");
-            return;
-    }
+            ThrowJavaException(env, "Failed to initialize LLM module, unable to parse shared-library-path into string");
+            return 0;
+        }
 
         try {
             LlmConfig config(modelCStr.get());
-            llm = std::make_unique<LLM>();
+            auto llm = std::make_unique<LLM>();
             llm->LlmInit(config, sharedLibraryPathNative.get());
+            return LLMCache::Instance().Add(std::move(llm));
         } catch (const std::exception& e) {
             std::string msg = std::string("Failed to create Llm from config : ") + e.what();
             ThrowJavaException(env, msg.c_str());
-            return;
+            return 0;
         }
-
-        } catch (const std::exception& e) {
-        std:: string msg = std::string("Failed to create Llm instance due to error: ") + e.what();
+    } catch (const std::exception& e) {
+        std:: string msg = std::string("Failed to create Llm Instance due to error: ") + e.what();
         //  prevents C++ exceptions escaping JNI
         ThrowJavaException(env, msg.c_str());
+    }
+    return 0;
+}
+
+/**
+ * @brief JNI entry point to free an LLM instance referenced by a handle.
+ * @param env JNI environment variable passed from JVM layer
+ * @param llmHandle native handle returned by llmInitJNI
+ */
+JNIEXPORT void JNICALL Java_com_arm_Llm_freeLlmJNI(JNIEnv* env, jobject, jlong llmHandle)
+{
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
         return;
     }
-}
 
-JNIEXPORT void JNICALL Java_com_arm_Llm_freeLlm(JNIEnv*, jobject)
-{
     llm->FreeLlm();
+    LLMCache::Instance().Remove(llmHandle);
 }
 
-JNIEXPORT void JNICALL Java_com_arm_Llm_encode(JNIEnv *env, jobject thiz, jstring jtext, jstring path_to_image,
-                                               jboolean is_first_message) {
+/**
+ * @brief JNI entry point to encode a chat payload (text + optional image path).
+ * @param env JNI environment variable passed from JVM layer
+ * @param jtext java string containing the text prompt
+ * @param path_to_image java string containing the path to an input image (may be empty)
+ * @param is_first_message boolean indicating whether this is the first message in a chat session
+ * @param llmHandle native handle returned by llmInitJNI
+ */
+JNIEXPORT void JNICALL Java_com_arm_Llm_encodeJNI(JNIEnv *env, jobject thiz, jstring jtext, jstring path_to_image,
+                                               jboolean is_first_message, jlong llmHandle) {
+
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return;
+    }
+    
     try {
         auto textChars = GetUtfChars(env,jtext);
         auto imageChars = GetUtfChars(env,path_to_image);
@@ -139,61 +173,138 @@ JNIEXPORT void JNICALL Java_com_arm_Llm_encode(JNIEnv *env, jobject thiz, jstrin
     }
     catch (const std::exception& e) {
         ThrowJavaException(env, ("Failed to encode query: " + std::string(e.what())).c_str());
-        return;
     }
 }
 
-JNIEXPORT jstring JNICALL Java_com_arm_Llm_getNextToken(JNIEnv* env, jobject)
+/**
+ * @brief JNI entry point to retrieve the next decoded token from the model.
+ * @param env JNI environment variable passed from JVM layer
+ * @param llmHandle native handle returned by llmInitJNI
+ * @return java string containing the next token (empty string on invalid handle)
+ */
+JNIEXPORT jstring JNICALL Java_com_arm_Llm_getNextTokenJNI(JNIEnv* env, jobject, jlong llmHandle)
 {
-    try {
-    std::string result = llm->NextToken();
-    return env->NewStringUTF(result.c_str());
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return env->NewStringUTF("");
     }
-    catch (const std::exception& e) {
+
+    try {
+       std::string result = llm->NextToken();
+       return env->NewStringUTF(result.c_str());
+    } catch (const std::exception& e) {
         std::string msg = std::string("Failed to get next token: ") + e.what();
         ThrowJavaException(env,msg.c_str() );
         return nullptr;
     }
 }
 
-JNIEXPORT jstring JNICALL Java_com_arm_Llm_getNextTokenCancellable(JNIEnv* env, jobject, jlong operationId)
+/**
+ * @brief JNI entry point to retrieve the next decoded token with cancellation support.
+ * @param env JNI environment variable passed from JVM layer
+ * @param operationId operation identifier used for cancellation
+ * @param llmHandle native handle returned by llmInitJNI
+ * @return java string containing the next token (empty string on invalid handle)
+ */
+JNIEXPORT jstring JNICALL Java_com_arm_Llm_getNextTokenCancellableJNI(JNIEnv* env, jobject, jlong operationId, jlong llmHandle)
 {
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return env->NewStringUTF("");
+    }
+
     std::string result = llm->CancellableNextToken(operationId);
     return env->NewStringUTF(result.c_str());
 }
 
-JNIEXPORT void JNICALL Java_com_arm_Llm_cancel(JNIEnv* env, jobject, jlong operationId)
+/**
+ * @brief JNI entry point to return the model encode rate/timings.
+ * @param env JNI environment variable passed from JVM layer
+ * @param llmHandle native handle returned by llmInitJNI
+ * @return encode timing metric as float (0.0 on invalid handle)
+ */
+JNIEXPORT jfloat JNICALL Java_com_arm_Llm_getEncodeRateJNI(JNIEnv* env, jobject, jlong llmHandle)
 {
-    llm->Cancel(operationId);
-}
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return 0.0;
+    }
 
-JNIEXPORT jfloat JNICALL Java_com_arm_Llm_getEncodeRate(JNIEnv* env, jobject)
-{
     float result = llm->GetEncodeTimings();
     return result;
 }
 
-JNIEXPORT jfloat JNICALL Java_com_arm_Llm_getDecodeRate(JNIEnv* env, jobject)
+/**
+ * @brief JNI entry point to return the model decode rate/timings.
+ * @param env JNI environment variable passed from JVM layer
+ * @param llmHandle native handle returned by llmInitJNI
+ * @return decode timing metric as float (0.0 on invalid handle)
+ */
+JNIEXPORT jfloat JNICALL Java_com_arm_Llm_getDecodeRateJNI(JNIEnv* env, jobject, jlong llmHandle)
 {
-    float result = llm->GetDecodeTimings();
-    return result;
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return 0.0;
+    }
+
+    return llm->GetDecodeTimings();
 }
 
-JNIEXPORT void JNICALL Java_com_arm_Llm_resetTimings(JNIEnv* env, jobject)
+/**
+ * @brief JNI entry point to reset encode/decode timing counters for an LLM instance.
+ * @param env JNI environment variable passed from JVM layer
+ * @param llmHandle native handle returned by llmInitJNI
+ */
+JNIEXPORT void JNICALL Java_com_arm_Llm_resetTimingsJNI(JNIEnv* env,  jobject, jlong llmHandle)
 {
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+
+        return;
+    }
+
     llm->ResetTimings();
 }
 
-JNIEXPORT jsize JNICALL Java_com_arm_Llm_getChatProgress(JNIEnv* env, jobject)
+/**
+ * @brief JNI entry point to query current chat progress from an LLM instance.
+ * @param env JNI environment variable passed from JVM layer
+ * @param llmHandle native handle returned by llmInitJNI
+ * @return progress counter as jsize (0 on invalid handle)
+ */
+JNIEXPORT jsize JNICALL Java_com_arm_Llm_getChatProgressJNI(JNIEnv* env, jobject, jlong llmHandle)
 {
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+
+        return 0;
+    }
+
     return llm->GetChatProgress();
 }
 
-JNIEXPORT void JNICALL Java_com_arm_Llm_resetContext(JNIEnv* env, jobject)
+/**
+ * @brief JNI entry point to reset the conversation/context state in an LLM instance.
+ * @param env JNI environment variable passed from JVM layer
+ * @param llmHandle native handle returned by llmInitJNI
+ */
+JNIEXPORT void JNICALL Java_com_arm_Llm_resetContextJNI(JNIEnv* env, jobject, jlong llmHandle)
 {
     try {
-    llm->ResetContext();
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return;
     }
+
+    llm->ResetContext();
+}
     catch (const std::exception& e) {
         std::string msg = std::string("Failed to reset context: ") + e.what();
         ThrowJavaException(env,msg.c_str() );
@@ -201,21 +312,64 @@ JNIEXPORT void JNICALL Java_com_arm_Llm_resetContext(JNIEnv* env, jobject)
     }
 }
 
-JNIEXPORT jstring JNICALL Java_com_arm_Llm_benchModel(
-    JNIEnv* env, jobject, jint nPrompts, jint nEvalPrompts, jint nMaxSeq, jint nRep)
+/**
+ * @brief JNI entry point to run a benchmark on the current model instance.
+ * @param env JNI environment variable passed from JVM layer
+ * @param llmHandle native handle returned by llmInitJNI
+ * @param nPrompts number of prompts to use for the benchmark
+ * @param nEvalPrompts number of evaluation prompts
+ * @param nMaxSeq maximum sequence length
+ * @param nRep number of repetitions
+ * @return java string containing benchmark results (empty string on invalid handle)
+ */
+JNIEXPORT jstring JNICALL Java_com_arm_Llm_benchModelJNI(
+    JNIEnv* env, jobject, jlong llmHandle, jint nPrompts, jint nEvalPrompts, jint nMaxSeq, jint nRep)
 {
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return env->NewStringUTF("");
+    }
+
+
     std::string result = llm->BenchModel(nPrompts, nEvalPrompts, nMaxSeq, nRep);
     return env->NewStringUTF(result.c_str());
 }
 
-JNIEXPORT jstring JNICALL Java_com_arm_Llm_getFrameworkType(JNIEnv* env, jobject)
+/**
+ * @brief This function returns the LLM Type 
+ *
+ * We can't lookup the llm from the handle in this function because the llm Instance
+ * may not have been created yet.
+ *
+ * To work around this problem we create an empty LLM Instance that is automatically 
+ * deleted by C++ when this function returns. Because this llm object is deleted 
+ * calling this function can't be used in lieu of calling initLlm.
+ * 
+*/
+JNIEXPORT jstring JNICALL Java_com_arm_Llm_getFrameworkTypeJNI(JNIEnv* env, jobject, jlong)
 {
+
+    auto llm = std::make_unique<LLM>();
+
     std::string frameworkType = llm->GetFrameworkType();
     return env->NewStringUTF(frameworkType.c_str());
 }
 
+/**
+ * @brief JNI entry point to determine whether the current LLM supports image input.
+ * @param env JNI environment variable passed from JVM layer
+ * @param llmHandle native handle returned by llmInitJNI
+ * @return JNI_TRUE if "image" is present in supported input modalities, otherwise JNI_FALSE
+ */
 JNIEXPORT jboolean JNICALL
-Java_com_arm_Llm_supportsImageInput(JNIEnv *env, jobject thiz) {
+Java_com_arm_Llm_supportsImageInputJNI(JNIEnv *env, jobject thiz, jlong llmHandle) {
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return JNI_FALSE;
+    }
+    
     for (const auto &m : llm->SupportedInputModalities()) {
         if (m.find("image") != std::string::npos) {
             return JNI_TRUE;
@@ -224,21 +378,23 @@ Java_com_arm_Llm_supportsImageInput(JNIEnv *env, jobject thiz) {
     return JNI_FALSE;
 }
 
-// ------------------------------------------------------------
-// JNI exported: nativeCancel(operationId)
-// ------------------------------------------------------------
+/**
+ * @brief JNI exported method to cancel an in-flight operation identified by operationId.
+ * @param env JNI environment variable passed from JVM layer
+ * @param operationId operation identifier to cancel
+ */
 JNIEXPORT void JNICALL
 Java_com_arm_voiceassistant_utils_LlmBridge_nativeCancel(
-        JNIEnv *env,
-jobject /*clazz*/,
-jlong operationId) {
+    JNIEnv *env,
+    jobject /*clazz*/,
+    jlong operationId) {
 
-auto state = findWork(operationId);
-if (!state) {
-return;
-}
+    auto state = findWork(operationId);
+    if (!state) {
+        return;
+    }
 
-state->cancelled.store(true, std::memory_order_release);
+    state->cancelled.store(true, std::memory_order_release);
 }
 
 
@@ -269,7 +425,15 @@ state->cancelled.store(true, std::memory_order_release);
      ) )
 #endif
 
-
+/**
+ * @brief JNI_OnLoad callback invoked when the native library is loaded by the JVM.
+ *
+ * Caches the JavaVM pointer, attempts to resolve the NativeBridge class, and caches
+ * the onNativeComplete static method ID for later callbacks.
+ *
+ * @param vm JavaVM pointer provided by JVM
+ * @return JNI version supported on success, JNI_ERR on failure
+ */
 jint JNI_OnLoad(JavaVM *vm, void *) {
     g_vm = vm;
     JNIEnv *env = nullptr;
@@ -285,7 +449,6 @@ jint JNI_OnLoad(JavaVM *vm, void *) {
             env->ExceptionDescribe();
             env->ExceptionClear();
         }
-        LOGD("Completion / Cancel handler will not been enabled, check if %s is present and has been loaded", g_nativeBridgeClassName);
         return JNI_VERSION_1_6;
     }
     g_NativeBridgeClass = reinterpret_cast<jclass>(env->NewGlobalRef(local));
@@ -308,9 +471,13 @@ jint JNI_OnLoad(JavaVM *vm, void *) {
 }
 
 
-// ------------------------------------------------------------
-// JNI_OnUnload: cleanup global refs (optional but good hygiene)
-// ------------------------------------------------------------
+/**
+ * @brief JNI_OnUnload callback invoked when the native library is unloaded by the JVM.
+ *
+ * Releases cached global references and clears cached method IDs / VM pointer.
+ *
+ * @param vm JavaVM pointer provided by JVM
+ */
 void JNI_OnUnload(JavaVM *vm, void *) {
     if (g_NativeBridgeClass == nullptr) {
         return;
@@ -366,6 +533,13 @@ struct EnvScope {
     ~EnvScope();
 };
 
+/**
+ * @brief Constructs an EnvScope for the current thread.
+ *
+ * Ensures that the current native thread is attached to the JVM and initializes the
+ * EnvScope::env member. Sets EnvScope::didAttach to true if it attached the thread,
+ * or false if the thread was already attached.
+ */
 EnvScope::EnvScope() : env(nullptr), didAttach(false) {
     if (g_vm == nullptr) return;  // shouldn't happen
     if (g_vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
@@ -377,16 +551,28 @@ EnvScope::EnvScope() : env(nullptr), didAttach(false) {
     }
 }
 
+/**
+ * @brief Destroys the EnvScope and optionally detaches the thread.
+ *
+ * If EnvScope::didAttach is true, the destructor detaches the current thread from
+ * the JVM. If false, no detachment is performed.
+ */
 EnvScope::~EnvScope() {
     if (didAttach && g_vm) {
         g_vm->DetachCurrentThread();
     }
 }
 
-// ------------------------------------------------------------
-// Use this method when the call is complete, can complete call with the following state
-// Success / Error / Cancelled
-// ------------------------------------------------------------
+/**
+ * @brief Deliver completion callback to the JVM via NativeBridge.onNativeComplete.
+ *
+ * Attaches the current thread to the JVM if required, invokes the cached static
+ * callback method, and detaches the thread if it was attached in this function.
+ *
+ * @param operationId operation identifier associated with the completion
+ * @param rc completion result code (e.g. success/error/cancelled)
+ * @param payload completion payload string (e.g. result or error message)
+ */
 void deliverCompletion(long operationId, int rc, const std::string &payload) {
     JNIEnv *env;
     bool detach = false;

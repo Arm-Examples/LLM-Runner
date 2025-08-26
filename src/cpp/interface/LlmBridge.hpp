@@ -4,12 +4,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#ifndef LLMBRIDGE_HPP
-#define LLMBRIDGE_HPP
+#pragma once
 
 #include <atomic>
-
-#pragma once
 
 /**
  * @brief Result codes for operations.
@@ -62,5 +59,3 @@ std::shared_ptr<WorkState> findWork(long operationId);
  * @return The removed state if it existed; otherwise @c nullptr.
  */
 std::shared_ptr<WorkState> removeWork(long operationId);
-
-#endif //LLMBRIDGE_HPP

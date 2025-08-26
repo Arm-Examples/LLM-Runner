@@ -36,37 +36,190 @@ public class Llm {
     }
 
     /**
-     * Create LLM native instance from config.
-     *
-     * @param jsonConfig string contains configuration in json
+     * handle to the underlying native LLM instance.
+     * Must be non-zero before any native operation is invoked.
+     */
+    private long nativeLlmHandle = 0L;
+
+    /**
+     * Sets the handle for the native Llm  instance.
+     * @param handle to native llm (must be non-zero)
+     */
+    private void setNativeLlmHandle(long handle) {
+        if (handle == 0L) {
+            throw new IllegalArgumentException("nativeLlmHandle must be non-zero");
+        }
+        this.nativeLlmHandle = handle;
+    }
+
+    /**
+     * Ensures the handle is set (non-zero) and returns it.
+     * @return the validated, non-zero handle to the native Llm
+     * @throws IllegalStateException if the handle is not set
+     */
+    private long getNativeLlmHandle() {
+        if (nativeLlmHandle == 0L) {
+            throw new IllegalStateException(
+                    "nativeLlmHandle is not set. Call setnativeLlmHandle(...) before using this API 4."
+            );
+        }
+        return nativeLlmHandle;
+    }
+
+    /**
+     * Native method for initialising LLM model.
+     * @param configPathStr path to config.json file as a string
      * @param sharedLibraryPath Path to shared library folder to load optional shared libs
+     * @return native handle to the LLM instance
      */
-    public native void llmInit(String jsonConfig, String sharedLibraryPath);
+    private native long llmInitJNI(String configPathStr, String sharedLibraryPath);
 
     /**
-     * @return Checks if the LLM impl supports Image input.
+     * Native method to encode the given text and image
+     * @param text               the prompt to be encoded
+     * @param pathToImage        path to the image to be encoded
+     * @param isFirstMessage     boolean flag to signal if its the first message or not
+     * @param nativeLlmHandle    native handle to the LLM instance
      */
-    public native boolean supportsImageInput();
+    private native void encodeJNI(String text, String pathToImage, boolean isFirstMessage, long nativeLlmHandle);
 
     /**
-     * Free the LLM model (native).
+     * Native method to check if we supportsImageInput.
+     * @param nativeLlmHandle handle to the native LLM instance
+     * @return true if it support image encoding
      */
-    private native void freeLlm();
+    private native boolean supportsImageInputJNI(long nativeLlmHandle);
 
     /**
-     * @return Encoding rate in tokens/s.
+     * Native method for freeing the native LLM model.
+     * @param nativeLlmHandle native handle to the LLM instance
      */
-    public native float getEncodeRate();
+    private native void freeLlmJNI(long nativeLlmHandle);
 
     /**
-     * @return Decoding rate in tokens/s.
+     * Native method for getting encode timing.
+     * @param nativeLlmHandle native handle to the LLM instance
+     * @return timings in tokens/s for encoding the prompt
      */
-    public native float getDecodeRate();
+    private native float getEncodeRateJNI(long nativeLlmHandle);
 
     /**
-     * Private method for resetting conversation history
+     * Native method for getting decode timing.
+     * @param nativeLlmHandle handle to the native LLM instance
+     * @return timings in tokens/s for decoding the prompt
      */
-    public native void resetContext();
+    private native float getDecodeRateJNI(long nativeLlmHandle);
+
+    /**
+     * Native method for resetting conversation history/context.
+     * @param nativeLlmHandle handle to the native LLM instance
+     */
+    private native void resetContextJNI(long nativeLlmHandle);
+
+    /**
+     * Native method for resetting timing information.
+     * @param nativeLlmHandle handle to the native LLM instance
+     */
+    private native void resetTimingsJNI(long nativeLlmHandle);
+
+    /**
+     * Native method to encode the given text.
+     * @param nativeLlmHandle handle to the native LLM instance
+     * @param text the prompt to be encoded
+     */
+    private native void encodeJNI(long nativeLlmHandle, String text);
+
+    /**
+     * Native method to get the next token once encoding is done.
+     * Should be called in a loop while monitoring for stop-words.
+     * @param nativeLlmHandle handle to the native LLM instance
+     * @return next token as String
+     */
+    private native String getNextTokenJNI(long nativeLlmHandle);
+
+    /**
+     * Method to produce next token, this API can be cancelled via cancel API
+     * @param operationId can be used to return an error or check for user cancel operation requests
+     * @param nativeLlmHandle handle to the native LLM instance
+     * @return the next Token for Encoded Prompt
+     */
+    public native String getNextTokenCancellableJNI(long operationId, long nativeLlmHandle);
+  
+    /**
+     * Native method to get chat progress in percentage.
+     * @param nativeLlmHandle handle to the native LLM instance
+     * @return chat progress as int (0–100)
+     */
+    private native int getChatProgressJNI(long nativeLlmHandle);
+
+    /**
+     * Native method to decode answers one by one, once prefill stage is completed.
+     * @param nativeLlmHandle handle to the native LLM instance
+     * @param nPrompts     prompt length used for benchmarking
+     * @param nEvalPrompts number of generated tokens for benchmarking
+     * @param nMaxSeq      sequence number
+     * @param nRep         number of repetitions
+     * @return string containing results of the benchModel
+     */
+    private native String benchModelNative(
+            long nativeLlmHandle,
+            int nPrompts,
+            int nEvalPrompts,
+            int nMaxSeq,
+            int nRep
+    );
+
+    /**
+     * Native method the frameworkType
+     * @param nativeLlmHandle handle to the native LLM instance
+     * @return Framework type as string.
+     */
+    private native String getFrameworkTypeJNI(long nativeLlmHandle);
+
+    /**
+     * Method to check if we supportsImageInput.
+     * @return true if model supports input image
+     */
+    public boolean supportsImageInput() {
+        return supportsImageInputJNI(getNativeLlmHandle());
+    }
+
+    /**
+     * Method for freeing LLM model.
+     * Delegates to the native layer using the stored native handle.
+     * @throws IllegalStateException if {@code nativeLlmHandle} is not set
+     */
+    public void freeLlm() {
+        freeLlmJNI(getNativeLlmHandle());
+        this.nativeLlmHandle = 0L;
+    }
+
+    /**
+     * Public method for getting encode timing.
+     * @return timings in tokens/s for encoding prompt
+     * @throws IllegalStateException if {@code nativeLlmHandle} is not set
+     */
+    public float getEncodeRate() {
+        return getEncodeRateJNI(getNativeLlmHandle());
+    }
+
+    /**
+     * Public method for getting decode timing.
+     * @return timings in tokens/s for decoding prompt
+     * @throws IllegalStateException if {@code nativeLlmHandle} is not set
+     */
+    public float getDecodeRate() {
+        return getDecodeRateJNI(getNativeLlmHandle());
+    }
+
+    /**
+     * Method for resetting conversation history.
+     * Calls the native implementation with the stored handle.
+     * @throws IllegalStateException if {@code nativeLlmHandle} is not set
+     */
+    public void resetContext() {
+        resetContextJNI(getNativeLlmHandle());
+    }
 
     /**
      * Reset timing information (native).
@@ -79,21 +232,27 @@ public class Llm {
      * @param pathToImage        path to the image to be encoded
      * @param isFirstMessage     boolean flag to signal if its the first message or not
      */
-    private native void encode(String text, String pathToImage, boolean isFirstMessage);
+    public void encode(String text, String pathToImage, boolean isFirstMessage) {
+         encodeJNI(text, pathToImage, isFirstMessage, getNativeLlmHandle());
+    }
 
     /**
      * Method to get Next Token once encoding is done.
      * This Method needs to be called in a loop while monitoring for Stop-Words.
      * @return next Token as String
      */
-    public native String getNextToken();
+    public String getNextToken() {
+        return getNextTokenJNI(getNativeLlmHandle());
+    }
 
     /**
      * Method to produce next token
      * @param operationId can be used to return an error or check for user cancel operation requests
      * @return the next Token for Encoded Prompt
      */
-    public native String getNextTokenCancellable(long operationId);
+    public String getNextTokenCancellable(long operationId) {
+        return getNextTokenCancellableJNI(operationId, getNativeLlmHandle());
+    }
 
     /**
      * Function to request the cancellation of a ongoing operation / functional call
@@ -104,7 +263,9 @@ public class Llm {
     /**
      * @return Chat progress as percentage [0–100].
      */
-    public native int getChatProgress();
+    public int getChatProgress() {
+        return getChatProgressJNI(getNativeLlmHandle());
+    }
 
     /**
      * Benchmark the model.
@@ -118,6 +279,7 @@ public class Llm {
     public native String benchModel(int nPrompts, int nEvalPrompts, int nMaxSeq, int nRep);
 
     /**
+     * Return the frameworkType
      * @return Framework type as string.
      */
     public native String getFrameworkType();
@@ -125,7 +287,6 @@ public class Llm {
 
     /**
      * Submit a query synchronously.
-     *
      * @param query  User query.
      * @return void.
      */
@@ -139,8 +300,18 @@ public class Llm {
     }
 
     /**
+     * Method to create Llm cpp instance from params.
+     * @param configPathStr path to config.json file as a string
+     * @param sharedLibraryPath Path to shared library folder to load optional shared libs
+     * @return handle to native LLM Instance
+     */
+    public void llmInit(String configPathStr, String sharedLibraryPath)
+    {
+        this.nativeLlmHandle = llmInitJNI(configPathStr, sharedLibraryPath);
+    }
+
+    /**
      * Submits query to LLM and returns response.
-     *
      * @param query  User query.
      * @return Response string .
      */
@@ -165,8 +336,6 @@ public class Llm {
         return response.toString();
     }
 
-
-
     private void handleEncoding(String query) {
         if (!imageUploaded) {
             encode(query, "", true);
@@ -185,7 +354,6 @@ public class Llm {
 
     /**
      * Set image location for the next message.
-     *
      * @param imagePath Path to image file.
      */
     public void setImageLocation(String imagePath) {
@@ -195,11 +363,9 @@ public class Llm {
 
     /**
      * Checks if it is a stop token (case insensetive)
-     *
      * @param token to check.
-     * 
      * @return Bool, true if the token is a stop token 
-     */
+    */
     public Boolean isStopToken(String token) {
         return token.equalsIgnoreCase(eosToken);
     }

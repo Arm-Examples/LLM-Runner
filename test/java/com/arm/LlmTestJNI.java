@@ -74,6 +74,7 @@ public class LlmTestJNI {
         // Revert the configJson to preserve original system prompt and modelTag
         chatObj.put("systemPrompt",oldSystemPrompt);
     }
+
     @Test
     public void testInferenceWithContextReset() {
         Llm llm = new Llm();
@@ -109,13 +110,40 @@ public class LlmTestJNI {
     }
 
     @Test
+    public void testMultiLLMInferenceWithoutContextReset() {
+        Llm germanLlm = new Llm();
+        germanLlm.llmInit(configJson.toString(), backendSharedLibDir);
+
+        Llm frenchLlm = new Llm();
+        frenchLlm.llmInit(configJson.toString(), backendSharedLibDir);
+
+        String germanQuestion1 = "What is the capital of Germany?";
+        String germanResponse1 = germanLlm.getResponse(germanQuestion1);
+        checkLlmMatch(germanResponse1, "Berlin", true);
+
+        String frenchQuestion1 = "What is the capital of France?";
+        String frenchResponse1 = frenchLlm.getResponse(frenchQuestion1);
+        checkLlmMatch(frenchResponse1, "Paris", true);
+
+        String germanQuestion2 = "What languages do they speak there?";
+        String germanResponse2 = germanLlm.getResponse(germanQuestion2);
+        checkLlmMatch(germanResponse2, "German", true);
+        germanLlm.freeModel();
+
+        String frenchQuestion2 = "What languages do they speak there?";
+        String frenchResponse2 = frenchLlm.getResponse(frenchQuestion2);
+        checkLlmMatch(frenchResponse2, "French", true);
+        frenchLlm.freeModel();
+    }
+
+    @Test
     public void testInferenceHandlesEmptyQuestion() {
         Llm llm = new Llm();
         llm.llmInit(configJson.toString(), backendSharedLibDir);
         String question1 = "Paris is the capital of what country?";
         String response1 = llm.getResponse(question1);
         checkLlmMatch(response1, "France", true);
-    
+
         // Send an empty prompt to simulate blank recordings or non-speech tokens being returned by speech recognition;
         // then ask follow-up questions to ensure previous context persists when an empty prompt is injected in the conversation.
         String emptyResponse = llm.getResponse("");
@@ -169,7 +197,7 @@ public class LlmTestJNI {
         checkLlmMatch(postResetResponse, String.valueOf(originalMangoes), false);
         llm.freeModel();
     }
-    
+
 
     @Test
     public void testInferenceRecoversAfterContextReset() {
