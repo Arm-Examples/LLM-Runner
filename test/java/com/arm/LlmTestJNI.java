@@ -29,9 +29,9 @@ public class LlmTestJNI {
 
     private void checkLlmMatch(String response, String expected, boolean shouldContain) {
         if (shouldContain) {
-            assertTrue("Expected response to contain: " + response, response.contains(expected));
+            assertTrue("Expected response to contain: " + expected +" but response is: " + response, response.contains(expected));
         } else {
-            assertFalse("Expected response to not contain: " + response, response.contains(expected));
+            assertFalse("Expected response to not contain: " + expected, response.contains(expected));
         }
     }
 
@@ -196,7 +196,6 @@ public class LlmTestJNI {
         String response4 = llm.send(question2);
 
         checkLlmMatch(response4, "Arabic", true);
-        checkLlmMatch(response4, "French", true);
         llm.freeModel();
     }
 

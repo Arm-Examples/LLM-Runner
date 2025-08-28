@@ -48,8 +48,7 @@ def download_resources(resources_file: Path, download_dir: Path) -> None:
     """
     Downloads resource files as per the resource file json into the
     download dir.
-    Parameters
-    ----------
+
     @param resources_file:  Path to the resource file (JSON) to read URLs from
     @param download_dir:    Download location (parent directory) where files should
                             be placed.

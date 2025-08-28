@@ -1,0 +1,47 @@
+{
+  "common_flags": [
+    "--copt=-Wno-sign-compare",
+    "--define=MEDIAPIPE_DISABLE_GPU=1",
+    "--define=MEDIAPIPE_USE_XNNPACK=1",
+    "--compilation_mode=opt"
+  ],
+  "target_flags": {
+    "X86": [
+      "--config=linux",
+      "--define=xnn_enable_arm_i8mm=false",
+      "--define=xnn_enable_avx512f=false",
+      "--define=xnn_enable_avx512fp16=false",
+      "--define=xnn_enable_avx512bf16=false",
+      "--define=xnn_enable_avxvnni=false",
+      "--define=xnn_enable_avxvnniint8=false",
+      "--define=xnn_enable_avx256skx=false",
+      "--define=xnn_enable_avx256vnni=false",
+      "--define=xnn_enable_avx256vnnigfni=false"
+    ],
+    "ANDROID_ARM64": [
+      "--config=android_arm64",
+      "--cpu=arm64-v8a"
+    ],
+
+    "AARCH64": [
+      "--config=linux",
+      "--cpu=aarch64"
+     ]
+  },
+  "cross_compilation" : [
+      "--crosstool_top=//toolchain:aarch64_suite",
+      "--host_crosstool_top=@bazel_tools//tools/cpp:toolchain"
+  ],
+  "toolchain_tar": [
+      "resources_downloaded/build_utils/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu.tar.xz"
+  ],
+  "kleidiai": [
+    "--define=xnn_enable_arm_kleidiai=true"
+  ],
+  "i8mm": [
+    "--define=xnn_enable_arm_i8mm=true"
+  ],
+  "dotprod": [
+    "--define=xnn_enable_arm_dotprod=true"
+  ]
+}

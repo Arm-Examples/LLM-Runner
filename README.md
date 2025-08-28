@@ -14,10 +14,12 @@
     * [Conditional options](#conditional-options)
       * [llama cpp options](#llama-cpp-options)
       * [onnxruntime genai options](#onnxruntime-genai-options)
+      * [mediapipe options](#mediapipe-options)
   * [Quick start](#quick-start)
     * [Neural network](#neural-network)
       * [llama cpp model](#llama-cpp-model)
       * [onnxruntime genai model](#onnxruntime-genai-model)
+      * [mediapipe model](#mediapipe-model)
     * [To build for Android](#to-build-for-android)
     * [To build for Linux](#to-build-for-linux)
       * [Generic aarch64 target](#generic-aarch64-target)
@@ -35,10 +37,8 @@ This repo is designed for building an
 [Arm® KleidiAI™](https://www.arm.com/markets/artificial-intelligence/software/kleidi)
 enabled LLM library using CMake build system. It intends to provide an abstraction for different Machine Learning
 frameworks/backends that Arm® KleidiAI™ kernels have been integrated into.
-Currently, it supports [llama.cpp](https://github.com/ggml-org/llama.cpp) and
-[onnxruntime-genai](https://github.com/microsoft/onnxruntime-genai) backends but we intend to add
-support for other backends, such as [mediapipe](https://github.com/google-ai-edge/mediapipe), soon.
-
+Currently, it supports [llama.cpp](https://github.com/ggml-org/llama.cpp) , [mediapipe](https://github.com/google-ai-edge/mediapipe) and
+[onnxruntime-genai](https://github.com/microsoft/onnxruntime-genai) backends .
 The backend library (selected at CMake configuration stage) is wrapped by this project's thin C++ layer that could be used
 directly for testing and evaluations. However, JNI bindings are also provided for developers targeting Android™ based
 applications.
@@ -52,6 +52,7 @@ applications.
 * Python 3.9 or above installed, python is used to download test resources and models
 * Android™ NDK (if building for Android™). Minimum version: r27 is recommended and can be downloaded
   from [here](https://developer.android.com/ndk/downloads)
+* Bazelisk or Bazel 7.4.1 to build mediapipe backend
 * Aarch64 GNU toolchain (version 14.1 or later) if cross-compiling from a Linux® based system which can be downloaded from [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads)
 * Java Development Kit required for building JNI wrapper library necessary to utilise this module in an Android/Java application.
 
@@ -114,6 +115,20 @@ onnxruntime-genai:
 > **NOTE**: This repository has been tested with `onnxruntime` version `v1.22.2` and
 `onnxruntime-genai` version `v0.9.0`.
 
+#### mediapipe options
+
+For customising mediapipe framework , following parameters can be used:
+
+- `MEDIAPIPE_SRC_DIR`: Source directory path that will be populated by CMake
+  configuration.
+- `MEDIAPIPE_GIT_URL`: Git URL to clone the sources from.
+- `MEDIAPIPE_GIT_TAG`: Git SHA for checkout
+
+Building mediapipe for aarch64 in x86_64 linux based requires downloading Aarch64 GNU toolchain from [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads), following configuration flags need to provided for building
+- `BASE_PATH`: Provides the top level directory of aarch64 GNU toolchain, if not provided the build script will download the latest ARM GNU toolchain for cross-compilation.
+> **NOTE**: Support for mediapipe is experimental and current focus is to support Android™ platform. Please note that latest ARM GNU Toolchain version(14.3) may depend on libraries present in Ubuntu® 24.04.4 LTS when cross-compiled.\
+> Support for macOS® and Windows is not added in this release.
+
 ## Quick start
 
 By default, the JNI builds are enabled, and Arm® KleidiAI™ kernels are enabled on arm64/aarch64.
@@ -155,6 +170,12 @@ To use an ONNX model with this framework, the following files are required:
 - `tokenizer_config.json`: Tokenizer config file
 
 These files are essential for loading and running ONNX models effectively.
+
+#### mediapipe model
+
+Due to license restrictions default models are not added in [requirements.json](./scripts/py/requirements.json). The test models can be obtained form [kaggle](https://www.kaggle.com/models/google/gemma/tfLite/gemma-2b-it-cpu-int4?postConsentAction=explore) after agreeing to [*license*](https://www.kaggle.com/models/google/gemma/license/consent).
+Alternatively, you can quantize other models listed in [conversion colab](https://colab.research.google.com/github/googlesamples/mediapipe/blob/main/examples/llm_inference/conversion/llm_conversion.ipynb) from [Hugging Face](https://huggingface.co) to TensorFlow Lite™ (.tflite) format. Copy the resulting 4-bit models to `resources_downloaded/models/mediapipe`.
+It is recommended to use *mediapipe python package version 0.10.15* for stable conversion to 4-bit models.
 
 > **NOTE**: Currently only int4 and block size 32 models are accelerated by Arm® KleidiAI™ kernels in `onnxruntime-genai`.
 
@@ -302,7 +323,8 @@ More information can be found at `onnxruntime-genai/benchmark/c/readme.md` on ho
 
 * Arm® and KleidiAI™ are registered trademarks or trademarks of Arm® Limited (or its subsidiaries) in the US and/or
   elsewhere.
-* Android™ is a trademark of Google LLC.
+* Android™ and TensorFlow Lite™ are trademarks of Google LLC.
+* macOS® is a trademark of Apple Inc.
 
 ## License
 

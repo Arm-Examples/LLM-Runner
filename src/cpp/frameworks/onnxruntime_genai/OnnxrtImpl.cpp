@@ -331,3 +331,8 @@ std::string LLM::LLMImpl::GetFrameworkType()
 {
     return this->m_frameworkType;
 }
+
+void LLM::LLMImpl::StopGeneration()
+{
+    // TODO: add stop response to support cancelled query
+}

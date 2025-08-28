@@ -113,6 +113,12 @@ public:
      * @return string framework type
      */
     std::string GetFrameworkType();
+
+    /**
+    * Method to Cancel generation of response tokens. Can be used to stop response once query commences
+    */
+    void StopGeneration();
+
 private:
     /**
     * Method to format prompt into a style model understands conversation

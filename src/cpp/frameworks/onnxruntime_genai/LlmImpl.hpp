@@ -105,6 +105,11 @@ public:
      */
     std::string GetFrameworkType();
 
+    /**
+    * Method to Cancel generation of response tokens. Can be used to stop response once query commences
+    */
+    void StopGeneration();
+
 private:
     // Framework type
     std::string m_frameworkType{"onnxruntime-genai"};

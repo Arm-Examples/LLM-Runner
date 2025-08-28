@@ -440,3 +440,8 @@ static bool is_valid_utf8(const char* string)
     return true;
 }
 
+void LLM::LLMImpl::StopGeneration()
+{
+    // TODO: add stop response to support cancelled queries
+}
+

@@ -47,6 +47,9 @@
       "url": "https://huggingface.co/microsoft/Phi-4-mini-instruct-onnx/resolve/main/cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/tokenizer_config.json",
       "sha256sum": "c565326a315fbe62cda093a59d298828c8f3f823122661325f41f3ba577a7dec"
       }
+    ],
+    "mediapipe" :
+    [
     ]
   },
 
@@ -73,5 +76,15 @@
      "url": "https://repo1.maven.org/maven2/org/json/json/20250107/json-20250107.jar",
      "sha256sum": "85d4c1ab192d3117fd02c7fff1ec0fe63ade45cf56def7fe950ef060cf06e99f"
     }
+  ],
+  "build_utils":
+  [
+      {
+      "name": "Arm GNU Toolchain",
+      "purpose": "Toolchain to compile the mediapipe for aarch64",
+      "destination": "arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu.tar.xz",
+      "url": "https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu.tar.xz",
+      "sha256sum": "ddeaff1ea60d4135acba271b0143d9f5add02b68ab9e9be39672d1965c12e82f"
+      }
   ]
 }

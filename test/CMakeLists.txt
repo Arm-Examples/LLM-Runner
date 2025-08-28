@@ -28,6 +28,8 @@ if (${LLM_FRAMEWORK} STREQUAL "llama.cpp")
     set(CONFIG_FILE_NAME "llamaConfig.json" CACHE STRING "Path to the Llama config file")
 elseif (${LLM_FRAMEWORK} STREQUAL "onnxruntime-genai")
     set(CONFIG_FILE_NAME "onnxrtConfig.json" CACHE STRING "Path to the ONNX Runtime GenAI config file")
+elseif (${LLM_FRAMEWORK} STREQUAL "mediapipe")
+    set(CONFIG_FILE_NAME "mediapipeConfig.json" CACHE STRING "Path to the mediapipe config file")
 endif ()
 
 

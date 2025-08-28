@@ -110,6 +110,7 @@ std::string LLM::ContainsStopWord()
     if (this->m_stopFlag) {
         this->m_stopFlag = false;
         this->m_tokenBuffer.clear();
+        StopGeneration();
         return endToken;
     }
     //Detect Stop Word
@@ -121,7 +122,8 @@ std::string LLM::ContainsStopWord()
     }
 
     // Emit the tokens which is certainly not initial part of stop-words.
-    if (m_tokenBuffer.length() >= this->m_maxStopWordLength) {
+    if (m_tokenBuffer.length() >= this->m_maxStopWordLength)
+    {
         std::string result = m_tokenBuffer.substr(0, m_tokenBuffer.length()
                                                      - m_maxStopWordLength);
         m_tokenBuffer.erase(0, m_tokenBuffer.length()
@@ -129,4 +131,9 @@ std::string LLM::ContainsStopWord()
         return result;
     }
     return "";
+}
+
+void LLM::StopGeneration()
+{
+    this->m_impl->StopGeneration();
 }

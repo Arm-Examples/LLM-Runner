@@ -1,0 +1,20 @@
+{
+  "modelTag": "\n<start_of_turn>model:",
+  "userTag": "<end_of_turn> \n<start_of_turn>user:",
+  "endTag": "<end_of_turn>",
+  "llmPrefix": "You are an AI assistant named Orbita (meaning Orbit in English), you always answer the User's requests with precision. Your answer should be a maximum of two sentences.",
+  "stopWords": [
+    "Orbita:",
+    "User:",
+    "AI:",
+    "<|endoftext|>",
+    "Assistant:",
+    "user:",
+    "[end of text]",
+    "model:",
+    "Question:"
+  ],
+  "llmModelName": "mediapipe/gemma-2b-it-cpu-int4.tflite",
+  "batchSize" : 256,
+  "numThreads" : 4
+}

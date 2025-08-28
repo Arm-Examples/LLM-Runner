@@ -1,0 +1,245 @@
+#
+# SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+diff --git a/mediapipe/framework/formats/BUILD b/mediapipe/framework/formats/BUILD
+index d290e7ebe..8bc069c95 100644
+--- a/mediapipe/framework/formats/BUILD
++++ b/mediapipe/framework/formats/BUILD
+@@ -629,7 +629,6 @@ cc_library(
+             "//mediapipe/gpu/webgpu:webgpu_utils",
+         ],
+         "//mediapipe:android": [
+-            ":ahwb_gpu_releaser",
+             ":hardware_buffer",
+             ":hardware_buffer_pool",
+             ":shared_fd",
+@@ -640,7 +639,6 @@ cc_library(
+             "@com_google_absl//absl/time",
+         ],
+         ":android_link_native_window": [
+-            ":ahwb_gpu_releaser",
+             ":hardware_buffer",
+             ":hardware_buffer_pool",
+             ":tensor_ahwb_usage",
+diff --git a/mediapipe/framework/port.h b/mediapipe/framework/port.h
+index 2018b8313..238aca61f 100644
+--- a/mediapipe/framework/port.h
++++ b/mediapipe/framework/port.h
+@@ -130,7 +130,6 @@
+ // 2. Android vendor processes linked against nativewindow.
+ #if !defined(MEDIAPIPE_NO_JNI) || defined(MEDIAPIPE_ANDROID_LINK_NATIVE_WINDOW)
+ #if __ANDROID_API__ >= 26 || defined(__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__)
+-#define MEDIAPIPE_TENSOR_USE_AHWB 1
+ #endif  // __ANDROID_API__ >= 26 ||
+         // defined(__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__)
+ #endif  // !defined(MEDIAPIPE_NO_JNI) ||
+diff --git a/mediapipe/tasks/cc/genai/inference/c/BUILD b/mediapipe/tasks/cc/genai/inference/c/BUILD
+index 910fb7cbd..667c0892c 100644
+--- a/mediapipe/tasks/cc/genai/inference/c/BUILD
++++ b/mediapipe/tasks/cc/genai/inference/c/BUILD
+@@ -21,21 +21,26 @@ package(default_visibility = [
+
+ cc_library(
+     name = "llm_inference_engine_hdr",
+-    hdrs = ["llm_inference_engine.h"],
+-)
++    hdrs = ["llm_inference_engine.h"] + select({
++        "@org_tensorflow//tensorflow:ios": ["llm_inference_engine_ios.h"],
++        "//conditions:default": [],
++    })
++    )
+ 
+-cc_library(
+-    name = "libllm_inference_engine_cpu",
++cc_binary(
++    name = "libllm_inference_engine_cpu.so",
+     srcs = ["llm_inference_engine_cpu.cc"] + select({
+         "@org_tensorflow//tensorflow:ios": ["llm_inference_engine_ios.cc"],
+         "//conditions:default": [],
+     }),
+-    hdrs = ["llm_inference_engine.h"] + select({
+-        "@org_tensorflow//tensorflow:ios": ["llm_inference_engine_ios.h"],
+-        "//conditions:default": [],
+-    }),
+-    tags = ["swift_module=MediaPipeTasksGenAIC"],
++     linkshared = True,  # Ensures symbols are included
++     linkopts = [
++               "-Wl,--no-as-needed",  # Ensures all symbols are linked
++               "-Wl,--export-dynamic",  # Keeps symbols accessible
++               "-shared",  # Ensure shared library output
++           ],
+     deps = [
++        ":llm_inference_engine_hdr",
+         "//mediapipe/framework/deps:file_path",
+         "//mediapipe/framework/port:file_helpers",
+         "//mediapipe/framework/port:ret_check",
+diff --git a/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine.h b/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine.h
+index 1b2aa5f9e..a243432ab 100644
+--- a/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine.h
++++ b/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine.h
+@@ -336,6 +336,15 @@ ODML_EXPORT int LlmInferenceEngine_Session_AddAudio(
+     LlmInferenceEngine_Engine* engine, LlmInferenceEngine_Session* session,
+     const char* audio_bytes, int audio_bytes_size, char** error_msg);
+ 
++// Get EncoderRate in tokens/second
++ODML_EXPORT double LlmInferenceEngine_Session_EncoderRate(LlmInferenceEngine_Session* session);
++
++// Get DecoderRate in tokens/second
++ODML_EXPORT double LlmInferenceEngine_Session_DecoderRate(LlmInferenceEngine_Session* session);
++
++//Reset Timings to fresh Conversations
++ODML_EXPORT void LlmInferenceEngine_Session_ResetTimings(LlmInferenceEngine_Session* session);
++
+ #ifdef __cplusplus
+ }  // extern C
+ #endif
+diff --git a/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine_cpu.cc b/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine_cpu.cc
+index 8dbd0a30c..de518404d 100644
+--- a/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine_cpu.cc
++++ b/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine_cpu.cc
+@@ -26,7 +26,8 @@
+ #include <utility>
+ #include <variant>
+ #include <vector>
+-
++#include <chrono>
++#include <limits>
+ #include "absl/container/flat_hash_map.h"
+ #include "absl/container/flat_hash_set.h"
+ #include "absl/log/absl_check.h"
+@@ -70,6 +71,36 @@ using ::mediapipe::tasks::genai::llm_utils::ScopedFile;
+ 
+ constexpr int kCheckLastKChars = 10;
+ 
++class Timer {
++public:
++    Timer() : running(false) {}
++
++    void start() {
++        start_time = std::chrono::high_resolution_clock::now();
++        running = true;
++    }
++
++    void stop() {
++        end_time = std::chrono::high_resolution_clock::now();
++        running = false;
++    }
++
++    double interval() {
++        std::chrono::time_point<std::chrono::high_resolution_clock> end_time_check;
++        if (running) {
++            end_time_check = std::chrono::high_resolution_clock::now();
++        } else {
++            end_time_check = end_time;
++        }
++        return std::chrono::duration<double>(end_time_check - start_time).count();
++    }
++
++private:
++    std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
++    std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
++    bool running;
++};
++
+ struct TfLiteLlm {
+   std::unique_ptr<tflite::Interpreter> interpreter;
+   std::unique_ptr<mediapipe::tasks::core::ModelAssetBundleResources> resources;
+@@ -105,6 +136,10 @@ struct LlmInferenceEngineCpu_Session {
+   std::function<void(std::string)> cpu_callback;
+   bool early_stop;
+   pthread_t work_id;
++  Timer encoder_timer;
++  Timer decoder_timer;
++  int encoder_counter;
++  int decoder_counter;
+   int next_token_id;
+   ~LlmInferenceEngineCpu_Session() { pthread_join(work_id, nullptr); };
+ };
+@@ -271,7 +306,11 @@ void* start_llm_function(void* args) {
+       (struct LlmInferenceEngineCpu_Session*)args;
+ 
+   std::vector<int> prompt_ids = {};
+-
++  // reset the counter
++  cpu_session->encoder_counter = 0;
++  cpu_session->decoder_counter = 0;
++  // start encoder timer
++  cpu_session->encoder_timer.start();
+   std::string prompt;
+   if (cpu_session->engine->bytes_to_unicode_mapper != nullptr) {
+     prompt = MapBytesToUnicode(cpu_session->prompt,
+@@ -286,7 +325,7 @@ void* start_llm_function(void* args) {
+     ABSL_LOG(FATAL) << "Failed to encode input: " << status;
+   }
+   prompt_ids.insert(prompt_ids.begin(), cpu_session->engine->start_token_id);
+-
++  cpu_session->encoder_counter = prompt_ids.size();
+   if (std::holds_alternative<mediapipe::tasks::genai::xnn_utils::Llm*>(
+           cpu_session->engine->llm)) {
+     auto llm = std::get<mediapipe::tasks::genai::xnn_utils::Llm*>(
+@@ -314,7 +353,11 @@ void* start_llm_function(void* args) {
+ 
+   cpu_session->timestep = prompt_ids.size();
+ 
++  cpu_session->encoder_timer.stop();
++  cpu_session->decoder_timer.start();
+   next_token_function(args);
++  cpu_session->decoder_timer.stop();
++  cpu_session->decoder_counter = cpu_session->timestep - cpu_session->encoder_counter;
+ 
+   return nullptr;
+ }
+@@ -686,14 +729,19 @@ int LlmInferenceEngine_Session_PredictAsync(
+   cpu_session->work_id = work_id;
+   pthread_create(&cpu_session->work_id, nullptr, start_llm_function,
+                  cpu_session);
+-
+   return 0;
+ }
+ 
+ int LlmInferenceEngine_Session_PendingProcessCancellation(
+     LlmInferenceEngine_Session* session, char** error_msg) {
+-  *error_msg = strdup("Not implemented");
+-  return 12;
++  if (session == nullptr) {
++    *error_msg = strdup("Session is null.");
++    return static_cast<int>(absl::StatusCode::kInvalidArgument);
++  }
++  auto cpu_session = reinterpret_cast<LlmInferenceEngineCpu_Session*>(session);
++  cpu_session->early_stop = true;
++  pthread_join(cpu_session->work_id, nullptr);
++  return 0;
+ }
+ 
+ int LlmInferenceEngine_Session_Clone(
+@@ -716,6 +764,28 @@ int LlmInferenceEngine_Session_SizeInTokens(LlmInferenceEngine_Session* session,
+   return output_ids.size();
+ }
+ 
++double LlmInferenceEngine_Session_EncoderRate(LlmInferenceEngine_Session* session) {
++    auto cpu_session = reinterpret_cast<LlmInferenceEngineCpu_Session*>(session);
++  if (cpu_session->encoder_timer.interval()>std::numeric_limits<double>::denorm_min())
++    return cpu_session->encoder_counter / cpu_session->encoder_timer.interval();
++  else
++    return 0.0f;
++}
++
++double LlmInferenceEngine_Session_DecoderRate(LlmInferenceEngine_Session* session) {
++    auto cpu_session = reinterpret_cast<LlmInferenceEngineCpu_Session*>(session);
++    if (cpu_session->decoder_timer.interval()>std::numeric_limits<double>::denorm_min())
++        return cpu_session->decoder_counter / cpu_session->decoder_timer.interval();
++    else
++        return 0.0f;
++}
++
++void LlmInferenceEngine_Session_ResetTimings(LlmInferenceEngine_Session* session) {
++    auto cpu_session = reinterpret_cast<LlmInferenceEngineCpu_Session*>(session);
++    cpu_session->decoder_counter = 0;
++    cpu_session->encoder_counter = 0;
++}
++
+ int LlmInferenceEngine_UpdateRuntimeConfig(LlmInferenceEngine_Session* session,
+                                            const SessionRuntimeConfig* config,
+                                            char** error_msg) {
