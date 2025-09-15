@@ -165,17 +165,18 @@ void LLM::LLMImpl::FreeModel()
         this->m_llmModelPtr = nullptr;
         LOG_INF("Freed Model\n");
     }
-
+    this->ResetContext();
     this->m_llmInitialized = false;
 }
 
 void LLM::LLMImpl::LlmInit(const LlmConfig& config)
 {
     try {
-        this->m_batchSz = config.GetBatchSize();
-        this->m_numOfThreads = config.GetNumThreads();
-        this->m_modelPath = config.GetModelPath().c_str();
-        this->m_llmPrefix = config.GetLlmPrefix();
+        this->m_config = config;
+        this->m_batchSz = this->m_config.GetBatchSize();
+        this->m_numOfThreads = this->m_config.GetNumThreads();
+        this->m_modelPath = this->m_config.GetModelPath().c_str();
+        this->m_llmPrefix = this->m_config.GetLlmPrefix();
 
         InitConfigs();
 
@@ -234,8 +235,14 @@ void LLM::LLMImpl::ResetContext()
     LOG_INF("Reset Context\n");
 }
 
-void LLM::LLMImpl::Encode(std::string& prompt)
+std::string LLM::LLMImpl::QueryBuilder(EncodePayload& payload)
 {
+    return this->m_config.GetUserTag() + payload.textPrompt + this->m_config.GetEndTag() + this->m_config.GetModelTag();
+}
+
+void LLM::LLMImpl::Encode(EncodePayload& payload)
+{
+    std::string prompt = payload.textPrompt;
     if (this->m_ctxResetted) {
         prompt = this->m_llmPrefix + prompt;
         this->m_ctxResetted = false;

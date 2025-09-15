@@ -18,7 +18,8 @@
     "Consider the following scenario:\\n"
   ],
   "llmModelName": "llama.cpp/model.gguf",
+  "inputModalities" : ["text"],
+  "outputModalities" : ["text"],
   "batchSize" : 256,
   "numThreads" : 4
 }
-

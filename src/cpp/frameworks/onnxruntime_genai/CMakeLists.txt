@@ -59,6 +59,7 @@ FetchContent_Declare(
     GIT_TAG        ${ONNXRUNTIME_GIT_TAG}
     SOURCE_DIR     ${ONNXRUNTIME_SRC_DIR}
     GIT_SHALLOW    1
+    EXCLUDE_FROM_ALL
 )
 
 FetchContent_MakeAvailable(onnxruntime)
@@ -131,7 +132,7 @@ set(ENABLE_JAVA            OFF)
 set(ENABLE_TESTS           OFF)
 
 # model-benchmark standalone application
-set(ENABLE_MODEL_BENCHMARK ${BUILD_EXECUTABLE} CACHE BOOL  "Enable model benchmark binary")
+set(ENABLE_MODEL_BENCHMARK ${BUILD_BENCHMARK} CACHE BOOL  "Enable model benchmark binary")
 
 # Fetch the dependency Git repo here
 FetchContent_Declare(onnxruntime-genai
@@ -153,7 +154,7 @@ elseif (NOT TARGET arm-llm-interface)
 endif()
 
 add_library(arm-llm-framework STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/OnnxrtImpl.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/OnnxrtImpl.cpp LlmFactory.cpp)
 
 target_include_directories(arm-llm-framework PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -166,7 +167,7 @@ target_link_libraries(arm-llm-framework PUBLIC
     arm-llm-config
     arm-llm-interface)
 
-if(ENABLE_MODEL_BENCHMARK)
+if(BUILD_BENCHMARK)
     target_include_directories(model_benchmark PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${ONNXRT_GENAI_SRC_DIR}/src)

@@ -96,7 +96,8 @@ void LLM::LLMImpl::LoadSession()
 void LLM::LLMImpl::LlmInit(const LlmConfig& config)
 {
     try {
-        const std::string modelPath = config.GetModelPath();
+        this->m_config = config;
+        const std::string modelPath = this->m_config.GetModelPath();
         const std::string cache_dir = GetCacheDir();
 
         std::filesystem::create_directories(cache_dir);
@@ -111,7 +112,7 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config)
             throw std::runtime_error("Mediapipe Session creation failed");
         }
 
-        this->m_llmPrefix           = config.GetLlmPrefix();
+        this->m_llmPrefix           = this->m_config.GetLlmPrefix();
         this->m_conversationContext = "";
         this->m_llmInitialized      = true;
         this->m_callbackContext.m_nCur = 0;
@@ -120,10 +121,10 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config)
     }
 }
 
-void LLM::LLMImpl::Encode(std::string& query)
+void LLM::LLMImpl::Encode(EncodePayload& prompt)
 {
     this->m_callbackContext.m_done = false;
-    std::string _query = this->m_conversationContext + query;
+    std::string _query = this->m_conversationContext + prompt.textPrompt;
     this->m_errorCode  = LlmInferenceEngine_Session_AddQueryChunk(
         this->m_llmEngineSession, _query.c_str(), &this->m_errorMsg);
     if (this->m_errorCode) {
@@ -195,6 +196,12 @@ const char* LLM::LLMImpl::SystemInfo()
 void LLM::LLMImpl::KVCacheClear()
 {
     this->m_conversationContext.clear();
+}
+
+std::string LLM::LLMImpl::QueryBuilder(EncodePayload& payload)
+{
+    const std::string prefix = payload.isFirstMessage ? this->m_config.GetLlmPrefix() : "";
+    return prefix + this->m_config.GetUserTag() + payload.textPrompt + this->m_config.GetEndTag() + this->m_config.GetModelTag();
 }
 
 int32_t LLM::LLMImpl::GetInitialPromptLength(const char* text)

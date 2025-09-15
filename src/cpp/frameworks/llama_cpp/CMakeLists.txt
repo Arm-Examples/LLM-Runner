@@ -29,8 +29,7 @@ set(LLAMA_GIT_SHA "b6218"
         CACHE STRING
         "Git commit SHA for llama.cpp repo")
 
-set(LLAMA_BUILD_EXAMPLES ${BUILD_EXECUTABLE} CACHE BOOL "Build llama.cpp examples")
-set(LLAMA_BUILD_TOOLS    ${BUILD_EXECUTABLE} CACHE BOOL "Build llama.cpp tools")
+set(LLAMA_BUILD_TOOLS    ON)
 set(LLAMA_CURL           OFF CACHE BOOL "llama: use libcurl to download model from an URL")
 
 # KleidiAI configuration
@@ -48,9 +47,15 @@ FetchContent_Declare(llama-cpp
     GIT_REPOSITORY ${LLAMA_GIT_URL}
     GIT_TAG ${LLAMA_GIT_SHA}
     GIT_SHALLOW ${GGML_BUILD_NUMBER}
-    SOURCE_DIR ${LLAMA_SRC_DIR})
+    SOURCE_DIR ${LLAMA_SRC_DIR}
+    EXCLUDE_FROM_ALL)
 
 FetchContent_MakeAvailable(llama-cpp)
+
+# Build llama-bench binary
+if(BUILD_BENCHMARK)
+    set_target_properties(llama-bench PROPERTIES EXCLUDE_FROM_ALL OFF)
+endif()
 
 # Check internally defined dependency targets are visible
 if (NOT TARGET arm-llm-config)
@@ -60,13 +65,14 @@ elseif (NOT TARGET arm-llm-interface)
 endif()
 
 add_library(arm-llm-framework STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/LlamaImpl.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/LlamaTextImpl.cpp LlamaVisionImpl.cpp LlmFactory.cpp)
 
 target_include_directories(arm-llm-framework PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR})
 
 # List all libraries that we need to depend on here:
 target_link_libraries(arm-llm-framework PUBLIC
+    mtmd
     llama
     common
     arm-llm-config

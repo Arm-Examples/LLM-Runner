@@ -16,13 +16,21 @@
 class LlmConfig {
 private:
     std::string m_modelTag{};
+    std::string m_mediaTag{};
     std::string m_userTag{};
     std::string m_endTag{};
     std::string m_modelPath{};
+    std::string m_mmProjModelPath{};
     std::string m_llmPrefix{};
+    std::vector<std::string> m_inputModalities;
+    std::vector<std::string> m_outputModalities;
+    std::string m_framework;
     std::vector<std::string> m_stopWords;
     int m_numThreads{};
     int m_batchSize{};
+
+    template <typename Container, typename T>
+    bool Contains(const Container& container, const T& value);
 
 public:
     /**
@@ -52,11 +60,27 @@ public:
     std::string GetModelTag() const;
 
     /**
+     * Returns the media tag string.
+     * @return modelTag
+     */
+    std::string GetMediaTag() const;
+
+    /**
+     * Returns the path to the projection model file.
+     * @return modelPath
+     */
+    std::string GetMMPROJModelPath() const;
+
+    /**
      * Returns the path to the model file.
      * @return modelPath
      */
     std::string GetModelPath() const;
 
+    /**
+     * Returns the path to the projection model file.
+     * @return modelPath
+     */
     /**
      * Returns the LLM prompt prefix string.
      * @return llmPrefix
@@ -80,6 +104,20 @@ public:
      * @return  vector of stop words (strings)
      */
     std::vector<std::string> GetStopWords() const;
+
+    /**
+     * Get the supported input modalities for the LLM framework.
+     *
+     * @return A vector of input modality names (e.g., "text", "image").
+     */
+    std::vector<std::string> GetInputModalities() const;
+
+    /**
+     * Get the supported output modalities for the LLM framework.
+     *
+     * @return A vector of output modality names (e.g., "text").
+     */
+    std::vector<std::string> GetOutputModalities() const;
 
     /**
      * Sets the model tag (The name to appear in conversation with the LLM).
@@ -109,6 +147,19 @@ public:
     void SetModelPath(const std::string& basePath);
 
     /**
+     * Sets the file path to the model.
+     * @param basePath absolute path to load llm projection model
+     */
+    void SetMMPROJModelPath(const std::string& basePath);
+
+    /**
+     * Sets the framework backend to be used by the LLM.
+     *
+     * @param framework Name of the framework (e.g., "llama.cpp", "onnxruntime-genai").
+     */
+    void SetFramework(const std::string& framework);
+
+    /**
      * Method sets the prompt prefix used for LLM inputs.
      * @param llmInitialPrompt LLM's need to prompt engineered to respond intelligently.
      * Provide an engineered initial-prompt here.
@@ -134,6 +185,20 @@ public:
     void SetStopWords(const std::vector<std::string>& stopWords);
 
     /**
+     * Sets the supported input modalities for the LLM framework.
+     *
+     * @param inputModalities Vector of input modality names (e.g., "text", "image").
+     */
+    void SetInputModalities(const std::vector<std::string>& inputModalities);
+
+    /**
+     * Sets the supported output modalities for the LLM framework.
+     *
+     * @param outputModalities Vector of output modality names (e.g., "text").
+     */
+    void SetOutputModalities(const std::vector<std::string>& outputModalities);
+
+    /**
     * Clears all the stop words
     */
     void ClearStopWords();
@@ -143,6 +208,20 @@ public:
      * @param stopWord stop word to be added to the existing list of stop-words
      */
     void AddStopWord(const std::string& stopWord);
+
+    /**
+     * Method to append an input modality to existing list.
+     * @param inputModality the new modality to add to the list
+     */
+    void AddInputModality(const std::string& inputModality);
+
+    /**
+    * Method to append an output modality to existing list.
+    * @param outputModality the new modality to add to the list
+    */
+    void AddOutputModality(const std::string& outputModality);
+
+
 };
 
 #endif /* LLM_CONFIG_HPP */

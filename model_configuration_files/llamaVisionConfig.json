@@ -1,0 +1,31 @@
+{
+  "modelTag": "<|im_start|>assistant\n",
+  "userTag": "<|im_start|>user\n",
+  "endTag" : "<|im_end|>\n",
+  "mediaTag" : "<__media__>",
+  "llmPrefix": "<|im_start|>system\nYou are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of four sentences.\n<|im_end|>\n",
+  "stopWords": [
+    "Orbita:",
+    "User:",
+    "AI:",
+    "<|user|>",
+    "Assistant:",
+    "user:",
+    "[end of text]",
+    "<|endoftext|>",
+    "<end_of_utterance>",
+    "model:",
+    "Question:",
+    "<|end|>",
+    "<|im_end|>",
+    "\n\n",
+    "Consider the following scenario:\n"
+  ],
+  "llmModelName": "llama.cpp/mmModel.gguf",
+  "llmMmProjModelName": "llama.cpp/mmproj.gguf",
+  "inputModalities" : ["text", "image"],
+  "outputModalities" : ["text"],
+  "numThreads": 5,
+  "maxInputImageDim": 128,
+  "batchSize" : 256
+}

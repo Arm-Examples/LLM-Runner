@@ -20,6 +20,8 @@
     "Consider the following scenario:\\n"
   ],
   "llmModelName": "onnxruntime-genai",
+  "inputModalities" : ["text"],
+  "outputModalities" : ["text"],
   "batchSize" : 1,
   "numThreads" : 4
 }

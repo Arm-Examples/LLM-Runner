@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-#include "LlmImpl.hpp"
+#include "LlamaTextImpl.hpp"
 
 #define LOG_INF(...)                  \
     do {                              \
@@ -23,12 +23,16 @@ LLM::LLMImpl::~LLMImpl()
     this->FreeLlm();
 }
 
-void LLM::LLMImpl::LoadModel(const char* pathToModel)
+void LLM::LLMImpl::LoadModel()
 {
     const llama_model_params model_params = llama_model_default_params();
-    this->m_llmModel                = llama_model_load_from_file(pathToModel, model_params);
+    const std::string& modelPath = this->m_config.GetModelPath();
+    if (modelPath.empty()) {
+        throw std::runtime_error("Model path supplied in config is empty");
+    }
+    this->m_llmModel                = llama_model_load_from_file(modelPath.c_str(), model_params);
     if (this->m_llmModel == nullptr) {
-        throw std::runtime_error("error: unable to load model from " + std::string(pathToModel));
+        throw std::runtime_error("error: unable to load model from " + std::string(modelPath.c_str()));
     }
 }
 
@@ -40,12 +44,12 @@ void LLM::LLMImpl::FreeModel()
     }
 }
 
-void LLM::LLMImpl::NewContext(int numThreads)
+void LLM::LLMImpl::NewContext()
 {
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx                = this->m_nCtx;
-    ctx_params.n_threads            = numThreads;
-    ctx_params.n_threads_batch      = numThreads;
+    ctx_params.n_threads            = this->m_config.GetNumThreads();
+    ctx_params.n_threads_batch      = this->m_config.GetNumThreads();
     ctx_params.no_perf              = false;
     this->m_llmContext              = llama_init_from_model(this->m_llmModel, ctx_params);
     if (this->m_llmContext == nullptr) {
@@ -64,15 +68,16 @@ void LLM::LLMImpl::FreeContext()
 void LLM::LLMImpl::LlmInit(const LlmConfig& config)
 {
     try {
-        this->m_batchSz = config.GetBatchSize();
+        this->m_config = config;
+        this->m_batchSz = this->m_config.GetBatchSize();
 
-        LoadModel(config.GetModelPath().c_str());
+        LoadModel();
         BackendInit();
 
-        this->m_llmPrefix = config.GetLlmPrefix();
+        this->m_llmPrefix = this->m_config.GetLlmPrefix();
 
         if (this->m_llmModel != nullptr) {
-            NewContext(config.GetNumThreads());
+            NewContext();
         }
         NewSampler();
         this->m_llmInitialized = true;
@@ -161,8 +166,7 @@ void LLM::LLMImpl::ResetContext()
 {
     if (!this->m_llmPrefix.empty()) {
         auto n_prefix = GetInitialPromptLength(
-            this->m_llmPrefix.c_str(), this->m_llmPrefix.length(), true, false);
-
+                this->m_llmPrefix.c_str(), this->m_llmPrefix.length(), false, true);
         KVCacheSeqRm(n_prefix, -1);
         this->m_nCur = n_prefix;
     } else {
@@ -184,9 +188,9 @@ void LLM::LLMImpl::NewSampler()
     llama_sampler_chain_add(this->m_pLlmSampler, llama_sampler_init_greedy());
 }
 
-void LLM::LLMImpl::Encode(std::string& prompt)
+void LLM::LLMImpl::Encode(const EncodePayload& payload)
 {
-    const auto prompt_tokens = common_tokenize(this->m_llmContext, prompt, 1);
+    const auto prompt_tokens = common_tokenize(this->m_llmContext, payload.textPrompt, 1);
 
     size_t promptLength = prompt_tokens.size();
 
@@ -238,7 +242,7 @@ void LLM::LLMImpl::CompletionInit(llama_tokens sub_tokens_list, bool lastBatch)
 std::string LLM::LLMImpl::CompletionLoop()
 {
     const auto model =
-        llama_get_model(this->m_llmContext); // CHANGE FROM JOBJECT TO PASSING ACTUAL CONTEXT
+            llama_get_model(this->m_llmContext); // CHANGE FROM JOBJECT TO PASSING ACTUAL CONTEXT
 
     const llama_vocab* vocab = llama_model_get_vocab(model);
 
@@ -290,6 +294,12 @@ size_t LLM::LLMImpl::GetChatProgress() const
 std::string LLM::LLMImpl::GetFrameworkType()
 {
     return this->m_frameworkType;
+}
+
+std::string LLM::LLMImpl::QueryBuilder(EncodePayload& payload)
+{
+    const std::string prefix = payload.isFirstMessage ? this->m_config.GetLlmPrefix() : "";
+    return prefix + this->m_config.GetUserTag() + payload.textPrompt + this->m_config.GetEndTag() + this->m_config.GetModelTag();
 }
 
 std::string LLM::LLMImpl::BenchModel(int& prompts, int& eval_prompts, int& n_max_sq, int& n_rep)
@@ -365,8 +375,8 @@ std::string LLM::LLMImpl::BenchModel(int& prompts, int& eval_prompts, int& n_max
         prompts_std = sqrt(prompts_std / static_cast<double>(n_rep - 1) -
                            prompts_avg * prompts_avg * static_cast<double>(n_rep) / static_cast<double>(n_rep - 1));
         eval_prompts_std =
-            sqrt(eval_prompts_std / static_cast<double>(n_rep - 1) -
-                 eval_prompts_avg * eval_prompts_avg * static_cast<double>(n_rep) / static_cast<double>(n_rep - 1));
+                sqrt(eval_prompts_std / static_cast<double>(n_rep - 1) -
+                     eval_prompts_avg * eval_prompts_avg * static_cast<double>(n_rep) / static_cast<double>(n_rep - 1));
     } else {
         prompts_std      = 0;
         eval_prompts_std = 0;

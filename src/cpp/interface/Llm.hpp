@@ -4,134 +4,160 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#ifndef ARM_LLM_HPP
-#define ARM_LLM_HPP
-
-
+#pragma once
 #include "LlmConfig.hpp"
-#include <memory>
+
 #include <atomic>
+#include <memory>
+#include <string>
+#include <vector>
 
 /**
  * @class LLM
- * @brief Interface class for interacting with a Large Language Model.
+ * @brief Public interface for interacting with a Large Language Model (LLM).
+ *
+ * Thin wrapper that delegates to a concrete LLM implementation.
  */
 class LLM {
-
 public:
 
     /**
-     * The token used to signify the end of a response or generation.
+     * @struct EncodePayload
+     * @brief Input payload for encoding a prompt.
+     *
+     * Encapsulates the parameters required when sending a prompt
+     * (text, optional image, and conversation metadata) to the model.
      */
-    const std::string endToken{"<eos>"};
+    struct EncodePayload {
+        std::string textPrompt;     ///< Text query to encode
+        std::string imagePath;      ///< Path to image (optional, leave empty if none)
+        bool isFirstMessage{false}; ///< Whether this is the first conversation message
+    };
 
-private:
-    LlmConfig m_config;
-    class LLMImpl;
-    std::unique_ptr<LLMImpl> m_impl{};
-    std::atomic<bool> m_evaluatedOnce{false};
-    std::string m_streamEndFlag;
-    std::string m_tokenBuffer;
-    int m_maxStopWordLength{};
-    bool m_stopFlag{};
 
-public:
-    LLM();  /**< Constructor */
-    ~LLM(); /**< Destructor */
+    class LLMImpl; // Forward declaration for PImpl
 
     /**
-     * Method to Initialize a llama_model
-     * @param llmConfig Configuration class with model's parameter and user defined parameters
+     * @brief Construct an LLM instance with the given configuration.
+     * @param llmConfig Configuration object specifying backend, model, and runtime options.
      */
-    void LlmInit(const LlmConfig& llmConfig);
+    explicit LLM(const LlmConfig &llmConfig);
+    ~LLM() noexcept;
 
     /**
-     * Method to Free Model
+     * @brief Deleted copy constructor.
      */
+    LLM(const LLM&) = delete;
+
+    /**
+     * @brief Deleted copy assignment operator.
+     */
+    LLM& operator=(const LLM&) = delete;
+
+    /**
+     * @brief Move constructor.
+     */
+    LLM(LLM&&) noexcept = default;
+
+    /**
+     * @brief Move assignment operator.
+     * @return Reference to this instance.
+     */
+    LLM& operator=(LLM&&) noexcept = default;
+
+    /** Token that signifies the end of a response/generation. */
+    inline static constexpr const char *endToken = "<eos>";
+
+    /**
+     * Initialize the underlying model.
+     * @param llmConfig Model and user parameters.
+     */
+    void LlmInit(const LlmConfig &llmConfig);
+
+    /** Free model resources. */
     void FreeLlm();
 
-    /**
-     * Function to retrieve the llm encode timings
-     * @return encode timings
-     */
-    float GetEncodeTimings();
+    /** @return Encode timings in milliseconds. */
+    [[nodiscard]] float GetEncodeTimings() const;
 
-    /**
-     * Function to retrieve the llm decode timings
-     * @return decode timings
-     */
-    float GetDecodeTimings();
+    /** @return Decode timings in milliseconds. */
+    [[nodiscard]] float GetDecodeTimings() const;
 
-    /**
-     * Function to reset the llm timings
-     */
+    /** Reset accumulated timings. */
     void ResetTimings();
 
-    /**
-     * Function to print the system info
-     * @return System info as a char pointer
-     */
-    std::string SystemInfo();
+    /** @return System information string. */
+    [[nodiscard]] std::string SystemInfo() const;
 
     /**
-     * Method to reset Conversation history and preserve Model's character prefix.
-     * If model's prefix is not defined all conversation history would be cleared
+     * Reset conversation history while preserving any model character prefix
+     * if defined; otherwise clears the entire history.
      */
     void ResetContext();
 
     /**
-     * Function to Encode Query into the llm. Use NextToken to get subsequent tokens.
-     * @param text THe query to be encoded
+     * Encode a text query into the model. Call NextToken() to retrieve tokens.
+     * @param payload The input payload containing text and optional image data.
      */
-    void Encode(std::string text);
+    void Encode(EncodePayload& payload);
 
     /**
-     * Function to get response from llm as token by token. Call Encode before
-     * @return result single token
+     * Retrieve the next token from the model after Encode().
+     * @return A single token (possibly empty if generation has finished).
      */
-    std::string NextToken();
+    [[nodiscard]] std::string NextToken();
 
     /**
-     * Function to get percentage of Context capacity filled in model's cache
-     * @return percentage of context filled
+     * @return Percentage of context capacity used in the model cache.
      */
-    size_t GetChatProgress();
+    [[nodiscard]] std::size_t GetChatProgress() const;
 
     /**
-     * Function to bench the underlying llm backend
-     * @param nPrompts prompt length used for benchmarking
-     * @param nEvalPrompts number of generated tokens for benchmarking
-     * @param nMaxSeq sequence number
-     * @param nRep number of repetitions
-     * @return the results of benchmarking in string format for prompt generation and evaluation
+     * Benchmark the underlying backend.
+     * @param nPrompts      Prompt length used for benchmarking.
+     * @param nEvalPrompts  Number of generated tokens for benchmarking.
+     * @param nMaxSeq       Maximum sequence length.
+     * @param nRep          Number of repetitions.
+     * @return Text report of prompt generation and evaluation results.
      */
 
-    std::string BenchModel(int& nPrompts, int& nEvalPrompts, int& nMaxSeq, int& nRep);
+    [[nodiscard]] std::string BenchModel(int &nPrompts, int &nEvalPrompts, int &nMaxSeq, int &nRep);
+
+    /** @return Framework type string (e.g., backend name). */
+    [[nodiscard]] std::string GetFrameworkType() const;
 
     /**
-     * Method to get framework type
-     * @return string framework type
+     * Format a prompt into a style the model understands for conversation.
+     * @param prompt Raw prompt string (modified in-place).
+     * @return Formatted query.
      */
-    std::string GetFrameworkType();
+    [[nodiscard]] std::string QueryBuilder(EncodePayload& prompt) const;
 
+    /**
+     * @return Vector of supported input modalities for the active implementation.
+     */
+    [[nodiscard]] std::vector<std::string> SupportedInputModalities() const;
+    
     /**
     * Method to Cancel generation of response tokens. Can be used to stop response once query commences
-    */
+    */    
     void StopGeneration();
+
+protected:
+    std::unique_ptr<LLMImpl> m_impl{};                  /**< Implementation pointer. */
 
 private:
     /**
-    * Method to format prompt into a style model understands conversation
-    * @param prompt raw prompt string
-    * @return formatted query
-    */
-    std::string QueryBuilder(std::string &prompt);
-    /**
-     * Method to detect stop words in internal token buffer and emit correct output
-     * @return token string up to stop word, end token, or partial output
+     * Detect stop words in the internal token buffer and emit correct output.
+     * @return Token string up to a stop word, end token, or partial output.
      */
-    std::string ContainsStopWord();
+    [[nodiscard]] std::string ContainsStopWord();
 
+    LlmConfig m_config{};
+    std::atomic<bool> m_evaluatedOnce{false};
+    std::string m_streamEndFlag{};
+    std::string m_tokenBuffer{};
+    int m_maxStopWordLength{};
+    bool m_stopFlag{false};
+    bool SupportsModality(const std::vector<std::string> &inptMods, std::string modality) const;
 };
-
-#endif /* ARM_LLM_HPP */

@@ -11,6 +11,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assume.assumeTrue;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
 import org.junit.Test;
 import org.junit.BeforeClass;
 
@@ -41,10 +42,15 @@ public class LlmTestJNI {
             String jsonContent = new String(Files.readAllBytes(Paths.get(configFilePath)));
             configJson = new JSONObject(jsonContent);
             configJson.put("llmModelName", modelDir + "/" + configJson.getString("llmModelName"));
+            JSONArray inputModalities = configJson.getJSONArray("inputModalities");
+            if (inputModalities.length() == 2) {
+                configJson.put("llmMmProjModelName", modelDir + "/" + configJson.getString("llmMmProjModelName"));
+            }
         } catch (IOException e) {
             throw new RuntimeException("Failed to load config JSON", e);
         }
     }
+
     @Test
     public void testLlmPrefixSetting() {
 
@@ -61,7 +67,7 @@ public class LlmTestJNI {
         Llm llm = new Llm();
         llm.llmInit(configJson.toString());
         String question = "What is your name?";
-        String response = llm.send(question);
+        String response = llm.send(question, true);
         checkLlmMatch(response, "Ferdia", true);
         llm.freeModel();
         // Revert the configJson to preserve original prefix and modelTag
@@ -76,14 +82,14 @@ public class LlmTestJNI {
         llm.llmInit(configJson.toString());
 
         String question1 = "What is the capital of the country, Morocco?";
-        String response1 = llm.send(question1);
+        String response1 = llm.send(question1, true);
         checkLlmMatch(response1, "Rabat", true);
 
         // Resetting context should cause model to forget what country is being referred to
         llm.resetContext();
 
         String question2 = "What languages do they speak there?";
-        String response2 = llm.send(question2);
+        String response2 = llm.send(question2, true);
         checkLlmMatch(response2, "Arabic", false);
         llm.freeModel();
     }
@@ -94,11 +100,11 @@ public class LlmTestJNI {
         llm.llmInit(configJson.toString());
 
         String question1 = "What is the capital of the country, Morocco?";
-        String response1 = llm.send(question1);
+        String response1 = llm.send(question1, true);
         checkLlmMatch(response1, "Rabat", true);
 
         String question2 = "What languages do they speak there?";
-        String response2 = llm.send(question2);
+        String response2 = llm.send(question2, true);
         checkLlmMatch(response2, "Arabic", true);
         llm.freeModel();
     }
@@ -108,17 +114,17 @@ public class LlmTestJNI {
         llm.llmInit(configJson.toString());
 
         String question1 = "What is the capital of the country, Morocco?";
-        String response1 = llm.send(question1);
+        String response1 = llm.send(question1, true);
         checkLlmMatch(response1, "Rabat", true);
 
         // Send an empty prompt to simulate blank recordings or non-speech tokens being returned by speech recognition;
         // then ask follow-up questions to ensure previous context persists when an empty prompt is injected in the conversation.
-        String emptyResponse = llm.send("");
+        String emptyResponse = llm.send("", true);
 
         checkLlmMatch(emptyResponse, "Rabat", true);
 
         String question2 = "What languages do they speak there?";
-        String response2 = llm.send(question2);
+        String response2 = llm.send(question2, true);
         checkLlmMatch(response2, "Arabic", true);
         llm.freeModel();
     }
@@ -135,7 +141,7 @@ public class LlmTestJNI {
 
         // Set the initial ground truth in the conversation.
         String initialContext = "There are " + originalMangoes + " mangoes in a basket.";
-        String initResponse = llm.send(initialContext);
+        String initResponse = llm.send(initialContext, true);
         String originalQuery = "How many mangoes did we start with?";
         String subtractQuery = "Remove 1 mango from the basket. How many mangoes left in the basket now?";
 
@@ -151,20 +157,20 @@ public class LlmTestJNI {
             }
 
             // Query to subtract one mango
-            String subtractionResponse = llm.send(subtractQuery);
+            String subtractionResponse = llm.send(subtractQuery, true);
             mangoes -= 1;  // Update our expected count
             checkLlmMatch(subtractionResponse, String.valueOf(mangoes), true);
 
             // Test if model still recalls the starting number
             if (i == originalMangoes - 1) {
-                String response = llm.send(originalQuery);
+                String response = llm.send(originalQuery, true);
                 checkLlmMatch(response, String.valueOf(originalMangoes), true);
                 llm.resetContext();
             }
 
         }
 
-        String postResetResponse = llm.send(originalQuery);
+        String postResetResponse = llm.send(originalQuery, true);
 
         checkLlmMatch(postResetResponse, String.valueOf(originalMangoes), false);
         llm.freeModel();
@@ -178,22 +184,22 @@ public class LlmTestJNI {
 
         // First Question
         String question1 = "What is the capital of the country, Morocco?";
-        String response1 = llm.send(question1);
+        String response1 = llm.send(question1, true);
         checkLlmMatch(response1, "Rabat", true);
         // Reset Context before second question
         llm.resetContext();
 
         // Second Question (After Reset)
         String question2 = "What languages do they speak there?";
-        String response2 = llm.send(question2);
+        String response2 = llm.send(question2, true);
         checkLlmMatch(response2, "Arabic", false);
         // Ask First Question Again. Note an additional reset is required to prevent the generic answer
         // from previous question affecting new topic.
         llm.resetContext();
-        String response3 = llm.send(question1);
+        String response3 = llm.send(question1, true);
 
         checkLlmMatch(response3, "Rabat", true);
-        String response4 = llm.send(question2);
+        String response4 = llm.send(question2, true);
 
         checkLlmMatch(response4, "Arabic", true);
         llm.freeModel();

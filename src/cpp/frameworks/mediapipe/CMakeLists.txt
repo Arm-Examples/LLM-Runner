@@ -73,7 +73,7 @@ elseif (NOT TARGET arm-llm-interface)
 endif()
 
 add_library(arm-llm-framework STATIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/MediaPipeImpl.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/MediaPipeImpl.cpp LlmFactory.cpp)
 
 target_include_directories(arm-llm-framework PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR})

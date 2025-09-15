@@ -4,9 +4,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 #include "LlmImpl.hpp"
+#include "LlmFactory.hpp"
+#include <stdexcept>
+#include <algorithm>
 
-LLM::LLM() {
-    this->m_impl = std::make_unique<LLM::LLMImpl>();
+LLM::LLM(const LlmConfig &llmConfig) {
+    LLMFactory factory;
+    this->m_impl = factory.CreateLLMImpl(llmConfig);
+    this->m_config = llmConfig;
 }
 
 LLM::~LLM() {
@@ -42,12 +47,12 @@ void LLM::FreeLlm()
     this->m_maxStopWordLength = 1;
 }
 
-float LLM::GetEncodeTimings()
+float LLM::GetEncodeTimings() const
 {
     return this->m_impl->GetEncodeTimings();
 }
 
-float LLM::GetDecodeTimings()
+float LLM::GetDecodeTimings() const
 {
     return this->m_impl->GetDecodeTimings();
 }
@@ -57,7 +62,7 @@ void LLM::ResetTimings()
     this->m_impl->ResetTimings();
 }
 
-std::string LLM::SystemInfo()
+std::string LLM::SystemInfo() const
 {
     return this->m_impl->SystemInfo();
 }
@@ -67,11 +72,43 @@ void LLM::ResetContext()
     this->m_impl->ResetContext();
 }
 
-void LLM::Encode(std::string text)
-{
-    std::string query = QueryBuilder(text);
-    this->m_impl->Encode(query);
-    this->m_evaluatedOnce.store(true);
+void LLM::Encode(EncodePayload& payload) {
+    if (!m_impl) {
+        throw std::runtime_error("LLM not initialized");
+    }
+    const std::vector<std::string> &inptMods = m_impl->SupportedInputModalities();
+
+    if(payload.textPrompt != "") {
+        bool supportsText = SupportsModality(inptMods, "text");
+        if(!supportsText) {
+            throw std::runtime_error("Error. Attempting to Encode an unsupported Text payload");
+        }
+    }
+    if(payload.imagePath != "") {
+        bool supportsVision = SupportsModality(inptMods, "image");
+        if(!supportsVision) {
+            throw std::runtime_error("Error. Attempting to Encode an unsupported Image payload");
+        }
+    }
+
+    std::string query = QueryBuilder(payload);
+    payload.textPrompt = query;
+    m_impl->Encode(payload);
+}
+
+bool LLM::SupportsModality(const std::vector<std::string> &inptMods, std::string modality) const {
+    auto toLower = [](std::string s) {
+        std::transform(s.begin(), s.end(), s.begin(),
+                       [](unsigned char c){ return std::tolower(c); });
+        return s;
+    };
+
+    bool supportsText = std::any_of(inptMods.begin(),
+                                    inptMods.end(),
+                                    [&](const std::string& s) {
+                                        return toLower(s) == modality;
+                                    });
+    return supportsText;
 }
 
 std::string LLM::NextToken()
@@ -82,7 +119,7 @@ std::string LLM::NextToken()
     return this->ContainsStopWord();
 }
 
-size_t LLM::GetChatProgress()
+size_t LLM::GetChatProgress() const
 {
     return this->m_impl->GetChatProgress();
 }
@@ -92,17 +129,19 @@ std::string LLM::BenchModel(int &nPrompts, int &nEvalPrompts, int &nMaxSeq, int 
     return this->m_impl->BenchModel(nPrompts, nEvalPrompts, nMaxSeq, nRep);
 }
 
-std::string LLM::GetFrameworkType()
+std::string LLM::GetFrameworkType() const
 {
     return this->m_impl->GetFrameworkType();
 }
 
-std::string LLM::QueryBuilder(std::string &prompt)
+std::string LLM::QueryBuilder(EncodePayload& prompt) const
 {
+    return this->m_impl->QueryBuilder(prompt);
+}
 
-    const std::string prefix = this->m_evaluatedOnce.load() ? "" :this->m_config.GetLlmPrefix();
-
-    return prefix + this->m_config.GetUserTag() + prompt + this->m_config.GetEndTag() + this->m_config.GetModelTag();
+std::vector<std::string> LLM::SupportedInputModalities() const
+{
+    return this->m_impl->SupportedInputModalities();
 }
 
 std::string LLM::ContainsStopWord()

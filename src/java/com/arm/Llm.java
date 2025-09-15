@@ -6,52 +6,57 @@
 
 package com.arm;
 
-import java.util.List;
 import java.util.concurrent.Flow;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.io.IOException;
+
 /**
  * Llm class that extends the SubmissionPublisher
  */
-public class Llm extends SubmissionPublisher<String>
-{
-    static
-    {
-        try
-        {
+public class Llm extends SubmissionPublisher<String> {
+
+    private final AtomicBoolean evaluatedOnce = new AtomicBoolean(false);
+    private static String eosToken = "<eos>";
+    private String imagePath = "";
+    private boolean imageUploaded = false;
+     /**
+      * @brief Maximum allowed input image dimension (in pixels).
+      */
+    public int maxInputImageDim = 128;
+
+    static {
+        try {
             System.loadLibrary("arm-llm-jni");
-        } catch (UnsatisfiedLinkError e)
-        {
+        } catch (UnsatisfiedLinkError e) {
             System.err.println("Llama: Failed to load library: arm-llm-jni");
             e.printStackTrace();
         }
     }
 
     /**
-     * Method to create Llm cpp instance from params.
-     * @param ConfigPathStr path to config.json file as a string
-     * @return null
+     * Create LLM native instance from config.
+     *
+     * @param configPathStr Path to config.json file.
      */
-    public native void llmInit(String ConfigPathStr);
+    public native void llmInit(String configPathStr);
 
     /**
-     * Method for freeing LLM model
-     * @param modelPtr to free model
+     * @return Checks if the LLM impl supports Image input.
+     */
+    public native boolean supportsImageInput();
+
+    /**
+     * Free the LLM model (native).
      */
     private native void freeLlm();
 
     /**
-     * Public method for getting encode timing
-     * @return timings in tokens/s for encoding prompt
+     * @return Encoding rate in tokens/s.
      */
     public native float getEncodeRate();
 
     /**
-     * Public method for getting decode timing
-     * @return timings in tokens/s for decoding prompt
+     * @return Decoding rate in tokens/s.
      */
     public native float getDecodeRate();
 
@@ -61,15 +66,17 @@ public class Llm extends SubmissionPublisher<String>
     public native void resetContext();
 
     /**
-     * Method for resetting timing information
+     * Reset timing information (native).
      */
     public native void resetTimings();
 
     /**
-     * Method to encode the given text
-     * @param text     the prompt to be encoded
+     * Method to encode the given text and image
+     * @param text               the prompt to be encoded
+     * @param pathToImage        path to the image to be encoded
+     * @param isFirstMessage     boolean flag to signal if its the first message or not
      */
-    private native void encode(String text);
+    private native void encode(String text, String pathToImage, boolean isFirstMessage);
 
     /**
      * Method to get Next Token once encoding is done.
@@ -79,87 +86,107 @@ public class Llm extends SubmissionPublisher<String>
     private native String getNextToken();
 
     /**
-     * Method to get chat Progress in percentage
-     * @return chat progress as an integer percentage
+     * @return Chat progress as percentage [0–100].
      */
     public native int getChatProgress();
 
     /**
-     * Method to decode answers one by one, once prefill stage is completed
-     * @param nPrompts     prompt length used for benchmarking
-     * @param nEvalPrompts number of generated tokens for benchmarking
-     * @param nMaxSeq      sequence number
-     * @param nRep         number of repetitions
-     * @return string containing results of the benchModel
+     * Benchmark the model.
+     *
+     * @param nPrompts     Prompt length.
+     * @param nEvalPrompts Number of generated tokens.
+     * @param nMaxSeq      Sequence length.
+     * @param nRep         Number of repetitions.
+     * @return Benchmark results string.
      */
-    public native String benchModel(
-            int nPrompts,
-            int nEvalPrompts,
-            int nMaxSeq,
-            int nRep
-    );
+    public native String benchModel(int nPrompts, int nEvalPrompts, int nMaxSeq, int nRep);
 
     /**
-     * Method to get framework type
-     * @return string framework type
+     * @return Framework type as string.
      */
     public native String getFrameworkType();
 
     /**
-     * Method to set subscriber
-     * @param subscriber set from llama
+     * @param subscriber Subscriber for LLM responses.
      */
-    public void setSubscriber(Flow.Subscriber<String> subscriber)
-    {
+    public void setSubscriber(Flow.Subscriber<String> subscriber) {
         this.subscribe(subscriber);
     }
 
     /**
-     * Method to get response of a query asynchronously
-     * @param Query the prompt asked
+     * Send a query asynchronously and stream results via SubmissionPublisher.
+     * @param query  User query.
+     * @param decode Whether to decode tokens as they arrive.
      */
-    public void  sendAsync(String Query)
-    {
-        encode(Query);
-        while (getChatProgress()<100)
-        {
-            String s = getNextToken();
-            if (s.equals("<eos>"))
-            {
-                // needed for showing end of stream, Closing publisher will result in error
-                // for next query
-                this.submit(s);
+    public void sendAsync(String query, boolean decode) {
+        handleEncoding(query);
+        evaluatedOnce.set(true);
+        if (!decode) {
+            return;
+        }
+        while (getChatProgress() < 100) {
+            String token = getNextToken();
+            if (eosToken.equals(token)) {
+                this.submit(token); // signal end-of-stream
                 break;
             }
-            this.submit(s);
+            this.submit(token);
         }
     }
 
     /**
-     * Method to get response of a query synchronously
-     * @param Query the prompt asked
-     * @return response of LLM
+     * Send a query synchronously and return the response string.
+     *
+     * @param query  User query.
+     * @param decode Whether to decode tokens.
+     * @return Response string if decode = true, else empty string.
      */
-    public String send(String Query)
-    {
-        String response = "";
-        encode(Query);
-        while (getChatProgress()<100)
-        {
-            String s = getNextToken();
-            response += s;
-            if (s.equals("<eos>"))
-              break;
+    public String send(String query, boolean decode) {
+        handleEncoding(query);
+        evaluatedOnce.set(true);
+        if (!decode) {
+            return "";
         }
-        return response;
+        StringBuilder response = new StringBuilder();
+        while (getChatProgress() < 100) {
+            String token = getNextToken();
+            response.append(token);
+            if (eosToken.equals(token)) {
+                break;
+            }
+        }
+        return response.toString();
     }
 
     /**
-    * Method to free model from memory
-    */
-    public void freeModel()
-    {
+     * Internal helper for encoding queries depending on image state.
+     *
+     * @param query User query.
+     */
+    private void handleEncoding(String query) {
+        if (!imageUploaded) {
+            encode(query, "", !evaluatedOnce.get());
+        } else {
+            encode(query, imagePath, !evaluatedOnce.get());
+            imageUploaded = false;
+        }
+    }
+
+    /**
+     * Free model from memory and close publisher.
+     */
+    public void freeModel() {
         freeLlm();
         this.close();
+    }
+
+    /**
+     * Set image location for the next message.
+     *
+     * @param imagePath Path to image file.
+     */
+    public void setImageLocation(String imagePath) {
+        this.imagePath = imagePath;
+        this.imageUploaded = true;
     }
 }

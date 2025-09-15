@@ -8,7 +8,23 @@
       "destination": "llama.cpp/model.gguf",
       "url": "https://huggingface.co/ggml-org/models/resolve/main/phi-2/ggml-model-q4_0.gguf?download=true",
       "sha256sum": "fd506d24a4bee6997a566b02b65715af5cadb433c6a3a47a74b467badc5727ca"
+      },
+      {
+        "name": "qwen mmproj model",
+        "purpose": "To enable basic testing",
+        "destination": "llama.cpp/mmproj.gguf",
+        "url": "https://huggingface.co/ggml-org/Qwen2-VL-2B-Instruct-GGUF/resolve/main/mmproj-Qwen2-VL-2B-Instruct-Q8_0.gguf?download=true",
+        "sha256sum": "a0ad91f00a7a80dcf84d719a61b00ee2e07b71794f4ee2dfa81a254621a8c418"
+      },
+
+      {
+        "name": "qwen model",
+        "purpose": "To enable basic testing",
+        "destination": "llama.cpp/mmModel.gguf",
+        "url": "https://huggingface.co/bartowski/Qwen2-VL-2B-Instruct-GGUF/resolve/main/Qwen2-VL-2B-Instruct-Q4_0.gguf?download=true",
+        "sha256sum": "5745685d2e607a82a0696c1118e56a2a1ae0901da450fd9cd4f161c6b62867d7"
       }
+
     ],
     "onnxruntime-genai" :
     [

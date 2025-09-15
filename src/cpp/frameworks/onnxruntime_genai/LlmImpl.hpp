@@ -67,7 +67,7 @@ public:
      * Method to prompt encoding
      * @param prompt Query to LLM
      */
-    void Encode(std::string& prompt);
+    void Encode(EncodePayload& prompt);
 
     /**
      * Method to produce next token
@@ -106,6 +106,19 @@ public:
     std::string GetFrameworkType();
 
     /**
+     * @brief Build and return a query string from the given prompt and configuration.
+     * @param prompt Input payload containing text, optional image, and conversation metadata.
+     * @return The constructed query string to be passed to the model backend.
+     */
+    virtual std::string QueryBuilder(EncodePayload& prompt);
+
+    /**
+     * @brief List supported input modalities.
+     * @return A vector containing {"text", "vision"}.
+     */
+    std::vector<std::string> SupportedInputModalities() const{  return {"text"};}
+
+    /**
     * Method to Cancel generation of response tokens. Can be used to stop response once query commences
     */
     void StopGeneration();
@@ -138,12 +151,12 @@ private:
     std::string m_modelPath{""};
     // Indicates whether the LLM has been initialized.
     bool m_llmInitialized{false};
-    // Number of tokens currently filled in the context window
+    // Proportion of the context window currently filled (as % of total tokens)
     size_t m_contextFilled{0};
     // Prefix text prepended to each generation request.
     std::string m_llmPrefix{""};
     // Flag indicating if the context window has been reset.
-    bool m_ctxResetted = false;
+    bool m_ctxResetted = true;
     // Total number of decoded tokens
     size_t m_totalDecodedTokens = 0;
     // Total number of encoded tokens
@@ -152,6 +165,8 @@ private:
     double m_totalDecoderTime = 0.0;
     // Total time for encoder
     double m_totalEncoderTime = 0.0;
+    // Configuration for model
+    LlmConfig m_config;
 
 
 

@@ -18,6 +18,7 @@
   * [Quick start](#quick-start)
     * [Neural network](#neural-network)
       * [llama cpp model](#llama-cpp-model)
+        * [multimodal](#multimodal)
       * [onnxruntime genai model](#onnxruntime-genai-model)
       * [mediapipe model](#mediapipe-model)
     * [To build for Android](#to-build-for-android)
@@ -64,7 +65,7 @@ provided configuration options. CMake presets are available to use and set the f
 - `LLM_FRAMEWORK`: Currently supports `llama.cpp` (default framework) and `onnxruntime-genai`.
 - `BUILD_JNI_LIB`: Build the JNI shared library that other projects can consume, <b>enabled by default.</b>
 - `BUILD_UNIT_TESTS`: Build C++ unit tests and add them to CTest, JNI tests will also be built, <b>enabled by default.</b>
-- `BUILD_EXECUTABLE`: Build standalone applications, <b>disabled by default.</b>
+- `BUILD_BENCHMARK`: Build benchmark binary, <b>enabled by default.</b>
 
 > **NOTE**: If you need specific version of Java set the path in `JAVA_HOME` environment variable.
 > ```shell
@@ -151,6 +152,25 @@ However, any model supported by the backend library could be used.
 
 > **NOTE**: Currently only Q4_0 models are accelerated by Arm® KleidiAI™ kernels in `llama.cpp`.
 
+##### multimodal
+
+The `llama.cpp` backend **also supports multimodal (image + text)** inference in this project.
+
+**What you need**
+- A compatible **text model** (GGUF).
+- A matching **vision projection (mmproj) file** (GGUF) for your chosen text model
+
+**How to enable**
+Use these fields in your configuration file:
+
+- `llmModelName` — text model (GGUF)
+- `llmMmProjModelName` — vision projection (GGUF) for multimodal
+- `inputModalities` — include `"image"` to enable multimodal
+
+If `"image"` is included in `inputModalities`, a valid `llmMmProjModelName` is required; omitting `"image"` runs the backend in **text-only** mode.
+
+You can find an example of multimodal settings in [`llamaVisionConfig.json`](model_configuration_files/llamaVisionConfig.json).
+
 #### onnxruntime genai model
 
 This project uses the **Phi-4-mini-instruct-onnx** as its default network for `onnxruntime-genai` framework.
@@ -204,7 +224,7 @@ As an example, for a target with `FEAT_DOTPROD` and `FEAT_I8MM` available, the c
 cmake -B build \
     --preset=elinux-aarch64-release-with-tests \
     -DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+i8mm \
-    -DBUILD_EXECUTABLE=ON
+    -DBUILD_BENCHMARK=ON
 
 cmake --build ./build
 ```
@@ -217,7 +237,7 @@ To build for aarch64 Linux system with [Scalable Matrix Extensions](https://deve
 cmake -B build \
     --preset=elinux-aarch64-release-with-tests \
     -DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+i8mm+sve+sme \
-    -DBUILD_EXECUTABLE=ON
+    -DBUILD_BENCHMARK=ON
 
 cmake --build ./build
 ```
@@ -279,9 +299,9 @@ Total Test time (real) =   7.41 sec
 
 Even when cross-compiling, the test binaries can be copied to the target system and executed.
 
-## To build an executable
+## To build an executable benchmark binary
 
-To build a standalone application add the configuration option `-DBUILD_EXECUTABLE=ON` to any of the build
+To build a standalone benchmark binary add the configuration option `-DBUILD_BENCHMARK=ON` to any of the build
 commands above. For example:
 
 On Aarch-64
@@ -290,7 +310,7 @@ cmake -B build \
     --preset=elinux-aarch64-release-with-tests \
     -DCMAKE_C_FLAGS=-march=armv8.2-a+dotprod+i8mm \
     -DCMAKE_CXX_FLAGS=-march=armv8.2-a+dotprod+i8mm \
-    -DBUILD_EXECUTABLE=ON
+    -DBUILD_BENCHMARK=ON
 cmake --build ./build
 
 
@@ -299,7 +319,7 @@ Or on x86 (No Kleidi Acceleration)
 ```shell
 cmake -B build \
     --preset=native-release-with-tests \
-    -DBUILD_EXECUTABLE=ON
+    -DBUILD_BENCHMARK=ON
 cmake --build ./build
 ```
 
