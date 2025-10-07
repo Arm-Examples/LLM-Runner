@@ -4,13 +4,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 #include "LlamaTextImpl.hpp"
+#include "is_utf8.h"
 
 #define LOG_INF(...)                  \
     do {                              \
         fprintf(stdout, __VA_ARGS__); \
     } while (0)
-
-static bool is_valid_utf8(const char* string);
 
 /**
  * @brief LLama Implementation of our LLM API
@@ -255,7 +254,7 @@ std::string LLM::LLMImpl::CompletionLoop()
     auto new_token_chars = common_token_to_piece(this->m_llmContext, new_token_id);
     this->m_cachedTokenChars += new_token_chars;
     std::string new_token = "";
-    if (is_valid_utf8(this->m_cachedTokenChars.c_str())) {
+    if (is_utf8(this->m_cachedTokenChars.c_str(), this->m_cachedTokenChars.size())) {
         new_token = this->m_cachedTokenChars.c_str();
         this->m_cachedTokenChars.clear();
     } else {
@@ -401,53 +400,6 @@ std::string LLM::LLMImpl::BenchModel(int& prompts, int& eval_prompts, int& n_max
            << eval_prompts_std << " |\n";
 
     return result.str().c_str();
-}
-
-/**
- * @brief Checks if a given string is valid UTF-8.
- *
- * This function validates whether the input C-string adheres to the UTF-8 encoding standard.
- * It iterates through each byte of the string, determining the expected length of UTF-8 sequences
- * based on leading byte patterns, and verifies that subsequent bytes match the UTF-8 format.
- *
- * @param string Pointer to a null-terminated C-string to be validated.
- * @return true if the string is valid UTF-8 or if the input is a null pointer; false otherwise.
- */
-static bool is_valid_utf8(const char* string)
-{
-    if (!string) {
-        return true;
-    }
-
-    auto bytes = reinterpret_cast<const unsigned char *>(string);
-    int num;
-
-    while (*bytes != 0x00) {
-        if ((*bytes & 0x80) == 0x00) {
-            // U+0000 to U+007F
-            num = 1;
-        } else if ((*bytes & 0xE0) == 0xC0) {
-            // U+0080 to U+07FF
-            num = 2;
-        } else if ((*bytes & 0xF0) == 0xE0) {
-            // U+0800 to U+FFFF
-            num = 3;
-        } else if ((*bytes & 0xF8) == 0xF0) {
-            // U+10000 to U+10FFFF
-            num = 4;
-        } else {
-            return false;
-        }
-
-        bytes += 1;
-        for (int i = 1; i < num; ++i) {
-            if ((*bytes & 0xC0) != 0x80) {
-                return false;
-            }
-            bytes += 1;
-        }
-    }
-    return true;
 }
 
 void LLM::LLMImpl::StopGeneration()

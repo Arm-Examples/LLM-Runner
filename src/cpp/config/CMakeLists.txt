@@ -17,3 +17,6 @@ target_include_directories(arm-llm-config PUBLIC
 
 include(find_json)
 target_link_libraries(arm-llm-config PUBLIC nlohmann_json::nlohmann_json)
+
+include(find_is_utf8)
+target_link_libraries(arm-llm-config PUBLIC is_utf8::is_utf8)
