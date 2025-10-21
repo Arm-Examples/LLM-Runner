@@ -3,9 +3,16 @@
     "llama.cpp":
     [
       {
+        "name": "Llama-3.2-1B",
+        "purpose": "To enable basic testing",
+        "destination": "llama.cpp/Llama-3.2-1B-Instruct-Q4_0.gguf",
+        "url": "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_0.gguf?download=true",
+        "sha256sum": "fa0390e7c043f89ae1847bd6682d748041a99d4ef3de0e0b27d33b6af97a8be8"
+      },
+      {
       "name": "phi-2 model",
       "purpose": "To enable basic testing",
-      "destination": "llama.cpp/model.gguf",
+      "destination": "llama.cpp/phi2_Q4_model.gguf",
       "url": "https://huggingface.co/ggml-org/models/resolve/main/phi-2/ggml-model-q4_0.gguf?download=true",
       "sha256sum": "fd506d24a4bee6997a566b02b65715af5cadb433c6a3a47a74b467badc5727ca"
       },

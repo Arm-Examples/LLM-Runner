@@ -36,7 +36,7 @@ public:
     * Constructs an LlmConfig object from a parsed JSON configuration.
     * @param jsonStr JSON string containing configuration keys and values.
     */
-    LlmConfig(const std::string &jsonStr);
+    explicit LlmConfig(const std::string &jsonStr);
 
     LlmConfig() =default;
 
@@ -62,51 +62,51 @@ public:
      * Returns the path to the projection model file.
      * @return modelPath
      */
-    std::string GetMMPROJModelPath() const;
+    [[nodiscard]] std::string GetMMPROJModelPath() const;
 
     /**
      * Returns the path to the model file.
      * @return modelPath
      */
-    std::string GetModelPath() const;
+    [[nodiscard]] std::string GetModelPath() const;
 
     /**
      * Returns the LLM system prompt string.
      * @return systemPrompt
      */
-    std::string GetSystemPrompt() const;
+    [[nodiscard]] std::string GetSystemPrompt() const;
 
     /**
      * Returns the number of threads configured for inference.
      * @return number of Threads
      */
-    int GetNumThreads() const;
+    [[nodiscard]] int GetNumThreads() const;
 
     /**
      * Returns the batch size used for querying.
      * @return batch size
      */
-    int GetBatchSize() const;
+    [[nodiscard]] int GetBatchSize() const;
 
     /**
      * Returns stop words of llm from the config
      * @return  vector of stop words (strings)
      */
-    std::vector<std::string> GetStopWords() const;
+    [[nodiscard]] std::vector<std::string> GetStopWords() const;
 
     /**
      * Get the supported input modalities for the LLM framework.
      *
      * @return A vector of input modality names (e.g., "text", "image").
      */
-    std::vector<std::string> GetInputModalities() const;
+    [[nodiscard]] std::vector<std::string> GetInputModalities() const;
 
     /**
      * Get the supported output modalities for the LLM framework.
      *
      * @return A vector of output modality names (e.g., "text").
      */
-    std::vector<std::string> GetOutputModalities() const;
+    [[nodiscard]] std::vector<std::string> GetOutputModalities() const;
 
     /**
      * Sets the file path to the model.

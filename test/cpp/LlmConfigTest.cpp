@@ -16,11 +16,10 @@
  * Simple Test file for testing config related cases
  */
 
-
 TEST_CASE("Test Multi-Modal config, with missing projection model")
 {
 
-    std::string jsonString =
+    const std::string jsonString =
             "{\n"
             "  \"modelTag\": \"<|im_start|>assistant\\n\",\n"
             "  \"userTag\": \"<|im_start|>user\\n\",\n"
@@ -53,7 +52,7 @@ TEST_CASE("Test Multi-Modal config, with missing projection model")
 
     try{
         LlmConfig config(jsonString);
-    } catch (std::runtime_error e)
+    } catch (std::runtime_error& e)
     {
         CHECK(!strcmp(e.what(), "Missing required parameter: llmMmProjModelName"));
     }

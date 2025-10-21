@@ -23,9 +23,9 @@
 #endif /* defined(DEPRECATED) */
 
 
-static std::string s_configFilePath{""};
-static std::string s_modelRootDir{""};
-static std::string s_backendSharedLibraryDir{""};
+static std::string s_configFilePath;
+static std::string s_modelRootDir;
+static std::string s_backendSharedLibraryDir;
 
 static int maxTokenRetrievalAttempts = 10000;
 
@@ -118,9 +118,9 @@ TEST_CASE("Test Llm-Wrapper class")
                 const char* expect;
             };
 
-            const std::array<Case, 3> cases{{{"cat.bmp",   "cat"},
-                                             {"tiger.bmp", "tiger"},
-                                             {"dog.bmp",   "dog"}}};
+            constexpr std::array<Case, 3> cases{{{"cat.bmp",   "cat"},
+                                                {"tiger.bmp", "tiger"},
+                                                {"dog.bmp",   "dog"}}};
             bool isFirst = true;
             for (const auto& c : cases) {
                 std::string prompt = "Can you describe this image briefly?";
@@ -130,7 +130,7 @@ TEST_CASE("Test Llm-Wrapper class")
 
                 while (llm.GetChatProgress() < 100) {
                     std::string s = llm.NextToken();
-                    if (s==llm.endToken)
+                    if (LLM::endToken == s)
                         break;
                     response += s;
 
@@ -157,7 +157,7 @@ TEST_CASE("Test Llm-Wrapper class")
             std::string response1;
             while (llm.GetChatProgress() < 100) {
                     std::string s = llm.NextToken();
-                    if (s==llm.endToken)
+                    if (LLM::endToken == s)
                         break;
                     response1 += s;
 
@@ -175,7 +175,7 @@ TEST_CASE("Test Llm-Wrapper class")
             llm.Encode(payload);
             while (llm.GetChatProgress() < 100) {
                     std::string s = llm.NextToken();
-                    if (s==llm.endToken)
+                    if (LLM::endToken == s)
                         break;
                     response2 += s;
 
@@ -199,7 +199,7 @@ TEST_CASE("Test Llm-Wrapper class")
             std::string response;
             while (llm.GetChatProgress() < 100) {
                     std::string s = llm.NextToken();
-                    if (s==llm.endToken)
+                    if (LLM::endToken == s)
                         break;
                     response += s;
 
@@ -220,7 +220,7 @@ TEST_CASE("Test Llm-Wrapper class")
 
             while (llm.GetChatProgress() < 100) {
                     std::string s = llm.NextToken();
-                    if (s==llm.endToken)
+                    if (LLM::endToken == s)
                         break;
                     response2 += s;
 
@@ -242,7 +242,7 @@ TEST_CASE("Test Llm-Wrapper class")
         llm.Encode(payload);
         while (llm.GetChatProgress() < 100) {
             std::string s = llm.NextToken();
-            if (s==llm.endToken)
+            if (LLM::endToken == s)
                 break;
             response += s;
 

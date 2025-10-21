@@ -24,11 +24,15 @@ endif()
 message(STATUS "Adding C++ tests")
 
 if (${LLM_FRAMEWORK} STREQUAL "llama.cpp")
-    set(CONFIG_FILE_NAME "llamaTextConfig.json;llamaVisionConfig.json" CACHE STRING "Path to the Llama config files")
+    set(CONFIG_FILE_NAME
+            "llamaTextConfig-phi-2.json"
+            "llamaVisionConfig-qwen2-vl-2B.json"
+            "llamaTextConfig-llama-3.2-1B.json"
+            CACHE STRING "Path to the llama.cpp config files")
 elseif (${LLM_FRAMEWORK} STREQUAL "onnxruntime-genai")
-    set(CONFIG_FILE_NAME "onnxrtTextConfig.json" CACHE STRING "Path to the ONNX Runtime GenAI config file")
+    set(CONFIG_FILE_NAME "onnxrtTextConfig-phi-4.json" CACHE STRING "Path to the ONNX Runtime GenAI config file")
 elseif (${LLM_FRAMEWORK} STREQUAL "mediapipe")
-    set(CONFIG_FILE_NAME "mediapipeTextConfig.json" CACHE STRING "Path to the mediapipe config file")
+    set(CONFIG_FILE_NAME "mediapipeTextConfig-gemma-2B.json" CACHE STRING "Path to the mediapipe config file")
 endif ()
 
 # Download Catch and add to the build.

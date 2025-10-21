@@ -1,5 +1,5 @@
 {
-  "llmModelName" : "llama.cpp/model.gguf",
+  "llmModelName" : "llama.cpp/phi2_Q4_model.gguf",
   "batchSize"    : 256,
   "numThreads"   : 5,
   "systemPrompt" : "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",

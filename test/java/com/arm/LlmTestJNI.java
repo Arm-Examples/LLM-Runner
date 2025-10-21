@@ -75,16 +75,16 @@ public class LlmTestJNI {
         Llm llm = new Llm();
         llm.llmInit(configJson.toString(), backendSharedLibDir);
 
-        String question1 = "What is the capital of Morocco?";
+        String question1 = "What is the capital of Canada?";
         String response1 = llm.send(question1, true);
-        checkLlmMatch(response1, "Rabat", true);
+        checkLlmMatch(response1, "Ottawa", true);
 
         // Resetting context should cause model to forget what country is being referred to
         llm.resetContext();
 
         String question2 = "What languages do they speak there?";
         String response2 = llm.send(question2, true);
-        checkLlmMatch(response2, "Arabic", false);
+        checkLlmMatch(response2, "English", false);
         llm.freeModel();
     }
 
@@ -93,13 +93,13 @@ public class LlmTestJNI {
         Llm llm = new Llm();
         llm.llmInit(configJson.toString(), backendSharedLibDir);
 
-        String question1 = "What is the capital of Morocco?";
+        String question1 = "What is the capital of Canada?";
         String response1 = llm.send(question1, true);
-        checkLlmMatch(response1, "Rabat", true);
+        checkLlmMatch(response1, "Ottawa", true);
 
         String question2 = "What languages do they speak there?";
         String response2 = llm.send(question2, true);
-        checkLlmMatch(response2, "Arabic", true);
+        checkLlmMatch(response2, "English", true);
         llm.freeModel();
     }
 
@@ -108,9 +108,9 @@ public class LlmTestJNI {
         Llm llm = new Llm();
         llm.llmInit(configJson.toString(), backendSharedLibDir);
 
-        String question1 = "What is the capital of Morocco?";
+        String question1 = "What is the capital of Canada?";
         String response1 = llm.send(question1, true);
-        checkLlmMatch(response1, "Rabat", true);
+        checkLlmMatch(response1, "Ottawa", true);
 
         // Send an empty prompt to simulate blank recordings or non-speech tokens being returned by speech recognition;
         // then ask follow-up questions to ensure previous context persists when an empty prompt is injected in the conversation.
@@ -118,7 +118,7 @@ public class LlmTestJNI {
 
         String question2 = "What languages do they speak there?";
         String response2 = llm.send(question2, true);
-        checkLlmMatch(response2, "Arabic", true);
+        checkLlmMatch(response2, "English", true);
         llm.freeModel();
     }
 
@@ -179,25 +179,25 @@ public class LlmTestJNI {
        llm.llmInit(configJson.toString(), backendSharedLibDir);
 
         // First Question
-        String question1 = "What is the capital of Morocco?";
+        String question1 = "What is the capital of Canada?";
         String response1 = llm.send(question1, true);
-        checkLlmMatch(response1, "Rabat", true);
+        checkLlmMatch(response1, "Ottawa", true);
         // Reset Context before second question
         llm.resetContext();
 
         // Second Question (After Reset)
         String question2 = "What languages do they speak there?";
         String response2 = llm.send(question2, true);
-        checkLlmMatch(response2, "Arabic", false);
+        checkLlmMatch(response2, "English", false);
         // Ask First Question Again. Note an additional reset is required to prevent the generic answer
         // from previous question affecting new topic.
         llm.resetContext();
         String response3 = llm.send(question1, true);
 
-        checkLlmMatch(response3, "Rabat", true);
+        checkLlmMatch(response3, "Ottawa", true);
         String response4 = llm.send(question2, true);
 
-        checkLlmMatch(response4, "Arabic", true);
+        checkLlmMatch(response4, "English", true);
         llm.freeModel();
     }
 }

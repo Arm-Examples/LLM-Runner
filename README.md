@@ -16,18 +16,19 @@
       * [onnxruntime genai options](#onnxruntime-genai-options)
       * [mediapipe options](#mediapipe-options)
   * [Quick start](#quick-start)
-    * [Neural network](#neural-network)
+    * [Supported Models](#supported-models)
       * [llama cpp model](#llama-cpp-model)
         * [multimodal](#multimodal)
       * [onnxruntime genai model](#onnxruntime-genai-model)
       * [mediapipe model](#mediapipe-model)
+    * [Native host build](#native-host-build)
     * [To build for Android](#to-build-for-android)
     * [To build for Linux](#to-build-for-linux)
       * [Generic aarch64 target](#generic-aarch64-target)
       * [Aarch64 target with SME](#aarch64-target-with-sme)
-      * [Native host build](#native-host-build)
+    * [To Build for macOS](#to-build-for-macos)
   * [Building and running tests](#building-and-running-tests)
-  * [To build an executable](#to-build-an-executable)
+  * [To build an executable benchmark binary](#to-build-an-executable-benchmark-binary)
     * [llama cpp](#llama-cpp)
     * [onnxruntime genai](#onnxruntime-genai)
   * [Trademarks](#trademarks)
@@ -49,7 +50,7 @@ applications.
 * A Linux®-based operating system is recommended (this repo is tested on Ubuntu® 22.04.4 LTS)
 * An Android™ or Linux® device with an Arm® CPU is recommended as a deployment target, but this
   library can be built for any native machine.
-* CMake 3.27 or above installed
+* CMake 3.28 or above installed
 * Python 3.9 or above installed, python is used to download test resources and models
 * Android™ NDK (if building for Android™). Minimum version: r27 is recommended and can be downloaded
   from [here](https://developer.android.com/ndk/downloads)
@@ -135,9 +136,14 @@ Building mediapipe for aarch64 in x86_64 linux based requires downloading Aarch6
 By default, the JNI builds are enabled, and Arm® KleidiAI™ kernels are enabled on arm64/aarch64.
 To disable these, configure with: `-DUSE_KLEIDIAI=OFF`.
 
-### Neural network
+### Supported Models
 
-There are different default model for different frameworks.
+| Framework / Backend    | Supported Models                           | Licenses                                                                                                                                                                                                                                        |
+|------------------------|--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **llama.cpp**          | `phi-2`<br/>`qwen-2-VL`<br/>`llama-3.2-1B` | [mit](https://huggingface.co/microsoft/phi-2/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
+| **onnxruntime-genai**  | `phi4-mini-instruct`                       | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)                                                                                                                                                                   |
+| **mediapipe**          | *User-provided* `gemma-2B`                 | [Gemma](https://www.kaggle.com/models/google/gemma/license/consent)                                                                                                                                                                             |
+
 
 #### llama cpp model
 
@@ -169,7 +175,7 @@ Use these fields in your configuration file:
 
 If `"image"` is included in `inputModalities`, a valid `llmMmProjModelName` is required; omitting `"image"` runs the backend in **text-only** mode.
 
-You can find an example of multimodal settings in [`llamaVisionConfig.json`](model_configuration_files/llamaVisionConfig.json).
+You can find an example of multimodal settings in [`llamaVisionConfig-qwen2-vl-2B.json`](model_configuration_files/llamaVisionConfig-qwen2-vl-2B.json).
 
 #### onnxruntime genai model
 
@@ -199,6 +205,12 @@ It is recommended to use *mediapipe python package version 0.10.15* for stable c
 
 > **NOTE**: Currently only int4 and block size 32 models are accelerated by Arm® KleidiAI™ kernels in `onnxruntime-genai`.
 
+### Native host build
+
+```shell
+cmake -B build --preset=native-release-with-tests
+cmake --build ./build
+```
 ### To build for Android
 For Android™ build, ensure the `NDK_PATH` is set to installed Android™ NDK, specify Android™ ABI and platform if required or use a default preset e.g. android-arm64-release-kleidi-on-v82a-dotprod-i8mm
 ```shell
@@ -266,11 +278,34 @@ GGML_KLEIDIAI_SME=0 ./build/bin/llama-cli -m resources_downloaded/models/llama.c
 > **NOTE**: Currently it is recommended for aarch64 Linux builds that the GGML_CPU_ARM_ARCH flag be set for the target system. 
 > Not setting the flag may result in build issues and / or runtime errors.
 
-#### Native host build
+### To Build for macOS
+
+To build for the CPU backend on macOS®, you can use the native CMake toolchain.
+However, additional flags are required to explicitly disable the default backends:
+```shell
+cmake -B build --preset=native-release-with-tests \
+    -DGGML_METAL=OFF \
+    -DGGML_BLAS=OFF
+cmake --build ./build
+```
+> **NOTE**: If you need specific version of Java set the path in `JAVA_HOME` environment variable.
+> ```shell
+> export JAVA_HOME=$(/usr/libexec/java_home)
+> ```
+
+Once built, a standalone application can be executed to get performance.
+
+If `FEAT_SME` is available on deployment target, environment variable `GGML_KLEIDIAI_SME` can be used to
+toggle the use of SME kernels during execution for `llama.cpp`. For example:
 
 ```shell
-cmake -B build --preset=native-release-with-tests
-cmake --build ./build
+GGML_KLEIDIAI_SME=1 ./build/bin/llama-cli -m resources_downloaded/models/llama.cpp/model.gguf -t 1 -p "What is a car?"
+```
+
+To run without invoking SME kernels, set `GGML_KLEIDIAI_SME=0` during execution:
+
+```shell
+GGML_KLEIDIAI_SME=0 ./build/bin/llama-cli -m resources_downloaded/models/llama.cpp/model.gguf -t 1 -p "What is a car?"
 ```
 
 ## Building and running tests
@@ -351,3 +386,4 @@ More information can be found at `onnxruntime-genai/benchmark/c/readme.md` on ho
 ## License
 
 This project is distributed under the software licenses in [LICENSES](LICENSES) directory.
+The licenses of supported models can be seen in [Supported Models section](#supported-models).
