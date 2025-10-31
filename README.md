@@ -57,6 +57,7 @@ applications.
 * Bazelisk or Bazel 7.4.1 to build mediapipe backend
 * Aarch64 GNU toolchain (version 14.1 or later) if cross-compiling from a Linux® based system which can be downloaded from [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads)
 * Java Development Kit required for building JNI wrapper library necessary to utilise this module in an Android/Java application.
+* Create a [Hugging Face](https://huggingface.co) account and obtain a Hugging Face access token.
 
 ## Configuration options
 
@@ -139,11 +140,11 @@ To disable these, configure with: `-DUSE_KLEIDIAI=OFF`.
 
 ### Supported Models
 
-| Framework / Backend    | Supported Models                           | Licenses                                                                                                                                                                                                                                        |
-|------------------------|--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Framework / Backend    | Supported Models                           | Licenses                                                                                                                                                                                                                                       |
+|------------------------|--------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **llama.cpp**          | `phi-2`<br/>`qwen-2-VL`<br/>`llama-3.2-1B` | [mit](https://huggingface.co/microsoft/phi-2/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
-| **onnxruntime-genai**  | `phi4-mini-instruct`                       | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)                                                                                                                                                                   |
-| **mediapipe**          | *User-provided* `gemma-2B`                 | [Gemma](https://www.kaggle.com/models/google/gemma/license/consent)                                                                                                                                                                             |
+| **onnxruntime-genai**  | `phi4-mini-instruct`                       | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)                                                                                                                                                                  |
+| **mediapipe**          | `gemma-2B`                                 | [Gemma](https://www.kaggle.com/models/google/gemma/license/consent)                                                                                                                                                                             |
 
 
 #### llama cpp model
@@ -198,13 +199,24 @@ To use an ONNX model with this framework, the following files are required:
 
 These files are essential for loading and running ONNX models effectively.
 
+> **NOTE**: Currently only int4 and block size 32 models are accelerated by Arm® KleidiAI™ kernels in `onnxruntime-genai`.
+
 #### mediapipe model
 
-Due to license restrictions default models are not added in [requirements.json](./scripts/py/requirements.json). The test models can be obtained form [kaggle](https://www.kaggle.com/models/google/gemma/tfLite/gemma-2b-it-cpu-int4?postConsentAction=explore) after agreeing to [*license*](https://www.kaggle.com/models/google/gemma/license/consent).
+To use the **Gemma 2B** model, add your [Hugging Face](https://huggingface.co) access token to the build environment after accepting the [*Gemma license*](https://www.kaggle.com/models/google/gemma/license/consent) .
+```shell
+export HF_TOKEN=<your hugging-face access token>
+```
+or
+Append the following lines to your ~/.netrc file:
+```text
+machine huggingface.co
+  login <your-username-or-email>
+  password <your-huggingface-access-token>
+```
+Ensure the .netrc file is secured with the correct permissions.
 Alternatively, you can quantize other models listed in [conversion colab](https://colab.research.google.com/github/googlesamples/mediapipe/blob/main/examples/llm_inference/conversion/llm_conversion.ipynb) from [Hugging Face](https://huggingface.co) to TensorFlow Lite™ (.tflite) format. Copy the resulting 4-bit models to `resources_downloaded/models/mediapipe`.
 It is recommended to use *mediapipe python package version 0.10.15* for stable conversion to 4-bit models.
-
-> **NOTE**: Currently only int4 and block size 32 models are accelerated by Arm® KleidiAI™ kernels in `onnxruntime-genai`.
 
 ### Native host build
 
@@ -350,10 +362,9 @@ cmake -B build \
     -DCMAKE_CXX_FLAGS=-march=armv8.2-a+dotprod+i8mm \
     -DBUILD_BENCHMARK=ON
 cmake --build ./build
-
+```
 
 Or on x86 (No Kleidi Acceleration)
-
 ```shell
 cmake -B build \
     --preset=native-release-with-tests \
@@ -388,3 +399,4 @@ More information can be found at `onnxruntime-genai/benchmark/c/readme.md` on ho
 
 This project is distributed under the software licenses in [LICENSES](LICENSES) directory.
 The licenses of supported models can be seen in [Supported Models section](#supported-models).
+

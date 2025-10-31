@@ -10,22 +10,77 @@ from urllib.error import URLError
 import urllib.request
 import logging
 import sys
+import os
+import netrc
+
 from argparse import ArgumentParser
 
-def download_file(url: str, dest: Path) -> None:
+
+def get_huggingface_token():
+    """
+    Method to get Hugging Face token from environment or .netrc file
+
+    Returns:
+    str or None: The Hugging Face token if found, otherwise None.
+    """
+
+    token = os.environ.get("HF_TOKEN")
+    if token:
+        return token
+
+    try:
+        # Expect the .netrc file to be located in the user's home directory
+        netrc_filepath = os.path.expanduser("~/.netrc")
+        auths = netrc.netrc(netrc_filepath).authenticators("huggingface.co")
+        if auths:
+            _, _, token = auths
+            return token
+    except FileNotFoundError:
+        logging.warning(".netrc file not found.")
+    except netrc.NetrcParseError as e:
+        logging.error(f"Failed to parse .netrc: {e}")
+    except Exception as e:
+        logging.error(f"Unexpected error reading .netrc: {e}")
+
+    return None
+
+def download_file(url: str, dest: Path,huggingface_token:str =None) -> None:
     """
     Download a file
 
-    @param url:     The URL of the file to download
-    @param dest:    The destination of downloaded file
+    @param url:              The URL of the file to download
+    @param dest:             The destination of downloaded file
+    @param huggingface_token The access token from users' Hugging Face account
+                             This token is optional and only used to download models
     """
     try:
-        with urllib.request.urlopen(url) as g:
+        req = urllib.request.Request(url)
+
+        if huggingface_token:
+            req.add_header("Authorization", f"Bearer {huggingface_token}")
+
+        with urllib.request.urlopen(req) as g:
             with open(dest, "b+w") as f:
                 f.write(g.read())
                 logging.info("Downloaded %s to %s.", url, dest)
-    except URLError:
-        logging.error("URLError while downloading %s.", url)
+    except urllib.error.HTTPError as e:
+         if e.code == 403:
+                logging.error( f"Access denied (403) while downloading from {url}.\n"
+                    f"This may be a gated model. Please ensure your HF token is correct "
+                    f"and you have accepted the license terms on the model's Hugging Face page.")
+         elif e.code == 401:
+                logging.error(f"Unauthorized (401) while accessing {url}.\n"
+                    f"Your Hugging Face token may be invalid or expired.")
+         else:
+                logging.error(f"HTTPError {e.code} while downloading {url}: {e.reason}")
+         raise
+
+    except urllib.error.URLError as e:
+        logging.error(f"URLError while downloading {url}: {e.reason}")
+        raise
+
+    except Exception as e:
+        logging.error(f"Unexpected error while downloading {url}: {str(e)}")
         raise
 
 
@@ -44,7 +99,7 @@ def validate_download(filepath, expected_hash):
     return actual_hash == expected_hash
 
 
-def download_resources(resources_file: Path, download_dir: Path) -> None:
+def download_resources(resources_file: Path, download_dir: Path,huggingface_token:str=None) -> None:
     """
     Downloads resource files as per the resource file json into the
     download dir.
@@ -81,7 +136,10 @@ def download_resources(resources_file: Path, download_dir: Path) -> None:
                     logging.info(f'{dest} exists; skipping download')
                 else:
                     logging.info(f'Downloading {url} -> {dest}')
-                    download_file(url, dest)
+                    if resource_type == "models":
+                       download_file(url, dest,huggingface_token)
+                    else :
+                       download_file(url, dest)
                     if validate_download(dest, resource_data["sha256sum"]):
                         print("Validated successfully!")
                     else:
@@ -110,14 +168,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "--llm-framework",
         help="LLM framework from which the model will be downloaded.",
+        choices=["llama.cpp", "mediapipe", "onnxruntime-genai"],
         default=default_llm_framework)
 
     args = parser.parse_args()
     req_file = Path(args.requirements_file)
     download_dir = Path(args.download_dir)
     llm_framework = args.llm_framework
+    hf_token = get_huggingface_token()
+    if not hf_token:
+        logging.error("HF_TOKEN is not set in the environment")
 
     if not req_file.exists():
         raise FileNotFoundError(f'{req_file} does not exist')
 
-    download_resources(req_file, download_dir)
+    download_resources(req_file, download_dir,hf_token)

@@ -63,6 +63,7 @@ void LLM::LLMImpl::LoadEngine(const std::string& model_path, const std::string& 
         .model_path     = model_path.c_str(),
         .cache_dir      = cache_dir.c_str(),
         .max_num_tokens = this->m_nCtx,
+        .num_threads   = static_cast<size_t>(this->m_config.GetNumThreads())
     };
 
     this->m_errorCode =

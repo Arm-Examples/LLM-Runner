@@ -73,6 +73,13 @@
     ],
     "mediapipe" :
     [
+      {
+        "name": "Gemma-2b-it (Cpu-Int4 model)",
+        "purpose": "tflite model for basic Mediapipe testing",
+        "destination": "mediapipe/gemma-2b-it-cpu-int4.tflite",
+        "url": "https://huggingface.co/google/gemma-2b-it-tflite/resolve/main/gemma-2b-it-cpu-int4.bin?download=true",
+        "sha256sum": "176452e0eef32e7cd477e5609160278f3f5cbfeeb46d2cb2d37bd631af1b0bea"
+      }
     ]
   },
 

@@ -40,7 +40,7 @@ index 910fb7cbd..667c0892c 100644
 --- a/mediapipe/tasks/cc/genai/inference/c/BUILD
 +++ b/mediapipe/tasks/cc/genai/inference/c/BUILD
 @@ -21,21 +21,26 @@ package(default_visibility = [
-
+ 
  cc_library(
      name = "llm_inference_engine_hdr",
 -    hdrs = ["llm_inference_engine.h"],
@@ -76,10 +76,19 @@ index 910fb7cbd..667c0892c 100644
          "//mediapipe/framework/port:file_helpers",
          "//mediapipe/framework/port:ret_check",
 diff --git a/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine.h b/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine.h
-index 1b2aa5f9e..a243432ab 100644
+index 1b2aa5f9e..46afb60de 100644
 --- a/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine.h
 +++ b/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine.h
-@@ -336,6 +336,15 @@ ODML_EXPORT int LlmInferenceEngine_Session_AddAudio(
+@@ -162,6 +162,8 @@ typedef struct {
+   bool enable_audio_modality;
+   // Maximum audio sequence length.
+   size_t max_audio_sequence_length;
++
++  size_t num_threads;
+ } LlmModelSettings;
+ 
+ // LlmPromptTemplates defines the prompt templates for the session.
+@@ -336,6 +338,15 @@ ODML_EXPORT int LlmInferenceEngine_Session_AddAudio(
      LlmInferenceEngine_Engine* engine, LlmInferenceEngine_Session* session,
      const char* audio_bytes, int audio_bytes_size, char** error_msg);
  
@@ -96,7 +105,7 @@ index 1b2aa5f9e..a243432ab 100644
  }  // extern C
  #endif
 diff --git a/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine_cpu.cc b/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine_cpu.cc
-index 8dbd0a30c..de518404d 100644
+index 8dbd0a30c..cfe907d46 100644
 --- a/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine_cpu.cc
 +++ b/mediapipe/tasks/cc/genai/inference/c/llm_inference_engine_cpu.cc
 @@ -26,7 +26,8 @@
@@ -191,7 +200,27 @@ index 8dbd0a30c..de518404d 100644
  
    return nullptr;
  }
-@@ -686,14 +729,19 @@ int LlmInferenceEngine_Session_PredictAsync(
+@@ -364,7 +407,9 @@ CreateXnnLlmCpuEngine(const LlmModelSettings* model_settings) {
+       model_settings->model_path, llm_params);
+ 
+   auto runtime_configs =
+-      std::make_unique<mediapipe::tasks::genai::xnn_utils::RuntimeConfigs>();
++    std::make_unique<mediapipe::tasks::genai::xnn_utils::RuntimeConfigs>(mediapipe::tasks::genai::xnn_utils::RuntimeConfigs{
++        .xnn_num_threads = model_settings->num_threads >0 ? model_settings->num_threads : 4
++    });
+ 
+   MP_ASSIGN_OR_RETURN(auto llm,
+                       mediapipe::tasks::genai::xnn_utils::CreateLlm(
+@@ -451,7 +496,7 @@ CreateTfliteLlmCpuEngine(const LlmModelSettings* model_settings) {
+   // RET_CHECK(model_settings->xnnpack_options.has_value());
+   auto delegate_options = TfLiteXNNPackDelegateOptionsDefault();
+   // Set the number of threads to 4 as default.
+-  delegate_options.num_threads = 4;
++  delegate_options.num_threads = model_settings->num_threads >0 ? model_settings->num_threads : 4 ;
+   // Compute the path for the cache file.
+   std::string weight_cache_path = model_settings->cache_dir;
+   if (weight_cache_path != ":nocache") {
+@@ -686,14 +731,19 @@ int LlmInferenceEngine_Session_PredictAsync(
    cpu_session->work_id = work_id;
    pthread_create(&cpu_session->work_id, nullptr, start_llm_function,
                   cpu_session);
@@ -214,7 +243,19 @@ index 8dbd0a30c..de518404d 100644
  }
  
  int LlmInferenceEngine_Session_Clone(
-@@ -716,6 +764,28 @@ int LlmInferenceEngine_Session_SizeInTokens(LlmInferenceEngine_Session* session,
+@@ -708,6 +758,11 @@ int LlmInferenceEngine_Session_SizeInTokens(LlmInferenceEngine_Session* session,
+                                             char** error_msg) {
+   auto cpu_session = reinterpret_cast<LlmInferenceEngineCpu_Session*>(session);
+   std::vector<int> output_ids;
++  std::string prompt;
++  if (cpu_session->engine->bytes_to_unicode_mapper != nullptr) {
++    input = MapBytesToUnicode(input,
++                               cpu_session->engine->bytes_to_unicode_mapper).c_str();
++  }
+   auto status = cpu_session->engine->tokenizer->Encode(input, &output_ids);
+   if (!status.ok()) {
+     *error_msg = strdup(status.ToString().c_str());
+@@ -716,6 +771,28 @@ int LlmInferenceEngine_Session_SizeInTokens(LlmInferenceEngine_Session* session,
    return output_ids.size();
  }
  
