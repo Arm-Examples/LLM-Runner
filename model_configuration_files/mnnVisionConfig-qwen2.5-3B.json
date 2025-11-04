@@ -2,12 +2,12 @@
   "chat" : {
     "systemPrompt" : "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",
     "applyDefaultChatTemplate" : false,
-    "systemTemplate" : "<|system|>%s<|end|>",
-    "userTemplate"   : "<|user|>%s<|end|><|assistant|>"
+    "systemTemplate" : "<|im_start|>system\n%s<|im_end|>",
+    "userTemplate"   : "<|im_start|>user\n%s<|im_end|>\n<|im_start|>assistant\n"
   },
   "model" : {
-    "llmModelName" : "onnxruntime-genai/phi-4-mini",
-    "isVision" : false
+    "llmModelName" : "mnn/qwen25vl-3b/",
+    "isVision" : true
   },
   "runtime" : {
     "batchSize"    : 1,
@@ -26,6 +26,7 @@
     "user:",
     "[end of text]",
     "<|endoftext|>",
+    "<|im_end|>",
     "<eos>",
     "model:",
     "Question:",

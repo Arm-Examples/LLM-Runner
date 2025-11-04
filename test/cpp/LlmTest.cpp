@@ -57,9 +57,9 @@ int main(int argc, char* argv[])
         LOG_ERROR("Failed to parse command line options");
     }
 
-    std::cout << "Config file: " << configFilePath;
-    std::cout << "Model root directory :" << modelsRootDir.c_str();
-    std::cout << "Backend shared Library directory :" << backendSharedLibraryDir.c_str();
+    std::cout << "Config file: " << configFilePath << std::endl;
+    std::cout << "Model root directory :" << modelsRootDir.c_str() << std::endl;
+    std::cout << "Backend shared Library directory :" << backendSharedLibraryDir.c_str() << std::endl;
 
     s_configFilePath = configFilePath;
     s_modelRootDir = modelsRootDir;
@@ -81,26 +81,42 @@ LlmConfig SetupTestConfig()
     buffer << configFile.rdbuf();  // Read file into stringstream
     std::string jsonContent = buffer.str();
 
-    LlmConfig configTest = LlmConfig(jsonContent);
-    std::string modelPath = s_modelRootDir + "/" + configTest.GetModelPath();
-    configTest.SetModelPath(modelPath);
+    LlmConfig configTest{jsonContent};
+    std::string modelPath = s_modelRootDir + "/" + configTest.GetConfigString("llmModelName");
+    configTest.SetConfigString("llmModelName", modelPath);
 
-    // Multimodal only
-    if (configTest.GetInputModalities().size() == 2) {
-        std::string projModelPath =  s_modelRootDir + "/" + configTest.GetMMPROJModelPath();
-        configTest.SetMMPROJModelPath(projModelPath);
+    // llama.cpp multimodal only
+    if (!configTest.GetConfigString("projModelName").empty()) {
+        std::string projModelPath = s_modelRootDir + "/" + configTest.GetConfigString("projModelName");
+        configTest.SetConfigString("projModelName", projModelPath);
     }
     return configTest;
 }
 
 /**
+ * Simple test to ensure we pick up the correct LLMImpl based on the modalities in the config
+ */
+TEST_CASE("LLM Factory test") {
+    LlmConfig configTest = SetupTestConfig();
+    LLM llm{};
+    llm.LlmInit(configTest);
+    std::vector<std::string> modalities = llm.SupportedInputModalities();
+    if(configTest.GetConfigBool("isVision")) {
+        CHECK(modalities.size() == 2);
+    } else {
+        CHECK(modalities.size() == 1);
+    }
+
+    llm.FreeLlm();
+}
+
+/**
  * Simple query->response test
- * ToDo Replace with more sophisticated context tests if/when reset context is available in Cpp
-sh */
+ */
 TEST_CASE("Test Llm-Wrapper class")
 {
-    auto configTest = SetupTestConfig();
-    LLM llm(configTest);
+    LlmConfig configTest = SetupTestConfig();
+    LLM llm{};
     std::stringstream stopWordsStream;
     std::list<std::string> stopWords;
     std::string question         = "What is the capital of France?" ;
@@ -108,7 +124,7 @@ TEST_CASE("Test Llm-Wrapper class")
     int circuitBreaker = 0;
     
     // Multimodal tests only
-    if (configTest.GetInputModalities().size() == 2)
+    if (configTest.GetConfigBool("isVision"))
     {
          // Validate the vision path can describe objects in images.
         SECTION("Describe Image")
@@ -116,16 +132,19 @@ TEST_CASE("Test Llm-Wrapper class")
             llm.LlmInit(configTest, s_backendSharedLibraryDir);
             struct Case {
                 const char* file;
-                const char* expect;
+                std::vector<std::string> expects;
             };
 
-            constexpr std::array<Case, 3> cases{{{"cat.bmp",   "cat"},
-                                                {"tiger.bmp", "tiger"},
-                                                {"dog.bmp",   "dog"}}};
-            bool isFirst = true;
+            const std::array<Case, 3> cases{{
+                {"cat.bmp",   {"cat"}},
+                {"tiger.bmp", {"tiger"}},
+                {"dog.bmp",   {"dog", "puppy"}},
+            }};
+
+            bool isFirstMessage = true;
             for (const auto& c : cases) {
                 std::string prompt = "Can you describe this image briefly?";
-                LLM::EncodePayload payload{prompt, std::string{TEST_RESOURCE_DIR} + "/" + c.file, isFirst};
+                LlmChat::Payload payload{prompt, std::string{TEST_RESOURCE_DIR} + "/" + c.file, isFirstMessage};
                 std::string response;
                 llm.Encode(payload);
 
@@ -139,8 +158,16 @@ TEST_CASE("Test Llm-Wrapper class")
                         FAIL("Token retrieval attempts exceed threshold, terminating test run (1)");
                     }
                 }
-                CHECK(response.find(c.expect) != std::string::npos);
-                isFirst = false;
+
+                bool match = false;
+                for (const auto& e : c.expects) {
+                    if (response.find(e) != std::string::npos) {
+                        match = true;
+                        break;
+                    }
+                }
+                CHECK(match);
+                isFirstMessage = false;
             }
 
             llm.FreeLlm();
@@ -153,7 +180,7 @@ TEST_CASE("Test Llm-Wrapper class")
             llm.LlmInit(configTest, s_backendSharedLibraryDir);
             std::string prompt = "What type of dress can you see in this image?";
 
-            LLM::EncodePayload payload{prompt, std::string{TEST_RESOURCE_DIR} + "/" + "kimono.bmp", true};
+            LlmChat::Payload payload{prompt, std::string{TEST_RESOURCE_DIR} + "/" + "kimono.bmp", true};
             llm.Encode(payload);
             std::string response1;
             while (llm.GetChatProgress() < 100) {
@@ -188,13 +215,13 @@ TEST_CASE("Test Llm-Wrapper class")
             llm.FreeLlm();
         }
 
-        //     Validate reset context.
+        // Validate reset context.
         SECTION("Reset Context")
         {
             llm.LlmInit(configTest, s_backendSharedLibraryDir);
             std::string prompt =  "Can you describe this image?";
 
-            LLM::EncodePayload payload{prompt, std::string{TEST_RESOURCE_DIR} + "/" + "tiger.bmp", true};
+            LlmChat::Payload payload{prompt, std::string{TEST_RESOURCE_DIR} + "/" + "tiger.bmp", true};
             llm.Encode(payload);
 
             std::string response;
@@ -234,12 +261,12 @@ TEST_CASE("Test Llm-Wrapper class")
         }
     }
 
-    
+    // Simple query
     SECTION("Simple Query Response")
     {
         std::string response;
         llm.LlmInit(configTest, s_backendSharedLibraryDir);
-        LLM::EncodePayload payload{question, "", true};
+        LlmChat::Payload payload{question, "", true};
         llm.Encode(payload);
         while (llm.GetChatProgress() < 100) {
             std::string s = llm.NextToken();
@@ -252,16 +279,18 @@ TEST_CASE("Test Llm-Wrapper class")
             }
         }
         CHECK(response.find("Paris") != std::string::npos);
+        llm.FreeLlm();
     }
 
-        /**
-         * Test Load Empty Model returns nullptr
-         */
+    /**
+     * Test Load Empty Model returns nullptr
+     */
     SECTION("Test Load Empty Model")
     {
         std::string emptyString;
-        configTest.SetModelPath(emptyString);
+        configTest.SetConfigString("llmModelName", emptyString);
         REQUIRE_THROWS(llm.LlmInit(configTest, s_backendSharedLibraryDir));
+        llm.FreeLlm();
     }
 
     llm.FreeLlm();

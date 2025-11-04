@@ -10,11 +10,7 @@
 #include <algorithm>
 #include "Logger.hpp"
 
-LLM::LLM(const LlmConfig &llmConfig) {
-    LLMFactory factory;
-    this->m_impl = factory.CreateLLMImpl(llmConfig);
-    this->m_config = llmConfig;
-}
+LLM::LLM() {}
 
 LLM::~LLM() {
     this->FreeLlm();
@@ -22,7 +18,10 @@ LLM::~LLM() {
 
 void LLM::LlmInit(const LlmConfig &llmConfig, std::string sharedLibraryPath)
 {
+    LLMFactory factory;
+    this->m_impl = factory.CreateLLMImpl(llmConfig);
     this->m_config = llmConfig;
+    this->m_impl->InitChatParams(this->m_config.GetChat());
     this->m_maxStopWordLength = 0;
     const auto &stopWords = this->m_config.GetStopWords();
 
@@ -38,7 +37,7 @@ void LLM::LlmInit(const LlmConfig &llmConfig, std::string sharedLibraryPath)
     if (this->m_maxStopWordLength < 1) {
         this->m_maxStopWordLength = 1;
     }
-    this->m_impl->LlmInit(llmConfig, sharedLibraryPath);
+    this->m_impl->LlmInit(this->m_config, sharedLibraryPath);
 }
 
 void LLM::FreeLlm()
@@ -72,7 +71,7 @@ void LLM::ResetContext()
     this->m_impl->ResetContext();
 }
 
-void LLM::Encode(EncodePayload& payload) {
+void LLM::Encode(LlmChat::Payload& payload) {
     if (!m_impl) {
         THROW_ERROR("LLM not initialized");
     }
@@ -90,9 +89,8 @@ void LLM::Encode(EncodePayload& payload) {
             THROW_ERROR("Error. Attempting to Encode an unsupported Image payload");
         }
     }
-    std::string query = this->m_impl->QueryBuilder(payload);
-    payload.textPrompt = query;
-    m_impl->Encode(payload);
+    this->m_impl->QueryBuilder(payload);
+    this->m_impl->Encode(payload);
 }
 
 bool LLM::SupportsModality(const std::vector<std::string> &inptMods, std::string modality) const {
@@ -128,9 +126,9 @@ std::string LLM::BenchModel(int &nPrompts, int &nEvalPrompts, int &nMaxSeq, int 
     return this->m_impl->BenchModel(nPrompts, nEvalPrompts, nMaxSeq, nRep);
 }
 
-std::string LLM::GetFrameworkType() const
+std::string LLM::GetFrameworkType()
 {
-    return this->m_impl->GetFrameworkType();
+    return LLM::LLMImpl::GetFrameworkType();
 }
 
 std::vector<std::string> LLM::SupportedInputModalities() const

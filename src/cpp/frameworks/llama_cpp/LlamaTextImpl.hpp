@@ -11,14 +11,13 @@
 #include "common.h"
 #include "llama.h"
 
-#include <cmath>
 #include <string>
 
 
 /**
  * @brief LLama Implementation of our LLM API
  */
-class LLM::LLMImpl {
+class LLM::LLMImpl : public LlmChat {
 
 public:
     LLMImpl();
@@ -69,7 +68,7 @@ public:
      * @brief Encode a multimodal payload (text + optional image).
      * @param payload Input payload containing text and/or image path.
      */
-    virtual void Encode(const EncodePayload& payload);
+    virtual void Encode(LlmChat::Payload& payload);
 
     /**
      * @brief Method to wrap CompletionLoop function
@@ -91,7 +90,7 @@ public:
      * generation, calculates average speeds and standard deviations over multiple repetitions, and
      * compiles the results into a formatted string.
      *
-     * @param prompts Number of prompts to process during benchmarking.
+     * @param prompts Number of prompt tokens to process during benchmarking.
      * @param eval_prompts Number of evaluation prompts for text generation.
      * @param n_max_sq Maximum sequence length for text generation.
      * @param n_rep Number of repetitions for benchmarking to obtain average metrics.
@@ -105,14 +104,7 @@ public:
      * @brief Method to get framework type
      * @return string framework type
      */
-    virtual std::string GetFrameworkType();
-
-    /**
-     * @brief Build and return a query string from the given prompt and configuration.
-     * @param prompt Input payload containing text, optional image, and conversation metadata.
-     * @return The constructed query string to be passed to the model backend.
-     */
-    virtual std::string QueryBuilder(EncodePayload& prompt);
+    static std::string GetFrameworkType() {return "llama.cpp";}
 
     /**
      * @brief Method to Cancel generation of response tokens. Can be used to stop response once query commences
@@ -125,24 +117,25 @@ public:
      */
     virtual std::vector<std::string> SupportedInputModalities() const{  return {"text"};}
 
+    /**
+     * Applies the automatic chat template to the given prompt.
+     * @param payload The input prompt to apply the template to.
+     * @return The prompt with the automatic chat template applied.
+     */
+    bool ApplyAutoChatTemplate(LlmChat::Payload& payload) override;
+
 protected:
-    std::string m_frameworkType{"llama.cpp"}; /**< Framework type. */
     llama_context* m_llmContext{nullptr};     /**< Pointer to the llama model context. */
     llama_model* m_llmModel{nullptr};         /**< Pointer to the loaded llama model. */
     llama_batch m_llmBatch{};                 /**< Batch object for processing tokens. */
     llama_sampler* m_pLlmSampler{nullptr};    /**< Sampler used for token generation. */
     size_t m_batchSz{0};                      /**< Current batch size. */
-    int m_nCtx{2048};                         /**< Maximum context window size. */
+    int m_nCtx{0};                            /**< Maximum context window size. */
     std::string m_cachedTokenChars{""};       /**< Cached decoded token characters. */
     size_t m_contextFilled{0};                /**< Proportion of the context window currently filled (as % of total tokens). */
     std::string m_llmPrefix{""};              /**< Prefix prepended to prompts. */
     bool m_llmInitialized{false};             /**< Indicates whether the LLM is initialized. */
     size_t m_nCur{0};                         /**< Current token index in the context. */
-    bool m_isConversationStart{true};         /**< Flag indicating whether this is starting of the conversation (used to decide if the system prompt should be encoded). */
-    bool m_isDefaultTemplate{false};          /**< Flag indicating whether a default chat template should be used. */
-    std::string m_systemPrompt{""};           /**< System prompt to be encoded with first query. */
-    std::string m_systemTemplate{""};         /**< Default template for system message. */
-    std::string m_userTemplate{""};           /**< Default template for user message. */
     std::string m_eos = "<|endoftext|>";      /**< Used as a general signal in our LLM module to terminate response. */
     LlmConfig m_config;                       /**< Configuration for model. */
     /**
@@ -245,20 +238,6 @@ protected:
      * is produced or if the current length reaches the maximum length.
      */
     std::string CompletionLoop();
-
-    /**
-     * Applies a default chat template to the given prompt.
-     * @param prompt The input prompt to apply the template to.
-     * @return The prompt with the default chat template applied.
-     */
-    std::string ApplyDefaultChatTemplate(const std::string& prompt);
-
-    /**
-     * Applies the automatic chat template to the given prompt.
-     * @param prompt The input prompt to apply the template to.
-     * @return The prompt with the automatic chat template applied.
-     */
-    std::string ApplyAutoChatTemplate(const std::string& prompt);
 
     /**
      * We are using our Logging functions and overriding default ggml logging callback.

@@ -8,28 +8,69 @@
 
 #include <string>
 #include <vector>
+#include <nlohmann/json.hpp>
+
+using nlohmann::json;
+
+/**
+ * @struct ChatParams
+ * @brief Defines all parameters related to chat behavior and templating.
+ *
+ * Contains the system and user message templates, system prompt text,
+ * and a flag to determine whether the default chat template is applied.
+ */
+struct ChatParams {
+    std::string systemPrompt;               ///< System prompt text that defines assistant behavior.
+    bool        applyDefaultChatTemplate;   ///< Whether to apply the built-in chat template automatically.
+    std::string systemTemplate;             ///< Template string used to render the system message.
+    std::string userTemplate;               ///< Template string used to render user input messages.
+};
+
+/// Enables JSON serialization and deserialization for ChatParams.
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ChatParams, systemPrompt, applyDefaultChatTemplate, systemTemplate, userTemplate)
+
+/**
+ * @struct RuntimeParams
+ * @brief Configuration parameters related to runtime execution.
+ *
+ * Defines the runtime threading and batching behavior for model inference.
+ */
+struct RuntimeParams {
+    int numThreads;                         ///< Number of threads to use for model execution.
+    int batchSize;                          ///< Number of samples processed in each inference batch.
+    int contextSize;                        ///< Maximum context length
+};
+
+/// Enables JSON serialization and deserialization for RuntimeParams.
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RuntimeParams, numThreads, batchSize, contextSize)
+
+/**
+ * @struct ModelParams
+ * @brief Parameters defining model-related configuration.
+ *
+ * Includes the model file name, vision model flag, and an optional projection model path.
+ */
+struct ModelParams {
+    std::string llmModelName;               ///< Name or path of the LLM model file to load.
+    bool        isVision;                   ///< Indicates if the model supports multimodal (vision) inputs.
+    std::string projModelName = "";         ///< Optional projection model name or path (if used).
+};
+
+/// Enables JSON serialization and deserialization for ModelParams.
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ModelParams, llmModelName, isVision, projModelName)
 
 /**
  * @class LlmConfig
- * @brief Config class for the Large Language Model settings.
+ * @brief Manages parsing, validation, and access to LLM configuration parameters.
+ * The LlmConfig class loads and validates a JSON-based configuration file,
+ * providing structured access to chat, runtime, model, and stop-word parameters.
  */
 class LlmConfig {
 private:
-    std::string m_modelPath{};
-    std::string m_mmProjModelPath{};
-    std::vector<std::string> m_inputModalities;
-    std::vector<std::string> m_outputModalities;
-    std::string m_framework;
-    bool m_isDefaultTemplate{};
-    std::string m_systemPrompt{};
-    std::vector<std::string> m_stopWords;
-    int m_numThreads{};
-    int m_batchSize{};
-    std::string m_systemTemplate{};
-    std::string m_userTemplate{};
-
-    template <typename Container, typename T>
-    bool Contains(const Container& container, const T& value);
+    ChatParams               m_chat{};      ///< Chat-related configuration block.
+    RuntimeParams            m_runtime{};   ///< Runtime configuration block.
+    ModelParams              m_model{};     ///< Model configuration block.
+    std::vector<std::string> m_stopWords;   ///< List of stop words used by the tokenizer or model.
 
 public:
     /**
@@ -38,156 +79,88 @@ public:
     */
     explicit LlmConfig(const std::string &jsonStr);
 
+    /**
+     * @brief Default constructor (unused, provided for completeness).
+     */
     LlmConfig() =default;
 
-    /**
-     * Checks whether the current template is a default template.
-     * @return true if it is a default template, false otherwise.
+     /**
+     * @brief Updates a string parameter by key name.
+     * @param key   Name of the configuration parameter.
+     * @param value New string value to assign.
+     * @throws std::invalid_argument if the key is unknown or type mismatched.
      */
-    [[nodiscard]] bool IsDefaultTemplate() const;
+    void SetConfigString(const std::string& key, const std::string& value);
 
     /**
-     * Returns the system template string.
-     * @return The system template as a string.
+     * @brief Updates a boolean parameter by key name.
+     * @param key   Name of the configuration parameter.
+     * @param value Boolean value to assign.
+     * @throws std::invalid_argument if the key is unknown or type mismatched.
      */
-    [[nodiscard]] std::string GetSystemTemplate() const;
+    void SetConfigBool(const std::string& key, bool value);
 
     /**
-     * Returns the user template string.
-     * @return The user template as a string.
+     * @brief Updates an integer parameter by key name.
+     * @param key   Name of the configuration parameter.
+     * @param value Integer value to assign.
+     * @throws std::invalid_argument if the key is unknown or type mismatched.
      */
-    [[nodiscard]] std::string GetUserTemplate() const;
+    void SetConfigInt(const std::string& key, int value);
 
     /**
-     * Returns the path to the projection model file.
-     * @return modelPath
+     * @brief Retrieves a string parameter by key name.
+     * @param key Name of the configuration parameter.
+     * @return String value corresponding to the key (empty string if optional and unset).
+     * @throws std::invalid_argument if the key is unknown or not a string.
      */
-    [[nodiscard]] std::string GetMMPROJModelPath() const;
+    std::string GetConfigString(const std::string& key) const;
 
     /**
-     * Returns the path to the model file.
-     * @return modelPath
+     * @brief Retrieves a boolean parameter by key name.
+     * @param key Name of the configuration parameter.
+     * @return Boolean value corresponding to the key.
+     * @throws std::invalid_argument if the key is unknown or not a boolean.
      */
-    [[nodiscard]] std::string GetModelPath() const;
+    bool GetConfigBool(const std::string& key) const;
 
     /**
-     * Returns the LLM system prompt string.
-     * @return systemPrompt
+     * @brief Retrieves an integer parameter by key name.
+     * @param key Name of the configuration parameter.
+     * @return Integer value corresponding to the key.
+     * @throws std::invalid_argument if the key is unknown or not an integer.
      */
-    [[nodiscard]] std::string GetSystemPrompt() const;
+    int GetConfigInt(const std::string& key) const;
 
     /**
-     * Returns the number of threads configured for inference.
-     * @return number of Threads
+     * @brief Accessor for chat configuration parameters.
+     * @return Constant reference to the ChatParams structure.
      */
-    [[nodiscard]] int GetNumThreads() const;
+    const ChatParams& GetChat() const { return m_chat; }
 
     /**
-     * Returns the batch size used for querying.
-     * @return batch size
+     * @brief Accessor for runtime configuration parameters.
+     * @return Constant reference to the RuntimeParams structure.
      */
-    [[nodiscard]] int GetBatchSize() const;
+    const RuntimeParams& GetRuntime() const { return m_runtime; }
 
     /**
-     * Returns stop words of llm from the config
-     * @return  vector of stop words (strings)
+     * @brief Accessor for model configuration parameters.
+     * @return Constant reference to the ModelParams structure.
      */
-    [[nodiscard]] std::vector<std::string> GetStopWords() const;
+    const ModelParams& GetModel() const { return m_model; }
 
     /**
-     * Get the supported input modalities for the LLM framework.
-     *
-     * @return A vector of input modality names (e.g., "text", "image").
+     * @brief Retrieves the list of configured stop words.
+     * @return Constant reference to the stop word vector.
      */
-    [[nodiscard]] std::vector<std::string> GetInputModalities() const;
+    const std::vector<std::string>& GetStopWords() const {return m_stopWords; }
 
     /**
-     * Get the supported output modalities for the LLM framework.
-     *
-     * @return A vector of output modality names (e.g., "text").
-     */
-    [[nodiscard]] std::vector<std::string> GetOutputModalities() const;
-
-    /**
-     * Sets the file path to the model.
-     * @param basePath absolute path to load llm model
-     */
-    void SetModelPath(const std::string& basePath);
-
-    /**
-     * Sets the file path to the model.
-     * @param basePath absolute path to load llm projection model
-     */
-    void SetMMPROJModelPath(const std::string& basePath);
-
-    /**
-     * Sets the framework backend to be used by the LLM.
-     * @param framework Name of the framework (e.g., "llama.cpp", "onnxruntime-genai").
-     */
-    void SetFramework(const std::string& framework);
-
-    /**
-     * Method sets the system prompt used for LLM inputs.
-     * @param systemPrompt A prompt that guides the LLM’s behavior and responses.
-     */
-    void SetSystemPrompt(const std::string& systemPrompt);
-
-    /**
-     * Sets the number of threads to use for LLM model inference.
-     * @param threads number of threads used inference of model
-     */
-    void SetNumThreads(int threads);
-
-    /**
-     * Sets the batch size for inference. Throws std::invalid_argument if the value is not positive.
-     * @param batchSz chunk-size of each batch used to split query-encoding
-     */
-    void SetBatchSize(int batchSz);
-
-    /**
-     * Sets the Stop words in config
+     * @brief Sets the Stop words in config
      * @param stopWords is the vector of stop words
      */
     void SetStopWords(const std::vector<std::string>& stopWords);
-
-    /**
-     * Sets the supported input modalities for the LLM framework.
-     *
-     * @param inputModalities Vector of input modality names (e.g., "text", "image").
-     */
-    void SetInputModalities(const std::vector<std::string>& inputModalities);
-
-    /**
-     * Sets the supported output modalities for the LLM framework.
-     *
-     * @param outputModalities Vector of output modality names (e.g., "text").
-     */
-    void SetOutputModalities(const std::vector<std::string>& outputModalities);
-
-    /**
-    * Clears all the stop words
-    */
-    void ClearStopWords();
-
-    /**
-     * Method to append stop word to existing list.
-     * @param stopWord stop word to be added to the existing list of stop-words
-     */
-    void AddStopWord(const std::string& stopWord);
-
-    /**
-     * Method to append an input modality to existing list.
-     * @param inputModality the new modality to add to the list
-     */
-    void AddInputModality(const std::string& inputModality);
-
-    /**
-    * Method to append an output modality to existing list.
-    * @param outputModality the new modality to add to the list
-    */
-    void AddOutputModality(const std::string& outputModality);
-
-
 };
 
 #endif /* LLM_CONFIG_HPP */

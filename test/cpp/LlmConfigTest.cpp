@@ -6,55 +6,91 @@
 
 
 #include "LlmImpl.hpp"
-#include <sstream>
 #include <cstring>
-
+#include <nlohmann/json.hpp>
 #include "catch2/catch_test_macros.hpp"
+
+using json = nlohmann::json;
+
+static std::string buildVariant(const std::string& baseConfig, const std::function<void(json&)>& mutator)
+{
+    json j = json::parse(baseConfig);
+    mutator(j);
+    return j.dump(4);
+}
 
 /**
  * Simple Test file for testing config related cases
  */
-TEST_CASE("Test Multi-Modal config, with missing projection model")
+TEST_CASE("Configuration paramaters test")
 {
+    std::string validConfig =
+        R"JSON(
+        {
+            "chat" : {
+                "systemPrompt": "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",
+                "applyDefaultChatTemplate": false,
+                "systemTemplate" : "<|system|>%s<|end|>",
+                "userTemplate"   : "<|user|>%s<|end|><|assistant|>"
+            },
+            "model" : {
+                "llmModelName" : "llama.cpp/phi-2/model.gguf",
+                "isVision" : false
+            },
+            "runtime" : {
+                "batchSize" : 256,
+                "numThreads" : 4,
+                "contextSize" : 2048
+            },
+            "stopWords": ["endoftext"]
+            }
+        )JSON";
 
-    std::string jsonString =
-            "{\n"
-            "  \"modelTag\": \"<|im_start|>assistant\\n\",\n"
-            "  \"userTag\": \"<|im_start|>user\\n\",\n"
-            "  \"endTag\" : \"<|im_end|>\\n\",\n"
-            "  \"mediaTag\" : \"<__media__>\",\n"
-            "  \"stopWords\": [\n"
-            "    \"Orbita:\",\n"
-            "    \"User:\",\n"
-            "    \"AI:\",\n"
-            "    \"<|user|>\",\n"
-            "    \"Assistant:\",\n"
-            "    \"user:\",\n"
-            "    \"[end of text]\",\n"
-            "    \"<|endoftext|>\",\n"
-            "    \"<end_of_utterance>\",\n"
-            "    \"model:\",\n"
-            "    \"Question:\",\n"
-            "    \"<|end|>\",\n"
-            "    \"<|im_end|>\",\n"
-            "    \"\\n\\n\",\n"
-            "    \"Consider the following scenario:\\n\"\n"
-            "  ],\n"
-            "  \"llmModelName\": \"llama.cpp/mmModel.gguf\",\n"
-            "  \"inputModalities\" : [\"text\", \"image\"],\n"
-            "  \"outputModalities\" : [\"text\"],\n"
-            "  \"llmPrefix\": \"<|im_start|>system\\nYou are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of four sentences.\\n<|im_end|>\\n\",\n"
-            "  \"numThreads\": 5,\n"
-            "  \"maxInputImageDim\": 128\n"
-            "}";
-
-    try{
-        LlmConfig config(jsonString);
-    } catch (std::runtime_error e)
-    {
-        CHECK(!strcmp(e.what(), "Missing required parameter: llmMmProjModelName"));
+    SECTION("Set parameter") {
+        LlmConfig config(validConfig);
+        int newNumThreads = 8;
+        config.SetConfigInt("numThreads",newNumThreads);
+        CHECK(newNumThreads == config.GetConfigInt("numThreads"));
     }
 
+    SECTION("Bad chat parameters") {
+        try {
+            // Wrong type: chat.systemPrompt -> bool
+            const std::string badChatParamConfig = buildVariant(validConfig, [](json& j) {
+                j["chat"]["systemPrompt"] = false;
+            });
 
+            LlmConfig config(badChatParamConfig);
+            CHECK(false);
+        } catch (const std::invalid_argument& e) {
+            CHECK(std::string(e.what()).find("config: schema/type error") != std::string::npos);
+        }
+    }
 
+    SECTION("Missing runtime parameters") {
+        try {
+            // Missing param: remove top-level "runtime"
+            const std::string missingParamConfig = buildVariant(validConfig, [](json& j) {
+                j.erase("runtime");
+            });
+
+            LlmConfig config(missingParamConfig);
+        } catch (const nlohmann::json::out_of_range& e) {
+            CHECK(std::string(e.what()).find("'runtime' not found") != std::string::npos);
+        }
+    }
+
+    SECTION("Missing sub chat parameter") {
+        try {
+              // Missing sub-param: remove "chat.userTemplate"
+            const std::string missingSubParamConfig = buildVariant(validConfig, [](json& j) {
+                if (j.contains("chat")) j["chat"].erase("userTemplate");
+            });
+
+            LlmConfig config(missingSubParamConfig);
+            CHECK(false);
+        } catch (const std::invalid_argument& e) {
+            CHECK(std::string(e.what()).find("config: schema/type error") != std::string::npos);
+        }
+    }
 }

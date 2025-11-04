@@ -1,12 +1,18 @@
 {
-  "llmModelName" : "mediapipe/gemma-2b-it-cpu-int4.tflite",
-  "batchSize"    : 256,
-  "numThreads"   : 5,
-  "systemPrompt" : "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",
-  "applyDefaultChatTemplate" : true,
-  "defaultChatTemplate" : {
+  "chat" : {
+    "systemPrompt" : "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",
+    "applyDefaultChatTemplate" : true,
     "systemTemplate" : "<start_of_turn>system:%s<end_of_turn>",
     "userTemplate"   : "\n<start_of_turn>user:%s<end_of_turn>\n<start_of_turn>model:"
+  },
+  "model" : {
+    "llmModelName" : "mediapipe/gemma-2b/gemma-2b-it-cpu-int4.tflite",
+    "isVision" : false
+  },
+  "runtime" : {
+    "batchSize"    : 256,
+    "numThreads"   : 5,
+    "contextSize"  : 2048
   },
   "stopWords": [
     "Orbita:",
@@ -18,7 +24,5 @@
     "[end of text]",
     "model:",
     "Question:"
-  ],
-  "inputModalities" : ["text"],
-  "outputModalities" : ["text"]
+  ]
 }

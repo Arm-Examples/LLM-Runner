@@ -15,12 +15,15 @@
       * [llama cpp options](#llama-cpp-options)
       * [onnxruntime genai options](#onnxruntime-genai-options)
       * [mediapipe options](#mediapipe-options)
+      * [mnn options](#mnn-options)
   * [Quick start](#quick-start)
     * [Supported Models](#supported-models)
       * [llama cpp model](#llama-cpp-model)
-        * [multimodal](#multimodal)
+        * [llama cpp multimodal](#llama-cpp-multimodal)
       * [onnxruntime genai model](#onnxruntime-genai-model)
       * [mediapipe model](#mediapipe-model)
+      * [mnn model](#mnn-model)
+        * [mnn multimodal](#mnn-multimodal)
     * [Native host build](#native-host-build)
     * [To build for Android](#to-build-for-android)
     * [To build for Linux](#to-build-for-linux)
@@ -31,6 +34,7 @@
   * [To build an executable benchmark binary](#to-build-an-executable-benchmark-binary)
     * [llama cpp](#llama-cpp)
     * [onnxruntime genai](#onnxruntime-genai)
+    * [mnn](#mnn)
   * [Trademarks](#trademarks)
   * [License](#license)
 <!-- TOC -->
@@ -133,6 +137,17 @@ Building mediapipe for aarch64 in x86_64 linux based requires downloading Aarch6
 > **NOTE**: Support for mediapipe is experimental and current focus is to support Android™ platform. Please note that latest ARM GNU Toolchain version(14.3) may depend on libraries present in Ubuntu® 24.04.4 LTS when cross-compiled.\
 > Support for macOS® and Windows is not added in this release.
 
+#### mnn options
+
+For customising MNN framework , following parameters can be used:
+
+- `MNN_SRC_DIR`: Source directory path that will be populated by CMake
+  configuration.
+- `MNN_GIT_URL`: Git URL to clone the sources from.
+- `MNN_GIT_TAG`: Git SHA for checkout
+
+> **NOTE**: This repository has been tested with `MNN` version `v3.3.0`.
+
 ## Quick start
 
 By default, the JNI builds are enabled, and Arm® KleidiAI™ kernels are enabled on arm64/aarch64.
@@ -145,6 +160,7 @@ To disable these, configure with: `-DUSE_KLEIDIAI=OFF`.
 | **llama.cpp**          | `phi-2`<br/>`qwen-2-VL`<br/>`llama-3.2-1B` | [mit](https://huggingface.co/microsoft/phi-2/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
 | **onnxruntime-genai**  | `phi4-mini-instruct`                       | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)                                                                                                                                                                  |
 | **mediapipe**          | `gemma-2B`                                 | [Gemma](https://www.kaggle.com/models/google/gemma/license/consent)                                                                                                                                                                             |
+| **mnn**                | `qwen-2.5-VL`<br/>`llama-3.2-1B`           | [apache-2.0](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
 
 
 #### llama cpp model
@@ -160,7 +176,7 @@ However, any model supported by the backend library could be used.
 
 > **NOTE**: Currently only Q4_0 models are accelerated by Arm® KleidiAI™ kernels in `llama.cpp`.
 
-##### multimodal
+##### llama cpp multimodal
 
 The `llama.cpp` backend **also supports multimodal (image + text)** inference in this project.
 
@@ -173,9 +189,9 @@ Use these fields in your configuration file:
 
 - `llmModelName` — text model (GGUF)
 - `llmMmProjModelName` — vision projection (GGUF) for multimodal
-- `inputModalities` — include `"image"` to enable multimodal
+- `isvision` — set `"true"` to enable multimodal
 
-If `"image"` is included in `inputModalities`, a valid `llmMmProjModelName` is required; omitting `"image"` runs the backend in **text-only** mode.
+If `"isVision"` is `true`, a valid `llmMmProjModelName` is required; omitting `"image"` runs the backend in **text-only** mode.
 
 You can find an example of multimodal settings in [`llamaVisionConfig-qwen2-vl-2B.json`](model_configuration_files/llamaVisionConfig-qwen2-vl-2B.json).
 
@@ -217,6 +233,41 @@ machine huggingface.co
 Ensure the .netrc file is secured with the correct permissions.
 Alternatively, you can quantize other models listed in [conversion colab](https://colab.research.google.com/github/googlesamples/mediapipe/blob/main/examples/llm_inference/conversion/llm_conversion.ipynb) from [Hugging Face](https://huggingface.co) to TensorFlow Lite™ (.tflite) format. Copy the resulting 4-bit models to `resources_downloaded/models/mediapipe`.
 It is recommended to use *mediapipe python package version 0.10.15* for stable conversion to 4-bit models.
+
+#### mnn model
+
+This project uses the **Llama 3.2 1B model** as its default network for the MNN framework.
+The model is distributed using the **4-bit quantization** format, which is highly recommended as it delivers efficient inference performance while maintaining strong text generation quality on Arm® CPUs.
+
+- You can access the text model from [Hugging Face](https://huggingface.co/taobao-mnn/Llama-3.2-1B-Instruct-MNN)
+- The model configuration is declared in the [`requirements.json`](scripts/py/requirements.json)
+
+However, any model supported by the MNN backend library can be used.
+
+To use an MNN model with this framework, the following files are required:
+- `config.json`: Model configuration file
+- `llm.mnn`: Main MNN model file
+- `llm.mnn.json`: Model metadata file generated by the MNN conversion process
+- `llm.mnn.weight`: Model weight file (used when weights are stored separately)
+- `llm_config.json`: Model-specific configuration file
+- `tokenizer.txt` : Tokenizer definition file
+- `embeddings_bf16.bin` : (optional) Used by some models that store embeddings separately. If this file exists, download it; otherwise, embeddings are already included in the main weights.
+
+These files are essential for loading and running MNN models effectively.
+
+##### mnn multimodal
+
+The `MNN` backend **also supports multimodal (image + text)** inference in this project.
+
+- You can access the vision model from [Hugging Face](https://huggingface.co/taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN)
+
+**What you need**
+- `visual.mnn`: Vision model metadata file generated by the MNN conversion process
+- `visual.mnn.weight`: Vision model weight file (used when weights are stored separately)
+
+> **NOTE**: The MNN backend determines whether multimodal mode is active from the `is_visual` field inside the model’s `llm_config.json`.
+
+You can find an example multimodal configuration in [mnnVisionConfig-qwen2.5-3B.json](model_configuration_files/mnnVisionConfig-qwen2.5-3B.json)
 
 ### Native host build
 
@@ -376,7 +427,7 @@ cmake --build ./build
 
 You can run either executable from command line and add your prompt for example the following:
 ```
-./build/bin/llama-cli -m resources_downloaded/models/llama.cpp/model.gguf --prompt "What is the capital of France"
+./build/bin/llama-cli -m resources_downloaded/models/llama.cpp/phi-2/phi2_Q4_model.gguf --prompt "What is the capital of France"
 ```
 More information can be found at `llama.cpp/examples/main/README.md` on how this executable can be run.
 
@@ -384,9 +435,16 @@ More information can be found at `llama.cpp/examples/main/README.md` on how this
 
 You can run model_benchmark executable from command line:
 ```
-./build/bin/model_benchmark -i resources_downloaded/models/onnxruntime-genai
+./build/bin/model_benchmark -i resources_downloaded/models/onnxruntime-genai/phi-4-mini/
 ```
 More information can be found at `onnxruntime-genai/benchmark/c/readme.md` on how this executable can be run.
+
+### mnn
+
+You can run llm_bench executable from command line:
+```
+./build/bin/llm_bench -m resources_downloaded/models/mnn/llama-3.2-1b/config.json -t 4 -p 128 -n 64
+```
 
 ## Trademarks
 

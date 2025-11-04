@@ -64,7 +64,7 @@ namespace LlmLog {
     #else
         #define LOG_WARN(...)    do { (void)0; } while(0)
     #endif
-    #if ACTIVE_LOG_LEVEL >= LOG_LEVEL_DEBUG
+    #if ACTIVE_LOG_LEVEL >= LOG_LEVEL_INFO
         #define LOG_INF(...)   do { fprintf(stdout, "INFO : "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); } while(0)
     #else
         #define LOG_INF(...)    do { (void)0; } while(0)
@@ -79,14 +79,14 @@ namespace LlmLog {
 // Exception macros using the logger
 #define THROW_ERROR(fmt, ...) \
     do { \
-        LOG_ERROR(fmt, ##__VA_ARGS__); \
-        throw std::runtime_error(LlmLog::vformat(fmt, ##__VA_ARGS__)); \
+        LOG_ERROR(fmt __VA_OPT__(, __VA_ARGS__)); \
+        throw std::runtime_error(LlmLog::vformat(fmt __VA_OPT__(, __VA_ARGS__))); \
     } while (0)
 
 #define THROW_INVALID_ARGUMENT(fmt, ...) \
     do { \
-        LOG_ERROR(fmt, ##__VA_ARGS__); \
-        throw std::invalid_argument(LlmLog::vformat(fmt, ##__VA_ARGS__)); \
+        LOG_ERROR(fmt __VA_OPT__(, __VA_ARGS__)); \
+        throw std::invalid_argument(LlmLog::vformat(fmt __VA_OPT__(, __VA_ARGS__))); \
     } while (0)
 
 #endif // ARM_LLM_WRAPPER_LOGGER_HPP

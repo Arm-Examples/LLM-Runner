@@ -176,7 +176,7 @@ public:
      * @brief Encode a multimodal payload (text + optional image).
      * @param payload Input payload containing text and/or image path.
      */
-    void Encode(const LLM::EncodePayload& payload) override;
+    void Encode(LlmChat::Payload& payload) override;
 
     /**
      * @brief Load the llama model from the given configuration.
@@ -187,20 +187,6 @@ public:
      * @brief Create a new runtime context (model + vision).
      */
     void NewContext() override;
-
-    /**
-     * @brief Build and return a query string from the given prompt and configuration.
-     * @param prompt Input payload containing text, optional image, and conversation metadata.
-     * @return The constructed query string to be passed to the model backend.
-     */
-    std::string QueryBuilder(LLM::EncodePayload& prompt) override {
-        if(prompt.imagePath != "") {
-            this->m_imageIndex += 1;
-            prompt.textPrompt = prompt.textPrompt + "#" + std::to_string(this->m_imageIndex) + this->m_mediaMarker;
-        }
-        return LLM::LLMImpl::QueryBuilder(prompt);
-        
-    };
 
     /**
      * @brief List supported input modalities.
@@ -220,6 +206,18 @@ public:
      * Function to create a new sampler object in memory
      */
     void NewSampler() override;
+
+    /**
+     * Adjusts the prompt with the media tag needed by multimodal encode
+     * @param payload The input payload containing the user's text prompt and the image path to apply the template to.
+     */
+    void QueryBuilder(LlmChat::Payload& payload) override {
+        if(payload.imagePath != "") {
+            payload.textPrompt = payload.textPrompt + "#" + std::to_string(this->m_imageIndex) + this->m_mediaMarker;
+            this->m_imageIndex += 1;
+        }
+        LlmChat::QueryBuilder(payload);
+    }
 
 private:
     /** MTMD + llama application context. */

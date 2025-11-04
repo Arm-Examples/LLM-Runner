@@ -90,7 +90,7 @@ def validate_download(filepath, expected_hash):
 
     @param filepath:       The path to downloaded file
     @param expected_hash:  Expected sha256sum
-"""
+    """
     sha256_hash = hashlib.sha256()
     with open(filepath, "rb") as f:
         for byte_block in iter(lambda: f.read(4096), b""):
@@ -111,14 +111,17 @@ def download_resources(resources_file: Path, download_dir: Path,huggingface_toke
     download_dir.mkdir(exist_ok=True)
     with (open(resources_file, encoding="utf8") as f):
         resource_list = json.load(f)
+        resources = []
         for resource_type in resource_list:
             resource_dir = Path(download_dir / resource_type)
             resource_dir.mkdir(exist_ok=True)
 
             if resource_type == "models":
-                resources = resource_list[resource_type][llm_framework]
-                model_dir = Path(resource_dir / llm_framework)
-                model_dir.mkdir(exist_ok=True)
+                model_resources = resource_list[resource_type][llm_framework]
+                for model_name in model_resources:
+                    model_dir = Path(resource_dir / llm_framework / model_name)
+                    model_dir.mkdir(parents=True, exist_ok=True)
+                    resources.extend(model_resources[model_name])
             else:
                 resources = resource_list[resource_type]
 
@@ -168,7 +171,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--llm-framework",
         help="LLM framework from which the model will be downloaded.",
-        choices=["llama.cpp", "mediapipe", "onnxruntime-genai"],
+        choices=["llama.cpp", "mediapipe", "onnxruntime-genai", "mnn"],
         default=default_llm_framework)
 
     args = parser.parse_args()

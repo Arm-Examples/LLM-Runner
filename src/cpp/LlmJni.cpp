@@ -45,7 +45,7 @@ JNIEXPORT void JNICALL Java_com_arm_Llm_llmInit(JNIEnv* env,
 
     try {
         LlmConfig config = LlmConfig(jsonStr);
-        llm = std::make_unique<LLM>(config);
+        llm = std::make_unique<LLM>();
         llm->LlmInit(config, sharedLibraryPathNative);
     } catch (const std::exception& e) {
         THROW_ERROR("Failed to create Llm from config string: %s", e.what());
@@ -61,7 +61,7 @@ JNIEXPORT void JNICALL Java_com_arm_Llm_encode(JNIEnv *env, jobject thiz, jstrin
                                                jboolean is_first_message) {
     const auto text = env->GetStringUTFChars(jtext, 0);
     const auto imagePath = env->GetStringUTFChars(path_to_image, 0);
-    LLM::EncodePayload payload{text, imagePath, static_cast<bool>(is_first_message)};
+    LlmChat::Payload payload{text, imagePath, static_cast<bool>(is_first_message)};
     llm->Encode(payload);
     env->ReleaseStringUTFChars(jtext, text);
 }

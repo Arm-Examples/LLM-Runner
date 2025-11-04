@@ -6,10 +6,12 @@
 
 #pragma once
 #include "LlmConfig.hpp"
+#include "LlmChat.hpp"
 #include <atomic>
 #include <memory>
 #include <string>
 #include <vector>
+
 
 /**
  * @class LLM
@@ -19,27 +21,12 @@
  */
 class LLM {
 public:
-
-    /**
-     * @struct EncodePayload
-     * @brief Input payload for encoding a prompt.
-     *
-     * Encapsulates the parameters required when sending a prompt
-     * (text, optional image, and conversation metadata) to the model.
-     */
-    struct EncodePayload {
-        std::string textPrompt;     ///< Text query to encode
-        std::string imagePath;      ///< Path to image (optional, leave empty if none)
-        bool isFirstMessage{false}; ///< Whether this is the first conversation message
-    };
-
     class LLMImpl; // Forward declaration for PImpl
 
     /**
-     * @brief Construct an LLM instance with the given configuration.
-     * @param llmConfig Configuration object specifying backend, model, and runtime options.
+     * @brief Construct an LLM instance.
      */
-    explicit LLM(const LlmConfig &llmConfig);
+    explicit LLM();
     ~LLM() noexcept;
 
     /**
@@ -98,7 +85,7 @@ public:
      * Encode a text query into the model. Call NextToken() to retrieve tokens.
      * @param payload The input payload containing text and optional image data.
      */
-    void Encode(EncodePayload& payload);
+    void Encode(LlmChat::Payload& payload);
 
     /**
      * Retrieve the next token from the model after Encode().
@@ -123,14 +110,7 @@ public:
     [[nodiscard]] std::string BenchModel(int &nPrompts, int &nEvalPrompts, int &nMaxSeq, int &nRep);
 
     /** @return Framework type string (e.g., backend name). */
-    [[nodiscard]] std::string GetFrameworkType() const;
-
-    /**
-     * Format a prompt into a style the model understands for conversation.
-     * @param prompt Raw prompt string (modified in-place).
-     * @return Formatted query.
-     */
-    [[nodiscard]] std::string QueryBuilder(EncodePayload& prompt) const;
+    [[nodiscard]] static std::string GetFrameworkType();
 
     /**
      * @return Vector of supported input modalities for the active implementation.
@@ -151,7 +131,6 @@ private:
      * @return Token string up to a stop word, end token, or partial output.
      */
     [[nodiscard]] std::string ContainsStopWord();
-
     LlmConfig m_config{};
     std::atomic<bool> m_evaluatedOnce{false};
     std::string m_streamEndFlag{};

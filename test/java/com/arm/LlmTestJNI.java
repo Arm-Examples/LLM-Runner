@@ -43,10 +43,14 @@ public class LlmTestJNI {
         try {
             String jsonContent = new String(Files.readAllBytes(Paths.get(configFilePath)));
             configJson = new JSONObject(jsonContent);
-            configJson.put("llmModelName", modelDir + "/" + configJson.getString("llmModelName"));
-            JSONArray inputModalities = configJson.getJSONArray("inputModalities");
-            if (inputModalities.length() == 2) {
-                configJson.put("llmMmProjModelName", modelDir + "/" + configJson.getString("llmMmProjModelName"));
+            JSONObject modelObj = configJson.getJSONObject("model");
+            String modelName = modelObj.getString("llmModelName");
+            modelObj.put("llmModelName", modelDir + "/" + modelName);
+            if (modelObj.has("projModelName") && !modelObj.isNull("projModelName")) {
+                String projModelName = modelObj.getString("projModelName");
+                if (!projModelName.isEmpty()) {
+                    modelObj.put("projModelName", modelDir + "/" + projModelName);
+                }   
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to load config JSON", e);
@@ -57,9 +61,9 @@ public class LlmTestJNI {
     public void testSystemPrompt() {
         String newModelTag = "Ferdia";
         String newSystemPrompt = "You are a helpful and factual AI assistant named "+ newModelTag + ". " + newModelTag +  " answers with maximum of two sentences.";
-        String oldSystemPrompt = configJson.getString("systemPrompt");
-
-        configJson.put("systemPrompt",newSystemPrompt);
+        JSONObject chatObj = configJson.getJSONObject("chat");
+        String oldSystemPrompt = chatObj.getString("systemPrompt");
+        chatObj.put("systemPrompt",newSystemPrompt);
         Llm llm = new Llm();
         llm.llmInit(configJson.toString(), backendSharedLibDir);
         String question = "What is your name?";
@@ -67,9 +71,8 @@ public class LlmTestJNI {
         checkLlmMatch(response, "Ferdia", true);
         llm.freeModel();
         // Revert the configJson to preserve original system prompt and modelTag
-        configJson.put("systemPrompt",oldSystemPrompt);
+        chatObj.put("systemPrompt",oldSystemPrompt);
     }
-
     @Test
     public void testInferenceWithContextReset() {
         Llm llm = new Llm();
@@ -82,9 +85,9 @@ public class LlmTestJNI {
         // Resetting context should cause model to forget what country is being referred to
         llm.resetContext();
 
-        String question2 = "What languages do they speak there?";
+        String question2 = "What country is that capital of? Reply with one word.";
         String response2 = llm.send(question2, true);
-        checkLlmMatch(response2, "English", false);
+        checkLlmMatch(response2, "Canada", false);
         llm.freeModel();
     }
 
@@ -97,9 +100,9 @@ public class LlmTestJNI {
         String response1 = llm.send(question1, true);
         checkLlmMatch(response1, "Ottawa", true);
 
-        String question2 = "What languages do they speak there?";
+        String question2 = "What country is that capital of? Reply with one word.";
         String response2 = llm.send(question2, true);
-        checkLlmMatch(response2, "English", true);
+        checkLlmMatch(response2, "Canada", true);
         llm.freeModel();
     }
 
@@ -122,14 +125,11 @@ public class LlmTestJNI {
         llm.freeModel();
     }
 
-
-    
     //Disabling test, it is failing intermittently on multiple backends/models
     //@Test
     public void testMangoSubtractionLongConversation() {
-
-       Llm llm = new Llm();
-       llm.llmInit(configJson.toString(), backendSharedLibDir);
+        Llm llm = new Llm();
+        llm.llmInit(configJson.toString(), backendSharedLibDir);
 
         int originalMangoes = 5;
         int mangoes = originalMangoes;
@@ -166,7 +166,6 @@ public class LlmTestJNI {
         }
 
         String postResetResponse = llm.send(originalQuery, true);
-
         checkLlmMatch(postResetResponse, String.valueOf(originalMangoes), false);
         llm.freeModel();
     }
@@ -186,9 +185,9 @@ public class LlmTestJNI {
         llm.resetContext();
 
         // Second Question (After Reset)
-        String question2 = "What languages do they speak there?";
+        String question2 = "What country is that capital of? Reply with one word.";
         String response2 = llm.send(question2, true);
-        checkLlmMatch(response2, "English", false);
+        checkLlmMatch(response2, "Canada", false);
         // Ask First Question Again. Note an additional reset is required to prevent the generic answer
         // from previous question affecting new topic.
         llm.resetContext();
@@ -197,7 +196,7 @@ public class LlmTestJNI {
         checkLlmMatch(response3, "Ottawa", true);
         String response4 = llm.send(question2, true);
 
-        checkLlmMatch(response4, "English", true);
+        checkLlmMatch(response4, "Canada", true);
         llm.freeModel();
     }
 }

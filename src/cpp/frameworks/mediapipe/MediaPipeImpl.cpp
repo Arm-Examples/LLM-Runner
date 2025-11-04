@@ -63,7 +63,7 @@ void LLM::LLMImpl::LoadEngine(const std::string& model_path, const std::string& 
         .model_path     = model_path.c_str(),
         .cache_dir      = cache_dir.c_str(),
         .max_num_tokens = this->m_nCtx,
-        .num_threads   = static_cast<size_t>(this->m_config.GetNumThreads())
+        .num_threads   = static_cast<size_t>(this->m_config.GetConfigInt("numThreads"))
     };
 
     this->m_errorCode =
@@ -94,8 +94,9 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPat
 {
     try {
         this->m_config = config;
-        const std::string modelPath = this->m_config.GetModelPath();
+        const std::string modelPath = this->m_config.GetConfigString("llmModelName");
         const std::string cache_dir = GetCacheDir();
+        this->m_nCtx = this->m_config.GetConfigInt("contextSize");
 
         std::filesystem::create_directories(cache_dir);
         LoadEngine(modelPath, cache_dir);
@@ -108,11 +109,6 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPat
         if (this->m_errorCode) {
             THROW_ERROR("Mediapipe Session creation failed");
         }
-        this->m_systemPrompt      = config.GetSystemPrompt();
-        this->m_isDefaultTemplate = config.IsDefaultTemplate();
-        this->m_systemTemplate    = config.GetSystemTemplate();
-        this->m_userTemplate      = config.GetUserTemplate();
-
         this->m_conversationContext = "";
         this->m_llmInitialized      = true;
         this->m_callbackContext.m_nCur = 0;
@@ -122,55 +118,10 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPat
     LOG_INF("Mediapipe Model initialized successfully");
 }
 
-std::string LLM::LLMImpl::ApplyAutoChatTemplate(const std::string& prompt)
-{
-    // TODO: Implement ApplyAutoChatTemplate function when it's available in Mediapipe
-    LOG_INF("Mediapipe does not provide chat templating, falling back to default chat template.");
-    return ApplyDefaultChatTemplate(prompt);
-}
-
-std::string LLM::LLMImpl::ApplyDefaultChatTemplate(const std::string& prompt)
-{
-    constexpr const char* kPlaceholder = "%s";
-    constexpr size_t kPlaceholderSize = std::char_traits<char>::length(kPlaceholder);
-
-    std::string userTurn = this->m_userTemplate;
-    if (auto pos = userTurn.find(kPlaceholder); pos != std::string::npos) {
-        userTurn.replace(pos, kPlaceholderSize, std::string(prompt));
-    } else {
-        THROW_ERROR(
-            "Placeholder not found in user template. Please include %s in the 'userTemplate' section of the configuration file.",kPlaceholder);
-    }
-
-    if (!this->m_isConversationStart) {
-        return userTurn;
-    }
-
-    this->m_isConversationStart = false;
-    std::string systemTurn = this->m_systemTemplate;
-
-    if (auto pos = systemTurn.find(kPlaceholder); pos != std::string::npos) {
-       systemTurn.replace(pos, kPlaceholderSize, std::string(this->m_systemPrompt));
-    } else {
-        THROW_ERROR(
-            "Placeholder not found in user template. Please include %s in the 'systemTemplate' section of the configuration file.",kPlaceholder);
-    }
-
-    return systemTurn + userTurn;
-}
-
-std::string LLM::LLMImpl::QueryBuilder(EncodePayload& payload) {
-    if(this->m_isDefaultTemplate) {
-        return ApplyDefaultChatTemplate(payload.textPrompt);
-    }
-
-    return ApplyAutoChatTemplate(payload.textPrompt);
-}
-
-void LLM::LLMImpl::Encode(EncodePayload& prompt)
+void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
 {
     this->m_callbackContext.m_done = false;
-    std::string _query = this->m_conversationContext + prompt.textPrompt;
+    std::string _query = this->m_conversationContext + payload.textPrompt;
     this->m_errorCode  = LlmInferenceEngine_Session_AddQueryChunk(
         this->m_llmEngineSession, _query.c_str(), &this->m_errorMsg);
     if (this->m_errorCode) {
@@ -279,11 +230,6 @@ void LLM::LLMImpl::ResetContext()
 size_t LLM::LLMImpl::GetChatProgress()
 {
      return (this->m_callbackContext.m_nCur * 100) / this->m_nCtx;
-}
-
-std::string LLM::LLMImpl::GetFrameworkType()
-{
-    return this->m_frameworkType;
 }
 
 void LLM::LLMImpl::FreeLlm()

@@ -149,6 +149,8 @@ file(REMOVE_RECURSE ${ORT_LIB_DIR})
 # Check internally defined dependency targets are visible
 if (NOT TARGET arm-llm-config)
     message(FATAL_ERROR "arm-llm-config target not defined")
+elseif (NOT TARGET arm-llm-chat)
+    message(FATAL_ERROR "arm-llm-chat target not defined")
 elseif (NOT TARGET arm-llm-interface)
     message(FATAL_ERROR "arm-llm-interface target not defined")
 elseif (NOT TARGET arm-llm-log)
@@ -166,6 +168,7 @@ target_link_libraries(arm-llm-framework PUBLIC
     onnxruntime-genai
     onnxruntime
     arm-llm-config
+    arm-llm-chat
     arm-llm-interface
     arm-llm-log)
 

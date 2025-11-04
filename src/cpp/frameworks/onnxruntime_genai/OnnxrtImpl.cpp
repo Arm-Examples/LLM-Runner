@@ -179,13 +179,10 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPat
 {
     try {
         this->m_config            = config;
-        this->m_numOfThreads      = config.GetNumThreads();
-        this->m_modelPath         = config.GetModelPath().c_str();
-        this->m_systemPrompt      = config.GetSystemPrompt();
-        this->m_isDefaultTemplate = config.IsDefaultTemplate();
-        this->m_systemTemplate    = config.GetSystemTemplate();
-        this->m_userTemplate      = config.GetUserTemplate();
-        this->m_batchSz           = config.GetBatchSize();
+        this->m_numOfThreads      = config.GetConfigInt("numThreads");
+        this->m_modelPath         = config.GetConfigString("llmModelName");
+        this->m_batchSz           = config.GetConfigInt("batchSize");
+        this->m_nCtx              = config.GetConfigInt("contextSize");
 
         InitConfigs();
 
@@ -247,68 +244,41 @@ void LLM::LLMImpl::ResetContext()
     LOG_INF("Reset Context");
 }
 
-std::string LLM::LLMImpl::QueryBuilder(EncodePayload& payload)
+bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
 {
-    if(this->m_isDefaultTemplate) {
-        return ApplyDefaultChatTemplate(payload.textPrompt);
-    }
-    return ApplyAutoChatTemplate(payload.textPrompt);
-}
+    // Helper: default role is "user"
+    auto chatMsg = [](std::string_view content, std::string_view role = "user") -> nlohmann::json {
+        return nlohmann::json{{"role", role}, {"content", content}};
+    };
 
-std::string LLM::LLMImpl::ApplyDefaultChatTemplate(const std::string& prompt)
-{
-    constexpr const char* kPlaceholder = "%s";
-    constexpr size_t kPlaceholderSize = std::char_traits<char>::length(kPlaceholder);
-
-    std::string userTurn = this->m_userTemplate;
-    if (auto pos = userTurn.find(kPlaceholder); pos != std::string::npos) {
-        userTurn.replace(pos, kPlaceholderSize, std::string(prompt));
-    } else {
-        THROW_ERROR(
-            "Placeholder not found in user template. Please include %s in the 'userTemplate' section of the configuration file.",kPlaceholder);
-    }
-    if (!this->m_isConversationStart) {
-        return userTurn;
-    }
-
-    this->m_isConversationStart = false;
-    std::string systemTurn = this->m_systemTemplate;
-
-    if (auto pos = systemTurn.find(kPlaceholder); pos != std::string::npos) {
-       systemTurn.replace(pos, kPlaceholderSize, std::string(this->m_systemPrompt));
-    } else {
-        THROW_ERROR(
-            "Placeholder not found in user template. Please include %s in the 'userTemplate' section of the configuration file.",kPlaceholder);
-    }
-    return systemTurn + userTurn;
-}
-
-std::string LLM::LLMImpl::ApplyAutoChatTemplate(const std::string& prompt)
-{
     nlohmann::json messages = nlohmann::json::array();
-    std::string out{""};
-    if (this->m_isConversationStart) {
-        messages.push_back({
-            {"role", "system"},
-            {"content", this->m_systemPrompt}
-        });
+
+    if (m_isConversationStart) {
+        messages.push_back(chatMsg(m_systemPrompt, "system"));
     }
-    messages.push_back({{"role", "user"},{"content", prompt}});
+    messages.push_back(chatMsg(payload.textPrompt)); // role defaults to "user"
+
     const std::string messages_json = messages.dump();
-    std::string first_err;
+
     try {
         // Auto-pick template from config if present
-        out = std::string(m_tokenizerPtr->ApplyChatTemplate("", messages_json.c_str(), "", true));
+        std::string formatted = std::string(
+            m_tokenizerPtr->ApplyChatTemplate("", messages_json.c_str(), "", /*add_generation_prompt=*/true));
+
+        if (formatted.empty()) {
+            LOG_INF("ApplyChatTemplate produced empty output. Falling back to default template.");
+            return false;
+        }
+
+        payload.textPrompt = std::move(formatted);
+        return true;
     } catch (const std::exception& e) {
-        // Fallback to default implementation if auto failed or produced empty output
-        LOG_INF("ApplyChatTemplate failed. Falling back to default template");
-        out = ApplyDefaultChatTemplate(prompt);
+        LOG_INF((std::string("ApplyChatTemplate failed: ") + e.what() + ". Falling back to default template.").c_str());
+        return false;
     }
-    this->m_isConversationStart = false;
-    return out.c_str();
 }
 
-void LLM::LLMImpl::Encode(EncodePayload& payload)
+void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
 {
     std::string prompt = payload.textPrompt;
     try {
@@ -404,11 +374,6 @@ std::string LLM::LLMImpl::BenchModel(int& prompts, int& eval_prompts, int& n_max
    // Abstract the core benchmarking logic into a shared BenchModel(const Config&) function,
    // Migrate each framework submodule to invoke it, and consolidate all parameters into the Config struct.
    return (char *) nullptr;
-}
-
-std::string LLM::LLMImpl::GetFrameworkType()
-{
-    return this->m_frameworkType;
 }
 
 void LLM::LLMImpl::StopGeneration()

@@ -17,6 +17,9 @@ add_subdirectory(interface)
 # Add configuration lib:
 add_subdirectory(config)
 
+# Add chat lib;
+add_subdirectory(chat)
+
 # Add frameworks lib:
 add_subdirectory(frameworks)
 
@@ -29,6 +32,7 @@ target_link_libraries(arm-llm-cpp PUBLIC
     arm-llm-interface
     arm-llm-config
     arm-llm-framework
+    arm-llm-chat
     arm-llm-log)
 
 # If building with JNI support, build a separate

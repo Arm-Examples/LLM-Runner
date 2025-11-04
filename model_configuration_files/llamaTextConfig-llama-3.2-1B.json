@@ -1,12 +1,18 @@
 {
-  "llmModelName" : "llama.cpp/Llama-3.2-1B-Instruct-Q4_0.gguf",
-  "batchSize"    : 256,
-  "numThreads"   : 5,
-  "systemPrompt" : "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",
-  "applyDefaultChatTemplate" : false,
-  "defaultChatTemplate" : {
+  "chat" : {
+    "systemPrompt" : "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",
+    "applyDefaultChatTemplate" : false,
     "systemTemplate" : "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n%s<|eot_id|>\n",
     "userTemplate"   : "<|start_header_id|>user<|end_header_id|>\n%s<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n"
+  },
+  "model" : {
+    "llmModelName" : "llama.cpp/llama-3.2-1b/Llama-3.2-1B-Instruct-Q4_0.gguf",
+    "isVision" : false
+  },
+  "runtime" : {
+    "batchSize"    : 256,
+    "numThreads"   : 5,
+    "contextSize"  : 2048
   },
   "stopWords" : [
     "Orbita:",
@@ -25,7 +31,5 @@
     "\\n\\n",
     "<end_of_turn>",
     "Consider the following scenario:\\n"
-  ],
-  "inputModalities" : ["text"],
-  "outputModalities" : ["text"]
+  ]
 }

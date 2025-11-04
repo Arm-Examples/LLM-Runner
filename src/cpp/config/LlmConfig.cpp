@@ -6,215 +6,113 @@
 #include "LlmConfig.hpp"
 #include <stdexcept>
 #include <nlohmann/json.hpp>
-
 #include "Logger.hpp"
+
+using nlohmann::json;
 
 LlmConfig::LlmConfig(const std::string& jsonStr)
 {
-    nlohmann::json modelConfig;
+    json cfg;
     try {
-        modelConfig = nlohmann::json::parse(jsonStr);
+        cfg = json::parse(jsonStr);
     } catch (const std::exception& e) {
-        THROW_INVALID_ARGUMENT("Invalid JSON input: %s", e.what());
+        THROW_INVALID_ARGUMENT("config: schema/type error: %s", e.what());
     }
 
-    m_isDefaultTemplate = modelConfig.value("applyDefaultChatTemplate", false);
+    // Required sections (throws via .at if missing)
+    const json& chatJ    = cfg.at("chat");
+    const json& modelJ   = cfg.at("model");
+    const json& runtimeJ = cfg.at("runtime");
 
-    // Default chat templates
-    const auto tmpl = modelConfig.value("defaultChatTemplate", nlohmann::json::object());
-    m_systemTemplate = tmpl.value("systemTemplate", "%s");
-    m_userTemplate   = tmpl.value("userTemplate",   "%s");
 
-    if (!modelConfig.contains("llmModelName")) {
-        THROW_INVALID_ARGUMENT("Missing required parameter: modelPath");
-    }
-    m_modelPath = modelConfig["llmModelName"];
-
-    m_framework = modelConfig.value("framework", "");
-    m_systemPrompt = modelConfig.value("systemPrompt", "");
-
-    // Stop-words should be a non-empty array of string with no null strings.
-
-    if (!modelConfig.contains("stopWords") || !modelConfig["stopWords"].is_array() || modelConfig["stopWords"].empty() )
-    {
-        THROW_INVALID_ARGUMENT("Missing 'stopWords' key or invalid 'stopWords', stopWords must be a non-empty array.");
+    // Parse directly into members (throws on missing/wrong types)
+    try {
+        chatJ.get_to(m_chat);
+        runtimeJ.get_to(m_runtime);
+        modelJ.get_to(m_model);
+    } catch (const nlohmann::json::exception& e) {
+        THROW_INVALID_ARGUMENT("config: schema/type error: %s", e.what());
     }
 
-    std::vector<std::string> parsedStopWords;
+    // Basic invariants
+    if (m_runtime.numThreads <= 0)
+        THROW_INVALID_ARGUMENT("config.runtime.numThreads must be positive");
+    if (m_runtime.batchSize <= 0)
+        THROW_INVALID_ARGUMENT("config.runtime.batchSize must be positive");
+    if (m_runtime.contextSize <= 0)
+        THROW_INVALID_ARGUMENT("config.runtime.contextSize must be positive");
 
-    for (const auto& val : modelConfig["stopWords"]) {
-        if (!val.is_string() || val.get<std::string>().empty()) {
-            THROW_INVALID_ARGUMENT("All stopWords must be non-empty strings.");
-        }
-        parsedStopWords.emplace_back(val.get<std::string>());
+    // stopWords: must exist, array, non-empty, all non-empty strings
+    const json& sw = cfg.at("stopWords");
+    if (!sw.is_array() || sw.empty())
+        THROW_INVALID_ARGUMENT("config.stopWords must be a non-empty array of strings");
+
+    std::vector<std::string> stopWords;
+    stopWords.reserve(sw.size());
+    for (const auto& v : sw) {
+        if (!v.is_string())
+            THROW_INVALID_ARGUMENT("config.stopWords: all entries must be strings");
+        const std::string s = v.get<std::string>();
+        if (s.empty())
+            THROW_INVALID_ARGUMENT("config.stopWords: strings must be non-empty");
+        stopWords.emplace_back(s);
     }
-
-    std::vector<std::string> parsedInputModalities;
-    for (const auto& val : modelConfig["inputModalities"]) {
-        if (!val.is_string() || val.get<std::string>().empty()) {
-            THROW_INVALID_ARGUMENT("All input modalities must be non-empty strings.");
-        }
-        parsedInputModalities.emplace_back(val.get<std::string>());
-    }
-
-    std::vector<std::string> parsedOutputModalities;
-    for (const auto& val : modelConfig["outputModalities"]) {
-        if (!val.is_string() || val.get<std::string>().empty()) {
-            THROW_INVALID_ARGUMENT("All output modalities must be non-empty strings.");
-        }
-        parsedOutputModalities.emplace_back(val.get<std::string>());
-    }
-
-    SetStopWords(parsedStopWords);
-    SetInputModalities(parsedInputModalities);
-    SetOutputModalities(parsedOutputModalities);
-
-    if(Contains(parsedInputModalities, "image")) {
-        if(!modelConfig.contains("llmMmProjModelName")) {
-            THROW_ERROR("Missing required parameter: llmMmProjModelName");
-        }
-        m_mmProjModelPath = modelConfig["llmMmProjModelName"];
-    }
-
-    //Default Batchsize is set to 256 if not provided and number of threads to 4.
-    SetNumThreads(modelConfig.value("numThreads", 4));
-    SetBatchSize(modelConfig.value("batchSize", 256));
+    m_stopWords = std::move(stopWords);
 }
 
-bool LlmConfig::IsDefaultTemplate() const
-{
-    return this->m_isDefaultTemplate;
+void LlmConfig::SetConfigString(const std::string& key, const std::string& value) {
+    if (key == "systemPrompt")   { m_chat.systemPrompt = value; return; }
+    if (key == "systemTemplate") { m_chat.systemTemplate = value; return; }
+    if (key == "userTemplate")   { m_chat.userTemplate = value; return; }
+    if (key == "llmModelName")   { m_model.llmModelName = value; return; }
+    if (key == "projModelName")  { m_model.projModelName = value; return; }
+    THROW_INVALID_ARGUMENT("Unknown string key: %s", key.c_str());
 }
 
-std::string LlmConfig::GetSystemTemplate() const
-{
-    return this->m_systemTemplate;
+void LlmConfig::SetConfigBool(const std::string& key, bool value) {
+    if (key == "applyDefaultChatTemplate") { m_chat.applyDefaultChatTemplate = value; return; }
+    if (key == "isVision")                 { m_model.isVision = value; return; }
+    THROW_INVALID_ARGUMENT("Unknown bool key: %s", key.c_str());
 }
 
-std::string LlmConfig::GetUserTemplate() const
-{
-    return this->m_userTemplate;
+void LlmConfig::SetConfigInt(const std::string& key, int value) {
+    if (key == "numThreads") { m_runtime.numThreads = value; return; }
+    if (key == "batchSize")  { m_runtime.batchSize  = value; return; }
+    if (key == "contextSize"){ m_runtime.contextSize= value; return; }
+    THROW_INVALID_ARGUMENT("Unknown int key: %s", key.c_str());
 }
 
-std::string LlmConfig::GetModelPath() const
-{
-    return this->m_modelPath;
+std::string LlmConfig::GetConfigString(const std::string& key) const {
+    if (key == "systemPrompt")   return m_chat.systemPrompt;
+    if (key == "systemTemplate") return m_chat.systemTemplate;
+    if (key == "userTemplate")   return m_chat.userTemplate;
+    if (key == "llmModelName")   return m_model.llmModelName;
+    if (key == "projModelName")  return m_model.projModelName;
+    THROW_INVALID_ARGUMENT("Unknown string key: %s", key.c_str());
 }
 
-std::string LlmConfig::GetMMPROJModelPath() const
-{
-    return this->m_mmProjModelPath;
+bool LlmConfig::GetConfigBool(const std::string& key) const {
+    if (key == "applyDefaultChatTemplate") return m_chat.applyDefaultChatTemplate;
+    if (key == "isVision")                 return m_model.isVision;
+    THROW_INVALID_ARGUMENT("Unknown bool key: %s", key.c_str());
 }
 
-std::string LlmConfig::GetSystemPrompt() const
-{
-    return this->m_systemPrompt;
-}
-
-int LlmConfig::GetNumThreads() const
-{
-    return this->m_numThreads;
-}
-
-int LlmConfig::GetBatchSize() const
-{
-    return this->m_batchSize;
-}
-
-std::vector<std::string> LlmConfig::GetStopWords() const
-{
-    return this->m_stopWords;
-}
-
-std::vector<std::string> LlmConfig::GetInputModalities() const
-{
-    return this->m_inputModalities;
-}
-
-std::vector<std::string> LlmConfig::GetOutputModalities() const
-{
-    return this->m_outputModalities;
-}
-
-void LlmConfig::SetModelPath(const std::string& basePath)
-{
-    this->m_modelPath = basePath;
-}
-
-void LlmConfig::SetMMPROJModelPath(const std::string& projectionModel)
-{
-    this->m_mmProjModelPath = projectionModel;
-}
-
-void LlmConfig::SetFramework(const std::string& framework)
-{
-    this->m_framework = framework;
-}
-
-void LlmConfig::SetSystemPrompt(const std::string& systemPrompt)
-{
-    this->m_systemPrompt = systemPrompt;
-}
-
-void LlmConfig::SetNumThreads(int threads)
-{
-    if (threads <= 0) {
-        THROW_INVALID_ARGUMENT("number of threads must be a positive integer.");
-    }
-    this->m_numThreads = threads;
-}
-
-void LlmConfig::SetBatchSize(int batchSz)
-{
-    if (batchSz <= 0) {
-        THROW_INVALID_ARGUMENT("batch-size must be a positive integer.");
-    }
-    this->m_batchSize = batchSz;
+int LlmConfig::GetConfigInt(const std::string& key) const {
+    if (key == "numThreads") return m_runtime.numThreads;
+    if (key == "batchSize")  return m_runtime.batchSize;
+    if (key == "contextSize")return m_runtime.contextSize;
+    THROW_INVALID_ARGUMENT("Unknown int key: %s", key.c_str());
 }
 
 void LlmConfig::SetStopWords(const std::vector<std::string>& stopWords)
 {
     if (stopWords.empty()) {
-        THROW_INVALID_ARGUMENT("Stop words must not be empty.");
+        THROW_INVALID_ARGUMENT("config.stopWords: strings must be non-empty");
+    }
+    for (const auto& s : stopWords) {
+        if (s.empty()) {
+            THROW_INVALID_ARGUMENT("config.stopWords: all entries must be strings");
+        }
     }
     this->m_stopWords = stopWords;
-}
-
-void LlmConfig::SetInputModalities(const std::vector<std::string>& inputModalities)
-{
-    if (inputModalities.empty()) {
-        THROW_INVALID_ARGUMENT("Input Modalities must not be empty.");
-    }
-    this->m_inputModalities = inputModalities;
-}
-
-void LlmConfig::SetOutputModalities(const std::vector<std::string>& outputModalities)
-{
-    if (outputModalities.empty()) {
-        THROW_INVALID_ARGUMENT("Output Modalities must not be empty.");
-    }
-    this->m_outputModalities = outputModalities;
-}
-
-void LlmConfig::ClearStopWords()
-{
-    this->m_stopWords.clear();
-}
-
-void LlmConfig::AddStopWord(const std::string& stopWord)
-{
-    this->m_stopWords.push_back(stopWord);
-}
-
-template <typename Container, typename T>
-bool LlmConfig::Contains(const Container& container, const T& value) {
-    return std::find(container.begin(), container.end(), value) != container.end();
-}
-
-void LlmConfig::AddInputModality(const std::string& inputModality) {
-    this->m_inputModalities.emplace_back(inputModality);
-}
-
-void LlmConfig::AddOutputModality(const std::string& outputModality) {
-    this->m_outputModalities.emplace_back(outputModality);
 }

@@ -37,14 +37,15 @@ TEST_CASE("Test logging issues") {
     auto jsonString = SetupConfigString();
     nlohmann::json modelConfig;
     modelConfig = nlohmann::json::parse(jsonString);
-    std::string llmModelName = modelConfig["llmModelName"];
+    std::string llmModelName = modelConfig["model"]["llmModelName"];
 
     SECTION("Wrong model path") {
         try {
             LlmConfig configTest(jsonString);
-            LLM llm(configTest);
+            LLM llm{};
+            llm.LlmInit(configTest);
         } catch (std::runtime_error e) {
-            CHECK(contains(e.what(),"initialized failed"));
+            CHECK(contains(e.what(),"initialization failed"));
         }
     }
 
@@ -52,9 +53,10 @@ TEST_CASE("Test logging issues") {
         try {
             LlmConfig configTest(jsonString);
             configTest.SetStopWords({});
-            LLM llm(configTest);
+            LLM llm{};
+            llm.LlmInit(configTest);
         } catch (std::invalid_argument e) {
-            CHECK(contains(e.what(),"Stop words must not be empty"));
+            CHECK(contains(e.what(),"config.stopWords: strings must be non-empty"));
         }
     }
 
@@ -66,24 +68,7 @@ TEST_CASE("Test logging issues") {
             LlmConfig configTest(updatedJsonString);
 
         } catch (std::invalid_argument e) {
-            CHECK(contains(e.what(),"All stopWords must be non-empty strings."));
-        }
-    }
-
-    SECTION("Set Extra input Modality") {
-        if (modelConfig["inputModalities"].size()==1) {
-            modelConfig["inputModalities"].push_back("image");
-            modelConfig["llmMmProjModelName"] ="placeholder/model.proj";
-        }
-        try {
-            LlmConfig configTest(modelConfig.dump());
-        }
-        catch (std::runtime_error e) {
-            // only mediapipe and onnxrt should throw errors for
-            if (contains(llmModelName,"mediapipe") || contains(llmModelName,"onnxrt"))
-                CHECK(contains(e.what(),"Error, image input modality specified, but no supported by this LLMImpl"));
-            else
-                CHECK(0);
+            CHECK(contains(e.what(),"config.stopWords: all entries must be strings"));
         }
     }
 
@@ -103,5 +88,4 @@ TEST_CASE("Test logging issues") {
             }
         }
     }
-    
 }

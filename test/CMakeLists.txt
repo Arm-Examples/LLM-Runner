@@ -33,6 +33,11 @@ elseif (${LLM_FRAMEWORK} STREQUAL "onnxruntime-genai")
     set(CONFIG_FILE_NAME "onnxrtTextConfig-phi-4.json" CACHE STRING "Path to the ONNX Runtime GenAI config file")
 elseif (${LLM_FRAMEWORK} STREQUAL "mediapipe")
     set(CONFIG_FILE_NAME "mediapipeTextConfig-gemma-2B.json" CACHE STRING "Path to the mediapipe config file")
+elseif (${LLM_FRAMEWORK} STREQUAL "mnn")
+    set(CONFIG_FILE_NAME
+            "mnnTextConfig-llama-3.2-1B.json"
+            "mnnVisionConfig-qwen2.5-3B.json"
+            CACHE STRING "Path to the MNN config files")
 endif ()
 
 # Download Catch and add to the build.
@@ -44,7 +49,6 @@ enable_testing()
 set(TEST_TARGET llm-cpp-tests)
 add_executable(${TEST_TARGET}
         ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmTest.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmImplFactoryTest.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmConfigTest.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmLogTest.cpp)
 

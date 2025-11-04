@@ -1,12 +1,18 @@
 {
-  "llmModelName" : "llama.cpp/phi2_Q4_model.gguf",
-  "batchSize"    : 256,
-  "numThreads"   : 5,
-  "systemPrompt" : "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",
-  "applyDefaultChatTemplate" : true,
-  "defaultChatTemplate" : {
+  "chat" : {
+    "systemPrompt" : "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",
+    "applyDefaultChatTemplate" : true,
     "systemTemplate" : "system: %s",
     "userTemplate"   : "user: %s\nassistant:"
+  },
+  "model" : {
+    "llmModelName" : "llama.cpp/phi-2/phi2_Q4_model.gguf",
+    "isVision"  : false
+  },
+  "runtime" : {
+    "batchSize"    : 256,
+    "numThreads"   : 5,
+    "contextSize"  : 2048
   },
   "stopWords" : [
     "Orbita:",
@@ -25,7 +31,5 @@
     "\\n\\n",
     "<end_of_turn>",
     "Consider the following scenario:\\n"
-  ],
-  "inputModalities" : ["text"],
-  "outputModalities" : ["text"]
+  ]
 }

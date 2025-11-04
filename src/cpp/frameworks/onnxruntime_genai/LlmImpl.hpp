@@ -19,7 +19,7 @@ class LLM;
 /**
  * @brief ONNX Implementation of our LLM API
  */
-class LLM::LLMImpl {
+class LLM::LLMImpl : public LlmChat {
 
 public:
     LLMImpl();
@@ -66,17 +66,10 @@ public:
     void ResetContext();
 
     /**
-     * Method to prompt encoding
-     * @param prompt Query to LLM
+     * Encode a payload containing text.
+     * @param payload Input payload containing text.
      */
-    void Encode(EncodePayload& prompt);
-
-    /**
-     * Builds a query string for the LLM based on the given prompt.
-     * @param prompt The prompt to structure into a query.
-     * @return The constructed query string.
-     */
-    std::string QueryBuilder(std::string&prompt);
+    void Encode(LlmChat::Payload& payload);
 
     /**
      * Method to produce next token
@@ -98,7 +91,7 @@ public:
      * generation, calculates average speeds and standard deviations over multiple repetitions, and
      * compiles the results into a formatted string.
      *
-     * @param prompts Number of prompts to process during benchmarking.
+     * @param prompts Number of prompt tokens to process during benchmarking.
      * @param eval_prompts Number of evaluation prompts for text generation.
      * @param n_max_sq Maximum sequence length for text generation.
      * @param n_rep Number of repetitions for benchmarking to obtain average metrics.
@@ -112,14 +105,7 @@ public:
      * Method to get framework type
      * @return string framework type
      */
-    std::string GetFrameworkType();
-
-    /**
-     * @brief Build and return a query string from the given prompt and configuration.
-     * @param prompt Input payload containing text, optional image, and conversation metadata.
-     * @return The constructed query string to be passed to the model backend.
-     */
-    virtual std::string QueryBuilder(EncodePayload& prompt);
+    static std::string GetFrameworkType() {return "onnxruntime-genai";}
 
     /**
      * @brief List supported input modalities.
@@ -132,9 +118,14 @@ public:
     */
     void StopGeneration();
 
+    /**
+     * Applies the automatic chat template to the given prompt.
+     * @param prompt The input prompt to apply the template to.
+     * @return The prompt with the automatic chat template applied.
+     */
+    bool ApplyAutoChatTemplate(LlmChat::Payload& prompt) override;
+
 private:
-    // Framework type
-    std::string m_frameworkType{"onnxruntime-genai"};
     // Pointer to the loaded OgaModel used for inference
     std::unique_ptr<OgaModel> m_llmModelPtr {nullptr};
     // Pointer to the OgaConfig instance containing model configuration settings.
@@ -153,7 +144,7 @@ private:
     // Number of threads to use for model inference.
     size_t m_numOfThreads{0};
     // Maximum context length (number of tokens) supported by the model.
-    int m_nCtx{2048};
+    int m_nCtx{0};
     // Batch size for token generation operations.
     size_t m_batchSz{0};
     // Filesystem path to the ONNX model.
@@ -183,16 +174,6 @@ private:
         {/*LLM_LOG_VERBOSE*/ 4 ,/*ORT_LOGGING_LEVEL_DEBUG*/  0}
     };
 
-    // Flag indicating whether this is starting of the conversation (used to decide if the system prompt should be encoded)
-    bool m_isConversationStart{true};
-    // Flag indicating whether a custom chat template should be used
-    bool m_isDefaultTemplate{false};
-    // System prompt to be encoded with first query
-    std::string m_systemPrompt{""};
-    // Default template for system message
-    std::string m_systemTemplate{""};
-    // Default template for user message
-    std::string m_userTemplate{""};
     // Used as a general signal in our LLM module to terminate response
     std::string m_eos = "<|endoftext|>";
 
@@ -246,19 +227,6 @@ private:
      */
     void FreeModel();
 
-    /**
-     * Applies a default chat template to the given prompt.
-     * @param prompt The input prompt to apply the template to.
-     * @return The prompt with the default chat template applied.
-     */
-    std::string ApplyDefaultChatTemplate(const std::string& prompt);
-
-    /**
-     * Applies the automatic chat template to the given prompt.
-     * @param prompt The input prompt to apply the template to.
-     * @return The prompt with the automatic chat template applied.
-     */
-    std::string ApplyAutoChatTemplate(const std::string& prompt);
 };
 
 #endif /* LLM_IMPL_HPP */

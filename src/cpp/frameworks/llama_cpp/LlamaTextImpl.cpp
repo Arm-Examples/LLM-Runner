@@ -22,7 +22,7 @@ LLM::LLMImpl::~LLMImpl()
 void LLM::LLMImpl::LoadModel()
 {
     const llama_model_params model_params = llama_model_default_params();
-    const std::string& modelPath = this->m_config.GetModelPath();
+    const std::string& modelPath = this->m_config.GetConfigString("llmModelName");
     if (modelPath.empty()) {
         THROW_ERROR("Model path supplied in config is empty");
     }
@@ -44,8 +44,8 @@ void LLM::LLMImpl::NewContext()
 {
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx                = this->m_nCtx;
-    ctx_params.n_threads            = this->m_config.GetNumThreads();
-    ctx_params.n_threads_batch      = this->m_config.GetNumThreads();
+    ctx_params.n_threads            = this->m_config.GetConfigInt("numThreads");
+    ctx_params.n_threads_batch      = this->m_config.GetConfigInt("numThreads");
     ctx_params.no_perf              = false;
     this->m_llmContext              = llama_init_from_model(this->m_llmModel, ctx_params);
     if (this->m_llmContext == nullptr) {
@@ -91,15 +91,11 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPat
     try {
         llama_log_set(llama_llm_log_callback, nullptr);
         this->m_config = config;
-        this->m_batchSz = this->m_config.GetBatchSize();
+        this->m_batchSz = this->m_config.GetConfigInt("batchSize");
+        this->m_nCtx    = this->m_config.GetConfigInt("contextSize");
 
         LoadModel();
         BackendInit();
-
-        this->m_systemPrompt      = config.GetSystemPrompt();
-        this->m_isDefaultTemplate = config.IsDefaultTemplate();
-        this->m_systemTemplate    = config.GetSystemTemplate();
-        this->m_userTemplate      = config.GetUserTemplate();
 
         if (this->m_llmModel != nullptr) {
             NewContext();
@@ -216,14 +212,14 @@ void LLM::LLMImpl::NewSampler()
     llama_sampler_chain_add(this->m_pLlmSampler, llama_sampler_init_greedy());
 }
 
-std::string LLM::LLMImpl::ApplyAutoChatTemplate(const std::string& prompt)
+bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
 {
     const char* tmpl = llama_model_chat_template(this->m_llmModel, /*name*/ nullptr);
 
     // if no template on the model, fall back to default implementation
     if (!tmpl) {
         LOG_INF("ApplyAutoChatTemplate: no template found. Falling back to default template.");
-        return ApplyDefaultChatTemplate(prompt);
+        return false;
     }
 
     std::vector<llama_chat_message> msgs;
@@ -237,7 +233,7 @@ std::string LLM::LLMImpl::ApplyAutoChatTemplate(const std::string& prompt)
 
     llama_chat_message usr{};
     usr.role    = "user";
-    usr.content = prompt.c_str();
+    usr.content = payload.textPrompt.c_str();
     msgs.push_back(usr);
 
     std::string templated;
@@ -253,8 +249,8 @@ std::string LLM::LLMImpl::ApplyAutoChatTemplate(const std::string& prompt)
     );
 
     if (requiredMemory < 0) {
-        LOG_INF("ApplyAutoChatTemplate failed. Falling back to default template");
-        return ApplyDefaultChatTemplate(prompt);
+        LOG_INF("ApplyAutoChatTemplate failed. Falling back to default template.");
+        return false;
     }
 
     templated.resize(requiredMemory);
@@ -268,48 +264,11 @@ std::string LLM::LLMImpl::ApplyAutoChatTemplate(const std::string& prompt)
         templated.data(),
         static_cast<int>(templated.size())
     );
-
-    return templated;
+    payload.textPrompt = templated;
+    return true;
 }
 
-std::string LLM::LLMImpl::ApplyDefaultChatTemplate(const std::string& prompt)
-{
-    constexpr const char* kPlaceholder = "%s";
-    constexpr size_t kPlaceholderSize = std::char_traits<char>::length(kPlaceholder);
-
-    std::string userTurn = this->m_userTemplate;
-    if (auto pos = userTurn.find(kPlaceholder); pos != std::string::npos) {
-        userTurn.replace(pos, kPlaceholderSize, std::string(prompt));
-    } else {
-        THROW_ERROR(
-            "Placeholder not found in user template. Please include %s in the 'userTemplate' section of the configuration file.",kPlaceholder);
-    }
-
-    if (!this->m_isConversationStart) {
-        return userTurn;
-    }
-
-    this->m_isConversationStart = false;
-    std::string systemTurn = this->m_systemTemplate;
-
-    if (auto pos = systemTurn.find(kPlaceholder); pos != std::string::npos) {
-       systemTurn.replace(pos, kPlaceholderSize, std::string(this->m_systemPrompt));
-    } else {
-        THROW_ERROR(
-            "Placeholder not found in user template. Please include %s in the 'systemTemplate' section of the configuration file.",kPlaceholder);
-    }
-    return systemTurn + userTurn;
-}
-
-std::string LLM::LLMImpl::QueryBuilder(EncodePayload& payload) {
-    if(this->m_isDefaultTemplate) {
-        return ApplyDefaultChatTemplate(payload.textPrompt);
-    }
-
-    return ApplyAutoChatTemplate(payload.textPrompt);
-}
-
-void LLM::LLMImpl::Encode(const EncodePayload& payload)
+void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
 {
     const auto prompt_tokens = common_tokenize(this->m_llmContext, payload.textPrompt, 1);
 
@@ -411,11 +370,6 @@ std::string LLM::LLMImpl::NextToken()
 size_t LLM::LLMImpl::GetChatProgress() const
 {
     return this->m_contextFilled;
-}
-
-std::string LLM::LLMImpl::GetFrameworkType()
-{
-    return this->m_frameworkType;
 }
 
 std::string LLM::LLMImpl::BenchModel(int& prompts, int& eval_prompts, int& n_max_sq, int& n_rep)
