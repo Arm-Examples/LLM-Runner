@@ -88,6 +88,8 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload) {
     m_llm->generate_init(nullptr, nullptr);
     // Tokenize the input prompt into model-specific token IDs
     auto token_ids = m_llm->tokenizer_encode(payload.textPrompt);
+    if (this->m_ctx->all_seq_len + token_ids.size() >= this->m_nCtx)
+        THROW_ERROR("LLM encoding failed ,context is full");
     // Run the model once to encode the context; max_tokens=0 to skip decoding
     this->m_llm->generate(/*input_ids=*/token_ids, /*max_tokens=*/0);
 }

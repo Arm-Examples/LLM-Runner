@@ -281,6 +281,7 @@ bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
 void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
 {
     std::string prompt = payload.textPrompt;
+
     try {
         // Time start
         TimePoint startTimeStampEncoder = Clock::now();
@@ -289,7 +290,8 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
 
         this->m_tokenizerPtr->Encode(prompt.c_str(), * this->m_sequencesPtr);
         this->m_llmGeneratorPtr->AppendTokenSequences(* this->m_sequencesPtr);
-
+        if (nCurr + this->m_sequencesPtr->SequenceCount(0) >= this->m_nCtx)
+              THROW_ERROR("LLM encoding failed ,context is full");
         // Record finishing time
         this->m_totalEncoderTime += Duration(Clock::now() - startTimeStampEncoder).count();
         this->m_totalEncodedTokens += this->m_sequencesPtr->SequenceCount(0);
@@ -316,7 +318,7 @@ std::string LLM::LLMImpl::NextToken()
             this->m_totalDecoderTime += Duration(Clock::now() - startTimeStampDecoder).count();
             this->m_totalDecodedTokens += 1;
 
-            size_t nCurr = this->m_llmGeneratorPtr->GetSequenceCount(0);
+            nCurr = this->m_llmGeneratorPtr->GetSequenceCount(0);
 
             this->m_contextFilled = 100 * nCurr / this->m_nCtx;
 

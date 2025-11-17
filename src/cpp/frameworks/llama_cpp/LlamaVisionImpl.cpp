@@ -148,7 +148,11 @@ void LlamaVisionImpl::Encode(LlmChat::Payload& payload) {
             /* reset_state = */ true,
             &newPast
     );
-
+    // This error can be linked to ggml status to get a better context error
+    if (newPast >= this->m_nCtx) {
+        THROW_ERROR("Encode: Failed to evaluate: context is full" );
+    }
+    
     if (evalFailed) {
         THROW_ERROR("Encode: Failed to evaluate multimodal prompt");
     }
@@ -157,6 +161,7 @@ void LlamaVisionImpl::Encode(LlmChat::Payload& payload) {
     this->m_mtmdContext->n_past = newPast;
     this->m_nCur                = newPast;
     this->m_contextFilled = std::min<size_t>((100ULL * this->m_nCur) / this->m_nCtx, 100);
+
 }
 
 std::string LlamaVisionImpl::NextToken() {

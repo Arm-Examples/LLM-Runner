@@ -82,7 +82,7 @@ namespace LlmLog {
         LOG_ERROR(fmt __VA_OPT__(, __VA_ARGS__)); \
         throw std::runtime_error(LlmLog::vformat(fmt __VA_OPT__(, __VA_ARGS__))); \
     } while (0)
-
+    
 #define THROW_INVALID_ARGUMENT(fmt, ...) \
     do { \
         LOG_ERROR(fmt __VA_OPT__(, __VA_ARGS__)); \

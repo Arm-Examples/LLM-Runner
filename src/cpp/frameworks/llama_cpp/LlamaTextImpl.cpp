@@ -273,16 +273,16 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
     const auto prompt_tokens = common_tokenize(this->m_llmContext, payload.textPrompt, 1);
 
     size_t promptLength = prompt_tokens.size();
-
+    const char * msg = "Failed to evaluate current prompt, context is full";
     // check prompt size
     if (promptLength > this->m_nCtx - 4) {
-        LOG_WARN("%s: Failed to evaluate large prompt",__func__);
+        THROW_ERROR("%s: Failed to evaluate large prompt",__func__);
     }
     else if (promptLength + this->m_nCur > this->m_nCtx - 4) {
-        LOG_WARN("%s: Failed to evaluate current prompt, context full",__func__);
+        THROW_ERROR("%s : %s",msg,__func__);
     }
     else if (promptLength <= 1) {
-        LOG_WARN("%s: Failed to evaluate empty prompt",__func__);
+        THROW_ERROR("%s : %s",msg,__func__);
     } else {
         for (size_t idx = 0; idx < promptLength; idx += this->m_batchSz) {
             const size_t end_idx  = std::min(idx + this->m_batchSz, promptLength - 1);

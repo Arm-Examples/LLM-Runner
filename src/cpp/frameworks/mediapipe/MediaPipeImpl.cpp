@@ -136,7 +136,7 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
         return;
     }
     if (this->m_callbackContext.m_nCur >= this->m_nCtx) {
-        THROW_ERROR("Mediapipe encode- Failed to evaluate: Context is full" );
+        THROW_ERROR("Mediapipe encode- Failed to evaluate: context is full" );
     }
     // clear response strings for synchronization
     this->m_callbackContext.m_asyncResponse.clear();

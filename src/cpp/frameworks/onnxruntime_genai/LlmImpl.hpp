@@ -145,6 +145,8 @@ private:
     size_t m_numOfThreads{0};
     // Maximum context length (number of tokens) supported by the model.
     int m_nCtx{0};
+    // length of context filled in absolute token number
+    size_t nCurr{0};
     // Batch size for token generation operations.
     size_t m_batchSz{0};
     // Filesystem path to the ONNX model.

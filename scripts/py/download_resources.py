@@ -73,15 +73,15 @@ def download_file(url: str, dest: Path,huggingface_token:str =None) -> None:
                     f"Your Hugging Face token may be invalid or expired.")
          else:
                 logging.error(f"HTTPError {e.code} while downloading {url}: {e.reason}")
-         raise
+
 
     except urllib.error.URLError as e:
         logging.error(f"URLError while downloading {url}: {e.reason}")
-        raise
+
 
     except Exception as e:
         logging.error(f"Unexpected error while downloading {url}: {str(e)}")
-        raise
+
 
 
 def validate_download(filepath, expected_hash):
