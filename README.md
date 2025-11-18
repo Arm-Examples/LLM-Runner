@@ -33,6 +33,7 @@
     * [onnxruntime genai](#onnxruntime-genai)
     * [mnn](#mnn)
     * [arm llm benchmark](#arm-llm-benchmark)
+  * [Troubleshooting](#Troubleshooting)
   * [Trademarks](#trademarks)
   * [License](#license)
 <!-- TOC -->
@@ -56,10 +57,12 @@ applications.
 * Python 3.9 or above installed, python is used to download test resources and models
 * Android™ NDK (if building for Android™). Minimum version: r27 is recommended and can be downloaded
   from [here](https://developer.android.com/ndk/downloads)
+* Building on macOS requires Xcode Command Line Tools, Android Studio installed and configured (NDK, CMake as above) and Clang (tested with 16.0.0)
 * Bazelisk or Bazel 7.4.1 to build mediapipe backend
 * Aarch64 GNU toolchain (version 14.1 or later) if cross-compiling from a Linux® based system which can be downloaded from [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads)
 * Java Development Kit required for building JNI wrapper library necessary to utilise this module in an Android/Java application.
 * Create a [Hugging Face](https://huggingface.co) account and obtain a Hugging Face access token.
+
 
 ## Quick start
 
@@ -534,6 +537,10 @@ Parameters:
 | llama.cpp          | 5       | Total  |  1959.827 ± 14.433 (ms)    |
 
 ```
+
+## Troubleshooting
+
+For a list of common errors and their fixes, see TROUBLESHOOTING.md.
 
 ## Trademarks
 
