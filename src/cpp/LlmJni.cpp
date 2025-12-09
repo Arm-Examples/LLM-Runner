@@ -11,7 +11,9 @@
 #include "Logger.hpp"
 #include "LlmBridge.hpp"
 #include "LlmCache.hpp"
+#include "LlmBenchmark.hpp"
 
+static std::string benchmarkResults;
 
 /**
 * @brief inline method to throw error in java
@@ -313,30 +315,6 @@ JNIEXPORT void JNICALL Java_com_arm_Llm_resetContextJNI(JNIEnv* env, jobject, jl
 }
 
 /**
- * @brief JNI entry point to run a benchmark on the current model instance.
- * @param env JNI environment variable passed from JVM layer
- * @param llmHandle native handle returned by llmInitJNI
- * @param nPrompts number of prompts to use for the benchmark
- * @param nEvalPrompts number of evaluation prompts
- * @param nMaxSeq maximum sequence length
- * @param nRep number of repetitions
- * @return java string containing benchmark results (empty string on invalid handle)
- */
-JNIEXPORT jstring JNICALL Java_com_arm_Llm_benchModelJNI(
-    JNIEnv* env, jobject, jlong llmHandle, jint nPrompts, jint nEvalPrompts, jint nMaxSeq, jint nRep)
-{
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
-    if (!llm) {
-        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
-        return env->NewStringUTF("");
-    }
-
-
-    std::string result = llm->BenchModel(nPrompts, nEvalPrompts, nMaxSeq, nRep);
-    return env->NewStringUTF(result.c_str());
-}
-
-/**
  * @brief This function returns the LLM Type 
  *
  * We can't lookup the llm from the handle in this function because the llm Instance
@@ -346,12 +324,10 @@ JNIEXPORT jstring JNICALL Java_com_arm_Llm_benchModelJNI(
  * deleted by C++ when this function returns. Because this llm object is deleted 
  * calling this function can't be used in lieu of calling initLlm.
  * 
-*/
+ */
 JNIEXPORT jstring JNICALL Java_com_arm_Llm_getFrameworkTypeJNI(JNIEnv* env, jobject, jlong)
 {
-
     auto llm = std::make_unique<LLM>();
-
     std::string frameworkType = llm->GetFrameworkType();
     return env->NewStringUTF(frameworkType.c_str());
 }
@@ -376,6 +352,86 @@ Java_com_arm_Llm_supportsImageInputJNI(JNIEnv *env, jobject thiz, jlong llmHandl
         }
     }
     return JNI_FALSE;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_arm_Llm_runBenchmark(
+    JNIEnv* env,
+    jobject /* thisObj */,
+    jstring jModelPath,
+    jint jInputTokens,
+    jint jOutputTokens,
+    jint jThreads,
+    jint jIterations,
+    jint jWarmupIterations,
+    jstring jSharedLibraryPath)
+{
+    try {
+        // Convert Java strings -> std::string
+        const char* cModelPath = env->GetStringUTFChars(jModelPath, nullptr);
+        if (!cModelPath) {
+            ThrowJavaException(env, "Failed to get modelPath UTF chars");
+            return -1;
+        }
+        std::string modelPath(cModelPath);
+        env->ReleaseStringUTFChars(jModelPath, cModelPath);
+
+        const char* cSharedLibPath = env->GetStringUTFChars(jSharedLibraryPath, nullptr);
+        if (!cSharedLibPath) {
+            ThrowJavaException(env, "Failed to get sharedLibraryPath UTF chars");
+            return -1;
+        }
+        std::string sharedLibraryPath(cSharedLibPath);
+        env->ReleaseStringUTFChars(jSharedLibraryPath, cSharedLibPath);
+
+        // Create benchmark on the stack – lifetime is this function only
+        LlmBenchmark bench(
+            modelPath,
+            static_cast<int>(jInputTokens),
+            static_cast<int>(jOutputTokens),
+            static_cast<int>(jThreads),
+            static_cast<int>(jIterations),
+            static_cast<int>(jWarmupIterations),
+            sharedLibraryPath
+        );
+
+        int rc = bench.Run();
+
+        // Cache results in a simple string, not in a long-lived object
+        benchmarkResults = bench.GetResults();
+
+        return static_cast<jint>(rc);
+    } catch (const std::exception& e) {
+        std::string msg = std::string("JNI runBenchmark failed: ") + e.what();
+        ThrowJavaException(env, msg.c_str());
+        return static_cast<jint>(-1);
+    } catch (...) {
+        ThrowJavaException(env, "JNI runBenchmark failed: unknown error");
+        return static_cast<jint>(-1);
+    }
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_arm_Llm_getBenchmarkResults(JNIEnv* env,
+                                     jobject /* thisObj */)
+{
+    try {
+        if (benchmarkResults.empty()) {
+            const char* msg = "No benchmark results available. Call runBenchmark() first.";
+            return env->NewStringUTF(msg);
+        }
+        return env->NewStringUTF(benchmarkResults.c_str());
+    }
+    catch (const std::exception& e) {
+        std::string msg = std::string("getBenchmarkResults failed: ") + e.what();
+        ThrowJavaException(env, msg.c_str());
+        return env->NewStringUTF(msg.c_str());
+    }
+    catch (...) {
+        std::string msg = "getBenchmarkResults failed: unknown error";
+        ThrowJavaException(env, msg.c_str());
+        return env->NewStringUTF(msg.c_str());
+    }
 }
 
 /**

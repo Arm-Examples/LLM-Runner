@@ -33,7 +33,7 @@ static std::string Vformat(const char* format, va_list args)
     }
 
     if (num_chars == 0) {
-        LOG_INF("Vformat: formatted output is empty for format string \"%s\"", format);
+        LOG_DEBUG("Vformat: formatted output is empty for format string \"%s\"", format);
         return "";
     }
 
@@ -65,7 +65,7 @@ void LlmChat::ApplyDefaultChatTemplate(Payload& payload)
     if (hasUserPlaceholder) {
         userTurn = FormatString(m_userTemplate.c_str(), payload.textPrompt.c_str());
     } else {
-        LOG_INF("[Warning] userTemplate is missing \"%s\"; using raw text.", m_templatePlaceholder);
+        LOG_DEBUG("[Warning] userTemplate is missing \"%s\"; using raw text.", m_templatePlaceholder);
         userTurn = payload.textPrompt;
     }
 
@@ -80,7 +80,7 @@ void LlmChat::ApplyDefaultChatTemplate(Payload& payload)
     if (hasSystemPlaceholder) {
         systemTurn = FormatString(m_systemTemplate.c_str(), m_systemPrompt.c_str());
     } else {
-        LOG_INF("[Warning] systemTemplate is missing \"%s\"; prepending raw system prompt.", m_templatePlaceholder);
+        LOG_DEBUG("[Warning] systemTemplate is missing \"%s\"; prepending raw system prompt.", m_templatePlaceholder);
         systemTurn = m_systemPrompt;
     }
 

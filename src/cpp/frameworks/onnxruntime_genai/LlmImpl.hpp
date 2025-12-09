@@ -90,24 +90,6 @@ public:
     size_t GetChatProgress() const;
 
     /**
-     * Benchmarks the performance of the LLM model.
-     *
-     * This function evaluates the model's performance by processing a specified number of prompts
-     * and generating text sequences. It measures the speed of prompt evaluation and text
-     * generation, calculates average speeds and standard deviations over multiple repetitions, and
-     * compiles the results into a formatted string.
-     *
-     * @param prompts Number of prompt tokens to process during benchmarking.
-     * @param eval_prompts Number of evaluation prompts for text generation.
-     * @param n_max_sq Maximum sequence length for text generation.
-     * @param n_rep Number of repetitions for benchmarking to obtain average metrics.
-     * @return A formatted string containing the benchmark results, including model description,
-     * size, number of parameters, backend information, and performance metrics for prompt
-     * evaluation and text generation.
-     */
-    std::string BenchModel(int& prompts, int& eval_prompts, int& n_max_sq, int& n_rep);
-
-    /**
      * Method to get framework type
      * @return string framework type
      */
@@ -130,6 +112,17 @@ public:
      * @return The prompt with the automatic chat template applied.
      */
     bool ApplyAutoChatTemplate(LlmChat::Payload& prompt) override;
+
+    /**
+     * @brief Creates a synthetic text prompt that tokenizes to the given size.
+     *
+     * Used for benchmarking to ensure the encode phase receives a fixed
+     * number of input tokens.
+     *
+     * @param numPromptTokens Desired number of input tokens.
+     * @return A text prompt that produces that many tokens when encoded.
+     */
+    std::string GeneratePromptWithNumTokens(size_t numPromptTokens);
 
 private:
     // Pointer to the loaded OgaModel used for inference

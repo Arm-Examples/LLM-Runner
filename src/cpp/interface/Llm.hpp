@@ -27,7 +27,7 @@ public:
      * @brief Construct an LLM instance.
      */
     explicit LLM();
-    ~LLM() noexcept;
+    virtual ~LLM() noexcept;
 
     /**
      * @brief Deleted copy constructor.
@@ -111,17 +111,6 @@ public:
      */
     [[nodiscard]] std::size_t GetChatProgress() const;
 
-    /**
-     * Benchmark the underlying backend.
-     * @param nPrompts      Prompt length used for benchmarking.
-     * @param nEvalPrompts  Number of generated tokens for benchmarking.
-     * @param nMaxSeq       Maximum sequence length.
-     * @param nRep          Number of repetitions.
-     * @return Text report of prompt generation and evaluation results.
-     */
-
-    [[nodiscard]] std::string BenchModel(int &nPrompts, int &nEvalPrompts, int &nMaxSeq, int &nRep);
-
     /** @return Framework type string (e.g., backend name). */
     [[nodiscard]] static std::string GetFrameworkType();
 
@@ -134,6 +123,13 @@ public:
     * Method to Cancel generation of response tokens. Can be used to stop response once query commences
     */
     void StopGeneration();
+
+    /**
+     * Creates a synthetic text prompt that tokenizes to the given size.
+     * @param numPromptTokens Desired number of input tokens.
+     * @return A text prompt that produces that many tokens when encoded.
+     */
+    std::string GeneratePromptWithNumTokens(size_t numPromptTokens);
 
 protected:
     std::unique_ptr<LLMImpl> m_impl{};                  /**< Implementation pointer. */

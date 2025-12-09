@@ -238,7 +238,7 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPat
 
 void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
 {
-    LOG_INF("Sending in query %s\n", payload.textPrompt.c_str());
+    LOG_DEBUG("Sending in query %s\n", payload.textPrompt.c_str());
 
     std::string _query = this->m_conversationContext + payload.textPrompt;
     this->m_errorCode  = LlmInferenceEngine_Session_AddQueryChunk(
@@ -358,14 +358,6 @@ void LLM::LLMImpl::FreeLlm()
     this->m_isConversationStart = true;
 }
 
-std::string LLM::LLMImpl::BenchModel(int& prompts, int& eval_prompts, int& n_max_sq, int& n_rep)
-{
-    // TODO: Refactor BenchModel() into a framework-agnostic utility:
-    // Abstract the core benchmarking logic into a shared BenchModel(const Config&) function,
-    // Migrate each framework submodule to invoke it, and consolidate all parameters into the Config struct.
-    return (char *) nullptr;
-}
-
 void LLM::LLMImpl::StopGeneration()
 {
      // Signal to cancel the response , helps in sending next query
@@ -374,3 +366,44 @@ void LLM::LLMImpl::StopGeneration()
              &this->m_errorMsg);
 }
 
+std::string LLM::LLMImpl::GeneratePromptWithNumTokens(size_t numPromptTokens)
+{
+    if (numPromptTokens == 0) {
+        return std::string{};
+    }
+
+    // Simple base pattern; you can tweak this if needed.
+    const std::string pattern = " A";
+
+    std::string prompt;
+
+    while (true) {
+        prompt += pattern;
+
+        // Ask the MediaPipe engine how many tokens this text would use
+        int32_t n_tokens =
+            LlmInferenceEngine_Session_SizeInTokens(this->m_llmEngineSession,
+                                                    prompt.c_str(),
+                                                    &this->m_errorMsg);
+
+        if (n_tokens < 0) {
+            // Error from engine
+            std::string err = this->m_errorMsg ? this->m_errorMsg : "unknown error";
+            if (this->m_errorMsg) {
+                free(this->m_errorMsg);
+                this->m_errorMsg = nullptr;
+            }
+            THROW_ERROR("Mediapipe benchmark: SizeInTokens failed: %s", err.c_str());
+        }
+
+        if (static_cast<size_t>(n_tokens) == numPromptTokens) {
+            // Exact match – ideal case
+            return prompt;
+        }
+
+        if (static_cast<size_t>(n_tokens) > numPromptTokens) {
+            // We overshot. For now, return best-effort.
+            return prompt;
+        }
+    }
+}

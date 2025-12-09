@@ -23,6 +23,9 @@ add_subdirectory(chat)
 # Add frameworks lib:
 add_subdirectory(frameworks)
 
+# Add benchmark lib:
+add_subdirectory(benchmark)
+
 # Actual API library that depends on framework
 add_library(arm-llm-cpp STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/Llm.cpp ${CMAKE_CURRENT_SOURCE_DIR}/LlmBridge.cpp)
@@ -45,7 +48,9 @@ if (BUILD_JNI_LIB)
         ${CMAKE_CURRENT_SOURCE_DIR}/LlmJni.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/LlmCache.cpp)
 
-    target_link_libraries(arm-llm-jni PUBLIC arm-llm-cpp)
+    target_link_libraries(arm-llm-jni PUBLIC 
+        arm-llm-cpp 
+        arm-llm-bench)
 
     target_include_directories(arm-llm-jni PUBLIC
         ${JNI_INCLUDE_DIRS} # Populated by FindJNI CMake module

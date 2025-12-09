@@ -7,7 +7,6 @@
 #include "is_utf8.h"
 #include "Logger.hpp"
 
-
 /**
  * @brief LLama Implementation of our LLM API
  *
@@ -377,110 +376,38 @@ size_t LLM::LLMImpl::GetChatProgress() const
     return this->m_contextFilled;
 }
 
-std::string LLM::LLMImpl::BenchModel(int& prompts, int& eval_prompts, int& n_max_sq, int& n_rep)
-{
-    auto prompts_avg      = 0.0;
-    auto eval_prompts_avg = 0.0;
-    auto prompts_std      = 0.0;
-    auto eval_prompts_std = 0.0;
-
-    LOG_INF("m_nCtx = %d", this->m_nCtx);
-
-    int i;
-    for (int nri = 0; nri < n_rep; nri++) {
-        LOG_INF("Benchmark prompt processing (pp)");
-
-        common_batch_clear(this->m_llmBatch);
-
-        const int n_tokens = prompts;
-        for (i = 0; i < n_tokens; i++) {
-            common_batch_add(this->m_llmBatch, 0, i, {0}, false);
-        }
-
-        this->m_llmBatch.logits[this->m_llmBatch.n_tokens - 1] = true;
-        llama_memory_clear(llama_get_memory(this->m_llmContext), true);
-
-        const auto t_prompts_start = ggml_time_us();
-        if (llama_decode(this->m_llmContext, this->m_llmBatch) != 0) {
-            LOG_INF("llama_decode() failed during prompt processing");
-        }
-        const auto t_prompts_end = ggml_time_us();
-
-        // bench text generation
-
-        LOG_INF("Benchmark text generation (tg)");
-
-        llama_memory_clear(llama_get_memory(this->m_llmContext), true);
-        const auto t_eval_prompts_start = ggml_time_us();
-        for (i = 0; i < eval_prompts; i++) {
-            common_batch_clear(this->m_llmBatch);
-            for (int j = 0; j < n_max_sq; j++) {
-                common_batch_add(this->m_llmBatch, 0, i, {j}, true);
-            }
-
-            LOG_INF("llama_decode() text generation: %d", i);
-            if (llama_decode(this->m_llmContext, this->m_llmBatch) != 0) {
-
-                THROW_ERROR("llama_decode() failed during text generation ");
-            }
-        }
-
-        const auto t_eval_prompts_end = ggml_time_us();
-
-        llama_memory_clear(llama_get_memory(this->m_llmContext), true);
-
-        const auto t_prompts      = static_cast<double>(t_prompts_end - t_prompts_start) / 1000000.0;
-        const auto t_eval_prompts = static_cast<double>(t_eval_prompts_end - t_eval_prompts_start) / 1000000.0;
-
-        const auto speed_prompts      = static_cast<double>(prompts) / t_prompts;
-        const auto speed_eval_prompts = static_cast<double>(n_max_sq * eval_prompts) / t_eval_prompts;
-
-        prompts_avg += speed_prompts;
-        eval_prompts_avg += speed_eval_prompts;
-
-        prompts_std += speed_prompts * speed_prompts;
-        eval_prompts_std += speed_eval_prompts * speed_eval_prompts;
-
-        LOG_INF("prompt eval %f t/s, token generation %f t/s", speed_prompts, speed_eval_prompts);
-    }
-
-    prompts_avg /= static_cast<double>(n_rep);
-    eval_prompts_avg /= static_cast<double>(n_rep);
-
-    if (n_rep > 1) {
-        prompts_std = sqrt(prompts_std / static_cast<double>(n_rep - 1) -
-                           prompts_avg * prompts_avg * static_cast<double>(n_rep) / static_cast<double>(n_rep - 1));
-        eval_prompts_std =
-                sqrt(eval_prompts_std / static_cast<double>(n_rep - 1) -
-                     eval_prompts_avg * eval_prompts_avg * static_cast<double>(n_rep) / static_cast<double>(n_rep - 1));
-    } else {
-        prompts_std      = 0;
-        eval_prompts_std = 0;
-    }
-
-    char model_desc[128];
-    llama_model_desc(this->m_llmModel, model_desc, sizeof(model_desc));
-
-    const auto model_size = static_cast<double>(llama_model_size(this->m_llmModel)) / 1024.0 / 1024.0 / 1024.0;
-    const auto model_n_params = static_cast<double>(llama_model_n_params(this->m_llmModel)) / 1e9;
-
-    const auto backend = "cpu"; // TODO: What should this be?
-
-    std::stringstream result;
-    result << "| model | size | params | backend | test | t/s |\n";
-    result << "| --- | --- | --- | --- | --- | --- |\n";
-    result << "| " << model_desc << " | " << model_size << "GiB | " << model_n_params << "B | "
-           << backend << " | prompts " << prompts << " | " << prompts_avg << " ± " << prompts_std
-           << " |\n";
-    result << "| " << model_desc << " | " << model_size << "GiB | " << model_n_params << "B | "
-           << backend << " | tg " << eval_prompts << " | " << eval_prompts_avg << " ± "
-           << eval_prompts_std << " |\n";
-
-    return result.str().c_str();
-}
-
 void LLM::LLMImpl::StopGeneration()
 {
     // TODO: add stop response to support cancelled queries
 }
 
+std::string LLM::LLMImpl::GeneratePromptWithNumTokens(size_t numPromptTokens)
+{
+    if (numPromptTokens == 0) {
+        return std::string{};
+    }
+
+    // Simple pattern that typically maps to a single token in LLaMA vocab
+    // (space + capital letter works well for BPE-style tokenizers)
+    const std::string pattern = " A";
+
+    std::string prompt;
+    std::vector<llama_token> tokens;
+
+    // We’ll grow the prompt until tokenized length reaches or exceeds target.
+    while (true) {
+        prompt += pattern;
+        tokens = common_tokenize(this->m_llmContext, prompt, /*add_bos=*/1);
+
+        const size_t currentTokens = tokens.size();
+
+        if (currentTokens == numPromptTokens) {
+            return prompt;
+        }
+
+        if (currentTokens > numPromptTokens) {
+            // We overshot. For now, return best-effort.
+            return prompt;
+        }
+    }
+}

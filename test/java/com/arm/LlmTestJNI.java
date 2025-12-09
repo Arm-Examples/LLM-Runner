@@ -9,6 +9,7 @@ package com.arm;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assume.assumeTrue;
+import static org.junit.Assert.assertEquals;
 
 import org.json.JSONObject;
 import org.json.JSONArray;
@@ -56,6 +57,26 @@ public class LlmTestJNI {
         } catch (IOException e) {
             throw new RuntimeException("Failed to load config JSON", e);
         }
+    }
+
+    @Test
+    public void testBenchmarking() {
+        Llm llm = new Llm();
+        JSONObject modelObj = configJson.getJSONObject("model");
+        String modelName = modelObj.getString("llmModelName");
+        int rc = llm.runBenchmark(
+            modelName,
+            128, /* Input tokens size */
+            64,  /* Output tokens size */
+            1,   /* Number of threads */
+            3,   /* Number of iterations */
+            1,   /* Number of warm up */
+            backendSharedLibDir
+        );
+        assertEquals("runBenchmark should succeed", 0, rc);
+        System.out.println("Benchmark done.");
+        String result = llm.getBenchmarkResults();
+        System.out.println(result);
     }
 
     @Test

@@ -13,7 +13,8 @@
 
 LLM::LLM() {}
 
-LLM::~LLM() {
+LLM::~LLM()
+{
     this->FreeLlm();
 }
 
@@ -155,11 +156,6 @@ size_t LLM::GetChatProgress() const
     return this->m_impl->GetChatProgress();
 }
 
-std::string LLM::BenchModel(int &nPrompts, int &nEvalPrompts, int &nMaxSeq, int &nRep)
-{
-    return this->m_impl->BenchModel(nPrompts, nEvalPrompts, nMaxSeq, nRep);
-}
-
 std::string LLM::GetFrameworkType()
 {
     return LLM::LLMImpl::GetFrameworkType();
@@ -179,4 +175,14 @@ bool LLM::isStopToken(std::string token)
     }
 
     return false;
+}
+
+std::string LLM::GeneratePromptWithNumTokens(size_t numPromptTokens)
+{
+    return this->m_impl->GeneratePromptWithNumTokens(numPromptTokens);
+}
+
+void LLM::StopGeneration()
+{
+    this->m_impl->StopGeneration();
 }

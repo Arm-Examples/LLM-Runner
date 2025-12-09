@@ -101,7 +101,7 @@ void LLM::LLMImpl::InitGenerator()
     this->m_llmGntParamsPtr->SetSearchOption("top_k", 0.0);
     this->m_llmGntParamsPtr->SetSearchOption("top_p", 1.0);
     this->m_llmGntParamsPtr->SetSearchOptionBool("do_sample", false);
-    this->m_llmGntParamsPtr->SetSearchOption("batch_size", this->m_batchSz);
+    this->m_llmGntParamsPtr->SetSearchOption("batch_size", 1);
 
     this->m_llmGeneratorPtr = OgaGenerator::Create(* this->m_llmModelPtr, * this->m_llmGntParamsPtr);
 
@@ -281,15 +281,13 @@ bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
 
 void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
 {
-    std::string prompt = payload.textPrompt;
-
     try {
         // Time start
         TimePoint startTimeStampEncoder = Clock::now();
 
         InitSequence();
 
-        this->m_tokenizerPtr->Encode(prompt.c_str(), * this->m_sequencesPtr);
+        this->m_tokenizerPtr->Encode(payload.textPrompt.c_str(), * this->m_sequencesPtr);
         this->m_llmGeneratorPtr->AppendTokenSequences(* this->m_sequencesPtr);
         if (this->m_nCurr + this->m_sequencesPtr->SequenceCount(0) >= this->m_nCtx)
               THROW_ERROR("LLM encoding failed ,context is full");
@@ -376,12 +374,33 @@ std::string LLM::LLMImpl::SystemInfo()
     return sysInfo;
 }
 
-std::string LLM::LLMImpl::BenchModel(int& prompts, int& eval_prompts, int& n_max_sq, int& n_rep)
-{
-   // TODO: Refactor BenchModel() into a framework-agnostic utility:
-   // Abstract the core benchmarking logic into a shared BenchModel(const Config&) function,
-   // Migrate each framework submodule to invoke it, and consolidate all parameters into the Config struct.
-   return (char *) nullptr;
+std::string LLM::LLMImpl::GeneratePromptWithNumTokens(size_t numPromptTokens) {
+    const char* const base_prompt = "A";
+
+    // 1) Encode the base prompt into sequences
+    auto base_prompt_sequences = OgaSequences::Create();
+    m_tokenizerPtr->Encode(base_prompt, *base_prompt_sequences);
+
+    // 2) Create generator params that force the output length = numPromptTokens
+    auto params = OgaGeneratorParams::Create(* this->m_llmModelPtr);
+    params->SetSearchOption("max_length", static_cast<double>(numPromptTokens));
+    params->SetSearchOption("min_length", static_cast<double>(numPromptTokens));
+
+    // 3) Create a generator and run until done
+    auto generator = OgaGenerator::Create(* this->m_llmModelPtr, * params);
+    generator->AppendTokenSequences(*base_prompt_sequences);
+
+    while (!generator->IsDone()) {
+        generator->GenerateNextToken();
+    }
+
+    // 4) Decode the generated tokens back into a string prompt
+    const auto output_sequence_length = generator->GetSequenceCount(0);
+    const auto* output_sequence_data  = generator->GetSequenceData(0);
+
+    return std::string{
+        m_tokenizerPtr->Decode(output_sequence_data, output_sequence_length)
+    };
 }
 
 void LLM::LLMImpl::StopGeneration()

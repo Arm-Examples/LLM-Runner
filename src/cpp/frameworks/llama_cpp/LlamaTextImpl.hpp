@@ -88,24 +88,6 @@ public:
     virtual size_t GetChatProgress() const;
 
     /**
-     * Benchmarks the performance of the LLM model.
-     *
-     * This function evaluates the model's performance by processing a specified number of prompts
-     * and generating text sequences. It measures the speed of prompt evaluation and text
-     * generation, calculates average speeds and standard deviations over multiple repetitions, and
-     * compiles the results into a formatted string.
-     *
-     * @param prompts Number of prompt tokens to process during benchmarking.
-     * @param eval_prompts Number of evaluation prompts for text generation.
-     * @param n_max_sq Maximum sequence length for text generation.
-     * @param n_rep Number of repetitions for benchmarking to obtain average metrics.
-     * @return A formatted string containing the benchmark results, including model description,
-     * size, number of parameters, backend information, and performance metrics for prompt
-     * evaluation and text generation.
-     */
-    virtual std::string BenchModel(int& prompts, int& eval_prompts, int& n_max_sq, int& n_rep);
-
-    /**
      * @brief Method to get framework type
      * @return string framework type
      */
@@ -129,6 +111,17 @@ public:
      */
     bool ApplyAutoChatTemplate(LlmChat::Payload& payload) override;
 
+    /**
+     * @brief Creates a synthetic text prompt that tokenizes to the given size.
+     *
+     * Used for benchmarking to ensure the encode phase receives a fixed
+     * number of input tokens.
+     *
+     * @param numPromptTokens Desired number of input tokens.
+     * @return A text prompt that produces that many tokens when encoded.
+     */
+    std::string GeneratePromptWithNumTokens(size_t numPromptTokens);
+
 protected:
     llama_context* m_llmContext{nullptr};     /**< Pointer to the llama model context. */
     llama_model* m_llmModel{nullptr};         /**< Pointer to the loaded llama model. */
@@ -143,6 +136,7 @@ protected:
     size_t m_nCur{0};                         /**< Current token index in the context. */
     std::string m_eos = "<|endoftext|>";      /**< Used as a general signal in our LLM module to terminate response. */
     LlmConfig m_config;                       /**< Configuration for model. */
+
     /**
      * @brief Function to load the chosen llama model to memory
      */

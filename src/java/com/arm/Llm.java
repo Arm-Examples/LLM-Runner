@@ -153,23 +153,6 @@ public class Llm {
     private native int getChatProgressJNI(long nativeLlmHandle);
 
     /**
-     * Native method to decode answers one by one, once prefill stage is completed.
-     * @param nativeLlmHandle handle to the native LLM instance
-     * @param nPrompts     prompt length used for benchmarking
-     * @param nEvalPrompts number of generated tokens for benchmarking
-     * @param nMaxSeq      sequence number
-     * @param nRep         number of repetitions
-     * @return string containing results of the benchModel
-     */
-    private native String benchModelNative(
-            long nativeLlmHandle,
-            int nPrompts,
-            int nEvalPrompts,
-            int nMaxSeq,
-            int nRep
-    );
-
-    /**
      * Native method the frameworkType
      * @param nativeLlmHandle handle to the native LLM instance
      * @return Framework type as string.
@@ -277,17 +260,6 @@ public class Llm {
     }
 
     /**
-     * Benchmark the model.
-     *
-     * @param nPrompts     Prompt length.
-     * @param nEvalPrompts Number of generated tokens.
-     * @param nMaxSeq      Sequence length.
-     * @param nRep         Number of repetitions.
-     * @return Benchmark results string.
-     */
-    public native String benchModel(int nPrompts, int nEvalPrompts, int nMaxSeq, int nRep);
-
-    /**
      * Return the frameworkType
      * @return Framework type as string.
      */
@@ -300,8 +272,6 @@ public class Llm {
      * @return void.
      */
     public void submit(String query) {
-
-        System.out.println("Submiting query: '" + query + "'");
 
         if (query.length() > 0) {
             handleEncoding(query);
@@ -378,4 +348,41 @@ public class Llm {
     public Boolean isStopToken(String token) {
         return token.equalsIgnoreCase(eosToken);
     }
+
+    /**
+     * Run the native LLM benchmark with the given parameters.
+     *
+     * This will execute the benchmark on the C++ side, including warmup
+     * iterations and measured iterations. Timing results are cached and
+     * can be retrieved via getBenchmarkResults().
+     *
+     * @param modelPath         Path to the model / config used by the LLM.
+     * @param inputTokens       Number of input tokens for the prompt.
+     * @param outputTokens      Number of tokens to generate in decode.
+     * @param threads           Number of threads to use.
+     * @param iterations        Number of measured iterations.
+     * @param warmupIterations  Number of warmup iterations (ignored in stats).
+     * @param sharedLibraryPath Path to directory with native shared libraries.
+     * @return 0 on success, non-zero on failure.
+     */
+    public native int runBenchmark(
+        String modelPath,
+        int inputTokens,
+        int outputTokens,
+        int threads,
+        int iterations,
+        int warmupIterations,
+        String sharedLibraryPath
+    );
+
+    /**
+     * Get the last benchmark results as a formatted string.
+     *
+     * This does NOT run any benchmark; it simply returns the summary
+     * from the most recent runBenchmark() call.
+     *
+     * @return Human-readable benchmark report, or an error message.
+     */
+    public native String getBenchmarkResults();
+
 }

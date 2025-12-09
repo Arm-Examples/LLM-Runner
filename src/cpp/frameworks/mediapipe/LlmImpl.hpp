@@ -234,18 +234,6 @@ public:
     void FreeLlm();
 
     /**
-     * ToDo Implement Decoding benchmark method
-     * Benchmarks the model by encoding a repeated prompt sequence.
-     * Computes and logs average and standard deviation of throughput.
-     * @param prompts Number of prompt tokens to process.
-     * @param eval_prompts Number of evaluation prompts (currently unused).
-     * @param n_max_sq Maximum sequence length (currently unused).
-     * @param n_rep Number of repetitions for averaging results.
-     * @return Benchmark result string.
-     */
-    std::string BenchModel(int& prompts, int& eval_prompts, int& n_max_sq, int& n_rep);
-
-    /**
      * Method to get framework type
      * @return string framework type
      */
@@ -268,6 +256,17 @@ public:
      * @return The prompt with the automatic chat template applied.
      */
     bool ApplyAutoChatTemplate(LlmChat::Payload& payload) override { return false;}
+
+    /**
+     * @brief Creates a synthetic text prompt that tokenizes to the given size.
+     *
+     * Used for benchmarking to ensure the encode phase receives a fixed
+     * number of input tokens.
+     *
+     * @param numPromptTokens Desired number of input tokens.
+     * @return A text prompt that produces that many tokens when encoded.
+     */
+    std::string GeneratePromptWithNumTokens(size_t numPromptTokens);
 
 private:
     // Pointer to underlying LLM engine instance

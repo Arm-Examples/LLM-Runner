@@ -31,6 +31,7 @@
     * [llama cpp](#llama-cpp)
     * [onnxruntime genai](#onnxruntime-genai)
     * [mnn](#mnn)
+    * [arm llm benchmark](#arm-llm-benchmark)
   * [Trademarks](#trademarks)
   * [License](#license)
 <!-- TOC -->
@@ -162,7 +163,7 @@ Flag name | Default | Values | Description |
 | LLM_FRAMEWORK | llama.cpp | llama.cpp / mediapipe / onnxruntime-genai / mnn | Specifies the backend framework to be used. |
 | BUILD_DEBUG | OFF | ON/OFF | If set to ON a debug build is configured. |
 | BUILD_LLM_TESTING | ON | ON/OFF | Builds the project's functional tests when ON. |
-| BUILD_BENCHMARK | OFF | ON/OFF | Builds the benchmark tests for the project when ON. |
+| BUILD_BENCHMARK | OFF | ON/OFF | Builds the framework's benchmark binaries and arm-llm-bench-cli for the project when ON. |
 | BUILD_JNI_LIB| ON | ON/OFF | Builds the JNI bindings for the project. |
 | LOG_LEVEL | INFO/DEBUG | DEBUG, INFO, WARN &  ERROR | For BUILD_DEBUG=OFF the default value is INFO. For BUILD_DEBUG=ON, the default value is DEBUG. |
 | USE_KLEIDIAI | ON | ON/OFF | Build the project with KLEIDIAI CPU optimizations; if set to OFF, optimizations are turned off. |
@@ -460,6 +461,76 @@ More information can be found at `onnxruntime-genai/benchmark/c/readme.md` on ho
 You can run llm_bench executable from command line:
 ```
 ./build/bin/llm_bench -m resources_downloaded/models/mnn/llama-3.2-1b/config.json -t 4 -p 128 -n 64
+```
+### arm llm benchmark
+
+The Arm LLM Benchmark tool (arm-llm-bench-cli) is a framework-agnostic, standalone executable designed to measure both prompt-processing and token-generation performance across all supported LLM backends.
+
+**Supported Frameworks**
+- `llama.cpp`
+- `onnxruntime-genai`
+- `MNN`
+- `mediapipe`
+
+Instead of writing your own prompts or relying on framework-specific benchmarking tools, `arm-llm-bench-cli` provides a unified benchmarking pipeline. It automatically detects the backend specified in the LLM configuration file and benchmarks it consistently. The tool repeatedly runs the LLM prompt-processing and token-generation  operations and reports timing and throughput metrics in a standardized format.
+
+> **NOTE**: To build `arm-llm-bench-cli`, enable the benchmarking flag in CMake by setting `-DBUILD_BENCHMARK=ON`.
+
+**Measures**
+
+- `Encode time and encode tokens/s`
+- `Decode time and decode tokens/s`
+- `Time-to-first-token (TTFT)`
+- `Total latency per iteration`
+- `Supports warm-up iterations (ignored in statistics)`
+
+**Usage**
+```
+./build/bin/arm-llm-bench-cli \
+    --model     <model_path>          | -m <model_path> \
+    --input     <tokens>              | -i <tokens> \
+    --output    <tokens>              | -o <tokens> \
+    --threads   <num_threads>         | -t <num_threads> \
+    --iterations <num_iterations>     | -n <num_iterations> \
+    [ --warmup <warmup_iterations>    | -w <warmup_iterations> ]
+```
+
+> **NOTE**: On-device execution requires that `arm-llm-bench-cli` and its backend shared libraries reside in the same directory. Builds using `GGML_OPENMP=ON` additionally require `libomp.so` to be placed in that directory as well.
+
+**Example**
+```
+./build/bin/arm-llm-bench-cli \
+    -m ./resources_downloaded/models/llama.cpp/llama-3.2-1b/Llama-3.2-1B-Instruct-Q4_0.gguf \
+    -i 128 \
+    -o 64 \
+    -t 4 \
+    -n 3 \
+    -w 1
+
+Terminal Output:
+
+INFO : Running 1 warmup iteration(s) (results ignored)...
+
+=== ARM LLM Benchmark ===
+
+Parameters:
+  model_path         : ./resources_downloaded/models/llama.cpp/llama-3.2-1b/Llama-3.2-1B-Instruct-Q4_0.gguf
+  num_input_tokens   : 128
+  num_output_tokens  : 64
+  num_threads        : 5
+  num_iterations     : 5
+  num_warmup         : 1
+
+
+======= Results =========
+
+| Framework          | Threads | Test   | Performance                |
+| ------------------ | ------- | ------ | -------------------------- |
+| llama.cpp          | 5       | pp128  |   204.149 ±  4.316 (t/s)   |
+| llama.cpp          | 5       | tg64   |    48.029 ±  0.080 (t/s)   |
+| llama.cpp          | 5       | TTFT   |   648.401 ± 13.798 (ms)    |
+| llama.cpp          | 5       | Total  |  1959.827 ± 14.433 (ms)    |
+
 ```
 
 ## Trademarks

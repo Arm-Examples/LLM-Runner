@@ -116,9 +116,6 @@ size_t LLM::LLMImpl::GetChatProgress() {
     return 100 * m_ctx->all_seq_len / this->m_nCtx;
 }
 
-std::string LLM::LLMImpl::BenchModel(int& prompts, int& eval_prompts, int& n_max_sq, int& n_rep) {return "";}
-
-
 bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
 {
     if(!this->m_llm) {
@@ -153,6 +150,38 @@ std::vector<std::string> LLM::LLMImpl::SupportedInputModalities() const {
         THROW_ERROR("Failed to get input modalities: initialize LLM first.");
     }
     return modalities;
+}
+
+std::string LLM::LLMImpl::GeneratePromptWithNumTokens(size_t numPromptTokens)
+{
+    if (numPromptTokens == 0) {
+        return std::string{};
+    }
+
+    // Simple base pattern. You can tweak this if needed.
+    const std::string pattern = " A";
+
+    std::string prompt;
+    std::vector<int> token_ids;
+
+    while (true) {
+        prompt += pattern;
+
+        // Use the real MNN tokenizer to see how many tokens we currently have
+        token_ids = m_llm->tokenizer_encode(prompt);
+
+        const size_t currentTokens = token_ids.size();
+
+        if (currentTokens == numPromptTokens) {
+            // Exact match – best case
+            return prompt;
+        }
+
+        if (currentTokens > numPromptTokens) {
+            // Overshoot: return best-effort
+            return prompt;
+        }
+    }
 }
 
 void LLM::LLMImpl::StopGeneration() {}
