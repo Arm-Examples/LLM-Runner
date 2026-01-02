@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -123,8 +123,8 @@ int main(int argc, char** argv)
                        numWarmup,
                        sharedLibraryPath);
 
-    bench.Run();
+    int rc = bench.Run();
     auto results = bench.GetResults();
     std::cout << results << std::endl;
-    return 1;
+    return rc;
 }
