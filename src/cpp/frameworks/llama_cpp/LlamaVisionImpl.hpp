@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2024-2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2024-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -7,7 +7,6 @@
 #ifndef ARM_LLM_WRAPPER_LLAMAVISIONIMPL_HPP
 #define ARM_LLM_WRAPPER_LLAMAVISIONIMPL_HPP
 
-#include <cstdlib>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -242,6 +241,10 @@ private:
 
     /** Resets the vision-specific application context. */
     void ResetVisionContext();
+
+    /** Tracks the memory allocated by llama for images and text combined to avoid overflow
+     * https://github.com/ggml-org/llama.cpp/issues/17534 */
+    size_t m_allocated{0};
 
     /** Media marker which llama mtmd needs to tokenize the image */
     const std::string m_mediaMarker = mtmd_default_marker();

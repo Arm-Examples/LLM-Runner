@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+# SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -183,7 +183,7 @@ def load_config(config_path):
 def get_bazel_flags(config: dict, target_arch: str) -> list[str]:
     """
     Returns a list of Bazel build flags based on the specified target architecture.
-    @param dict: Dictionary containing bazel falgs for each Architecture
+    @param dict: Dictionary containing bazel flags for each Architecture
     @param target_arch: The target architecture defined by Architecture enum
     """
     target_arch.strip().upper()

@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -32,7 +32,7 @@ void LLM::LLMImpl::InitSequence()
         THROW_ERROR("Error: unable to init sequence");
     }
 
-    LOG_INF("Seuqence Initialized");
+    LOG_INF("Sequence Initialized");
 }
 
 void LLM::LLMImpl::FreeSequence()
@@ -281,16 +281,19 @@ bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
 
 void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
 {
+    std::string prompt = payload.textPrompt;
+
     try {
         // Time start
         TimePoint startTimeStampEncoder = Clock::now();
 
         InitSequence();
 
-        this->m_tokenizerPtr->Encode(payload.textPrompt.c_str(), * this->m_sequencesPtr);
-        this->m_llmGeneratorPtr->AppendTokenSequences(* this->m_sequencesPtr);
-        if (this->m_nCurr + this->m_sequencesPtr->SequenceCount(0) >= this->m_nCtx)
-              THROW_ERROR("LLM encoding failed ,context is full");
+        this->m_tokenizerPtr->Encode(prompt.c_str(), * this->m_sequencesPtr);
+        if (this->m_nCurr + this->m_sequencesPtr->SequenceCount(0) >= this->m_nCtx) {
+            THROW_ERROR("LLM encoding failed ,context is full");
+        }
+        this->m_llmGeneratorPtr->AppendTokenSequences(*this->m_sequencesPtr);
         // Record finishing time
         this->m_totalEncoderTime += Duration(Clock::now() - startTimeStampEncoder).count();
         this->m_totalEncodedTokens += this->m_sequencesPtr->SequenceCount(0);

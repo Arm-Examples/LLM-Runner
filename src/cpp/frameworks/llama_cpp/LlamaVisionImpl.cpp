@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -47,6 +47,7 @@ void LlamaVisionImpl::FreeLlm() {
 
     this->m_nCur = 0;
     this->m_contextFilled = 0;
+    this->m_allocated = 0;
     this->m_llmInitialized = false;
 }
 
@@ -60,8 +61,10 @@ void LlamaVisionImpl::LlmInit(const LlmConfig& config, std::string sharedLibrary
     if (config.GetConfigInt(LlmConfig::ConfigParam::ContextSize) <= 0) {
         THROW_INVALID_ARGUMENT("contextSize must be > 0");
     }
-    
+
+
     try {
+        // llama_log_set should be the very beginning of llama initialization to obtain all logs.
         llama_log_set(llama_llm_log_callback, nullptr);
         ggml_backend_load_all_from_path(sharedLibraryPath.c_str());
         this->m_config = config;
@@ -84,6 +87,7 @@ void LlamaVisionImpl::ResetVisionContext() {
     this->m_contextFilled = (100 * this->m_nCur) / this->m_nCtx;
     this->m_mtmdContext->bitmaps.entries.clear();
     this->m_imageIndex = 0;
+    this->m_allocated = 0;
     common_batch_clear(this->m_mtmdContext->batch);
     llama_perf_context_reset(this->m_llmContext);
     common_sampler_reset(this->m_commonSampler);
@@ -135,6 +139,11 @@ void LlamaVisionImpl::Encode(LlmChat::Payload& payload) {
     // 4) Clear any previously stored bitmaps in the context
     this->m_mtmdContext->bitmaps.entries.clear();
 
+    if (this->m_allocated + mtmd_helper_get_n_tokens(chunks.ptr.get()) >= this->m_nCtx) {
+        THROW_ERROR("Encode: Failed to evaluate since context is full" );
+    }
+    //clip_n_output_tokens
+
     // 5) Evaluate the chunks
     llama_pos newPast = 0;
     const bool evalFailed = mtmd_helper_eval_chunks(
@@ -147,10 +156,6 @@ void LlamaVisionImpl::Encode(LlmChat::Payload& payload) {
             /* reset_state = */ true,
             &newPast
     );
-    // This error can be linked to ggml status to get a better context error
-    if (newPast >= this->m_nCtx) {
-        THROW_ERROR("Encode: Failed to evaluate: context is full" );
-    }
     
     if (evalFailed) {
         THROW_ERROR("Encode: Failed to evaluate multimodal prompt");
@@ -159,6 +164,8 @@ void LlamaVisionImpl::Encode(LlmChat::Payload& payload) {
     llama_synchronize(this->m_llmContext);
     this->m_mtmdContext->n_past = newPast;
     this->m_nCur                = newPast;
+
+    this->m_allocated += mtmd_helper_get_n_tokens(chunks.ptr.get());
     this->m_contextFilled = std::min<size_t>((100ULL * this->m_nCur) / this->m_nCtx, 100);
 
 }
@@ -168,7 +175,7 @@ std::string LlamaVisionImpl::NextToken() {
     // Check if context is full before new token is being processed
     if (this->m_nCur  >= this->m_nCtx) {
         this->m_contextFilled = 100;
-        return "ctx_full";
+        return this->m_eos;
     }
 
     const auto token_id = common_sampler_sample(this->m_commonSampler, this->m_mtmdContext->lctx, -1);
@@ -192,6 +199,7 @@ std::string LlamaVisionImpl::NextToken() {
     }
 
     ++this->m_nCur;
+    ++this->m_allocated;
     llama_synchronize(this->m_llmContext);
 
     // Update fill to reflect the token we just processed
@@ -217,7 +225,7 @@ void LlamaVisionImpl::NewContext() {
     auto params = this->m_commonParams;
     params.cpuparams.n_threads       = this->m_config.GetConfigInt(LlmConfig::ConfigParam::NumThreads);
     params.cpuparams_batch.n_threads = this->m_config.GetConfigInt(LlmConfig::ConfigParam::NumThreads);
-    params.n_batch                   = this->m_batchSz;
+    params.n_batch                   = std::min<size_t>(this->m_batchSz,this->m_nCtx);
     params.n_ctx                     = this->m_nCtx;
 
     auto ctx = std::make_unique<mtmd_app_context>(params);
@@ -239,5 +247,8 @@ void LlamaVisionImpl::NewContext() {
     this->m_llmModel       = this->m_mtmdContext->model;
     this->m_nCur           = 0;
     this->m_contextFilled  = 0;
+    this->m_allocated      = 0;
+    this->m_nCtx           = llama_n_ctx(this->m_llmContext);
+    this->m_batchSz        = llama_n_batch(this->m_llmContext);
 
 }

@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -241,6 +241,7 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
     LOG_DEBUG("Sending in query %s\n", payload.textPrompt.c_str());
 
     std::string _query = this->m_conversationContext + payload.textPrompt;
+    LOG_INF("Sending in query %s\n", _query.c_str());
     this->m_errorCode  = LlmInferenceEngine_Session_AddQueryChunk(
         this->m_llmEngineSession, _query.c_str(), &this->m_errorMsg);
     if (this->m_errorCode) {
@@ -253,19 +254,26 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
                                                          _query.c_str(), &this->m_errorMsg);
     if (nCur < 0) {
         free(this->m_errorMsg);
-        LOG_ERROR("Mediapipe Chat Progress Finder failed:");
+        THROW_ERROR("Mediapipe Chat Progress Finder failed:");
+        return;
+    }
+    if (nCur >= this->m_nCtx)
+    {
+        free(this->m_errorMsg);
+        THROW_ERROR("LLM context is full");
         return;
     }
 
     auto epoc = m_tokenQueue.reset();
     auto context = new LlmModelContext(epoc, this->m_tokenQueue, this->m_eos);
 
-    // The prediction can start as soon we encode. extract the tokens twith NextToken call.
+    // The prediction can start as soon as we encode, extract the tokens with NextToken call.
     this->m_errorCode = LlmInferenceEngine_Session_PredictAsync(
     this->m_llmEngineSession, context, &this->m_errorMsg, LlmCallback);
     if (this->m_errorCode) {
         THROW_ERROR("Mediapipe predictAsync - Failed to decode token: %s", this->m_errorMsg);
     }
+    this->m_conversationContext = _query;
 }
 
 
@@ -407,3 +415,5 @@ std::string LLM::LLMImpl::GeneratePromptWithNumTokens(size_t numPromptTokens)
         }
     }
 }
+
+

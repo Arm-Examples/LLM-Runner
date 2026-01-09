@@ -3,6 +3,6 @@ download.log
 resources_downloaded/
 Testing/
 cmake-build-*/
-build-*/
+build*/
 # Ignore coverage build directory
 build_coverage/

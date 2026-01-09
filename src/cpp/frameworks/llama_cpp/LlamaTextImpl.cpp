@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2024-2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2024-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -47,6 +47,9 @@ void LLM::LLMImpl::NewContext()
     ctx_params.n_threads_batch      = this->m_config.GetConfigInt(LlmConfig::ConfigParam::NumThreads);
     ctx_params.no_perf              = false;
     this->m_llmContext              = llama_init_from_model(this->m_llmModel, ctx_params);
+    this->m_nCtx                    = llama_n_ctx(this->m_llmContext);
+    this->m_batchSz                 = llama_n_batch(this->m_llmContext);
+    LOG_INF("batch_size is %zu , context length is %d", this->m_batchSz, this->m_nCtx);
     if (this->m_llmContext == nullptr) {
         THROW_ERROR("NewContext failed: Unable to create llama context");
     }
@@ -63,16 +66,16 @@ void LLM::LLMImpl::FreeContext()
 void LLM::LLMImpl::llama_llm_log_callback(enum ggml_log_level level, const char * text, void * user_data) {
     // map the llama provided internal logs to LLM module style logs.
     switch (level) {
-        case 1:
+        case GGML_LOG_LEVEL_DEBUG:
             LOG_DEBUG("%s",text);
             break;
-        case 2:
+        case GGML_LOG_LEVEL_INFO:
             LOG_INF("%s",text);
             break;
-        case 3:
+        case GGML_LOG_LEVEL_WARN:
             LOG_WARN("%s",text);
             break;
-        case 4:
+        case GGML_LOG_LEVEL_ERROR:
             LOG_ERROR("%s",text);
             break;
             // logs with GGML_LOG_LEVEL 0 and 5 are irrelevant in llama.cpp
@@ -269,28 +272,24 @@ bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
 
 void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
 {
-    const auto prompt_tokens = common_tokenize(this->m_llmContext, payload.textPrompt, 1);
+    const auto prompt_tokens = common_tokenize(this->m_llmContext, payload.textPrompt, true);
 
     size_t promptLength = prompt_tokens.size();
-    const char * msg = "Failed to evaluate current prompt, context is full";
     // check prompt size
-    if (promptLength > this->m_nCtx - 4) {
-        THROW_ERROR("%s: Failed to evaluate large prompt",__func__);
+    if (promptLength + this->m_nCur > this->m_nCtx - 4) {
+        const auto msg = "Failed to evaluate current prompt, context is full";
+        THROW_ERROR("%s : %s", msg, __func__);
     }
-    else if (promptLength + this->m_nCur > this->m_nCtx - 4) {
-        THROW_ERROR("%s : %s",msg,__func__);
+    if (promptLength <= 1) {
+        THROW_ERROR("%s : %s", "Prompt is empty.", __func__);
     }
-    else if (promptLength <= 1) {
-        THROW_ERROR("%s : %s",msg,__func__);
-    } else {
-        for (size_t idx = 0; idx < promptLength; idx += this->m_batchSz) {
-            const size_t end_idx  = std::min(idx + this->m_batchSz, promptLength - 1);
-            const bool lastBatch = (end_idx == (promptLength - 1));
-            auto sub_prompt = std::vector<llama_token>(prompt_tokens.begin() + idx,
-                                                       prompt_tokens.begin() + end_idx + 1);
-            if (!sub_prompt.empty()) {
-                CompletionInit(sub_prompt, lastBatch);
-            }
+    for (size_t idx = 0; idx < promptLength; idx += this->m_batchSz) {
+        const size_t end_idx  = std::min(idx + this->m_batchSz, promptLength);
+        const bool lastBatch = (end_idx == (promptLength));
+        auto sub_prompt = std::vector<llama_token>(prompt_tokens.begin() + idx,
+                                                   prompt_tokens.begin() + end_idx);
+        if (!sub_prompt.empty()) {
+            CompletionInit(sub_prompt, lastBatch);
         }
     }
 }
@@ -359,13 +358,11 @@ std::string LLM::LLMImpl::NextToken()
     std::string result = CompletionLoop();
     if ((result == this->m_eos) && (this->m_nCur >= this->m_nCtx)) {
         this->m_contextFilled = 100;
-        return "ctx_full";
     } else {
         this->m_contextFilled = 100 * this->m_nCur / this->m_nCtx;
     }
     return result;
 }
-
 
 void LLM::LLMImpl::Cancel() {
 	LOG_INF("Cancelling current operation");

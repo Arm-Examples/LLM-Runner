@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -12,12 +12,16 @@
 #include "LlmBridge.hpp"
 #if defined(ENABLE_STREAMLINE)
 #include "profiling/StreamlineLlm.hpp"
+#include <thread>
+#include <chrono>
 #endif
 
 LLM::LLM()
 {
 #if defined(ENABLE_STREAMLINE)
     sl::InitThreadOnce();
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    sl::Scope scope(sl::CH_CONTROL, ANNOTATE_BLUE, "LLM::LLM");
 #endif
 }
 
@@ -32,8 +36,8 @@ LLM::~LLM() noexcept
 void LLM::LlmInit(const LlmConfig &llmConfig, std::string sharedLibraryPath)
 {
 #if defined(ENABLE_STREAMLINE)
-    sl::marker(ANNOTATE_BLUE, "Init start");
     sl::Scope scope(sl::CH_INIT, ANNOTATE_BLUE, "LLM::LlmInit");
+    sl::marker(ANNOTATE_BLUE, "Init start");
 #endif
     LLMFactory factory;
     this->m_impl = factory.CreateLLMImpl(llmConfig);

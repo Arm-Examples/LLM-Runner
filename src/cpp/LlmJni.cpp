@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2024-2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2024-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -324,10 +324,12 @@ JNIEXPORT void JNICALL Java_com_arm_Llm_resetContextJNI(JNIEnv* env, jobject, jl
  * deleted by C++ when this function returns. Because this llm object is deleted 
  * calling this function can't be used in lieu of calling initLlm.
  * 
- */
+*/
 JNIEXPORT jstring JNICALL Java_com_arm_Llm_getFrameworkTypeJNI(JNIEnv* env, jobject, jlong)
 {
+
     auto llm = std::make_unique<LLM>();
+
     std::string frameworkType = llm->GetFrameworkType();
     return env->NewStringUTF(frameworkType.c_str());
 }
@@ -507,12 +509,14 @@ jint JNI_OnLoad(JavaVM *vm, void *) {
             env->ExceptionDescribe();
             env->ExceptionClear();
         }
+        LOG_DEBUG("Completion / Cancel handler have not been enabled. "
+                  "Check if %s is present and has been loaded", g_nativeBridgeClassName);
         return JNI_VERSION_1_6;
     }
     g_NativeBridgeClass = reinterpret_cast<jclass>(env->NewGlobalRef(local));
     env->DeleteLocalRef(local);
     if (!g_NativeBridgeClass) {
-        LOGE("JNI_OnLoad: NewGlobalRef failed");
+        LOG_ERROR("JNI_OnLoad: NewGlobalRef failed");
         return JNI_ERR;
     }
     // Signature: (JILjava/lang/String;)V   => long, int, String -> void
@@ -521,10 +525,10 @@ jint JNI_OnLoad(JavaVM *vm, void *) {
             "onNativeComplete",
             "(JILjava/lang/String;)V");
     if (!g_onNativeComplete) {
-        LOGE("JNI_OnLoad: cannot find onNativeComplete");
+        LOG_ERROR("JNI_OnLoad: cannot find onNativeComplete");
         return JNI_ERR;
     }
-    LOGD("JNI_OnLoad success");
+    LOG_DEBUG("JNI_OnLoad success");
     return JNI_VERSION_1_6;
 }
 
@@ -635,7 +639,7 @@ void deliverCompletion(long operationId, int rc, const std::string &payload) {
     JNIEnv *env;
     bool detach = false;
     if (g_vm->GetEnv((void **) &env, JNI_VERSION_1_6) != JNI_OK) {
-        JNI_ATTACH_CURRENT_THREAD(g_vm,&env, nullptr);
+        JNI_ATTACH_CURRENT_THREAD(g_vm, &env, nullptr);
         detach = true;
     }
 
