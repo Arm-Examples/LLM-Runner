@@ -225,7 +225,7 @@ void LlamaVisionImpl::NewContext() {
     auto params = this->m_commonParams;
     params.cpuparams.n_threads       = this->m_config.GetConfigInt(LlmConfig::ConfigParam::NumThreads);
     params.cpuparams_batch.n_threads = this->m_config.GetConfigInt(LlmConfig::ConfigParam::NumThreads);
-    params.n_batch                   = std::min<size_t>(this->m_batchSz,this->m_nCtx);
+    params.n_batch                   = this->m_batchSz;
     params.n_ctx                     = this->m_nCtx;
 
     auto ctx = std::make_unique<mtmd_app_context>(params);

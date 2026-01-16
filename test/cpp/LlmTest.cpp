@@ -27,7 +27,11 @@ std::string s_modelRootDir{""};
 std::string s_backendSharedLibraryDir{""};
 
 static int maxTokenRetrievalAttempts = 10000;
-static int testCtxLength = 73;  // Arbitrary truncated value to emulate faster end  of context.
+static int testCtxLength = 73;       // Arbitrary truncated value to emulate faster end  of context.
+static int testBatchLength = 64;     // The test batch for text should be fixed to avoid errors,
+                                     // when truncating Context length to low values
+static int testImgBatchLength = 256; // The mtmd requires text modality batch-sized to be fixed.
+
 using namespace Catch::Clara;
 
 int main(int argc, char* argv[])
@@ -252,6 +256,8 @@ TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
         SECTION("Vision: Context overflow during Encode should throw an error")
         {
             configTest.SetConfigInt(LlmConfig::ContextSize, testCtxLength);
+            configTest.SetConfigInt(LlmConfig::BatchSize, testImgBatchLength);
+
             llm.LlmInit(configTest, s_backendSharedLibraryDir);
 
             LlmChat::Payload payload{
@@ -300,6 +306,7 @@ TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
     SECTION("Context Overflow: Encode should throw when prompt exceeds available space")
     {
         configTest.SetConfigInt(LlmConfig::ContextSize, testCtxLength);
+        configTest.SetConfigInt(LlmConfig::BatchSize, testBatchLength);
         llm.LlmInit(configTest, s_backendSharedLibraryDir);
 
         int count = 8;
