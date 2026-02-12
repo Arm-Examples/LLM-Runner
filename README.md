@@ -11,9 +11,9 @@
 * [LLM library](#llm-library)
   * [Prerequisites](#prerequisites)
   * [Quick start](#quick-start)
-  * [Cross Compilation for Android and Aarch64](#cross-compilation-for-android-and-aarch64)
+  * [Cross Compilation for Android](#cross-compilation-for-android)
   * [To build an executable benchmark binary](#to-build-an-executable-benchmark-binary)
-  * [Supported Platforms & cmake presets](#supported-platforms--cmake-presets)
+  * [Supported Platforms](#supported-platforms)
   * [Configuration options](#configuration-options)
     * [Conditional options](#conditional-options)
       * [llama cpp options](#llama-cpp-options)
@@ -27,14 +27,14 @@
       * [mediapipe model](#mediapipe-model)
       * [mnn model](#mnn-model)
         * [mnn multimodal](#mnn-multimodal)
-      * [Aarch64 target with SME](#aarch64-target-with-sme)
+    * [Shared libraries build parameter](#shared-libraries-build-parameter)
     * [To Build for macOS](#to-build-for-macos)
     * [llama cpp](#llama-cpp)
     * [onnxruntime genai](#onnxruntime-genai)
     * [mnn](#mnn)
     * [arm llm benchmark](#arm-llm-benchmark)
-  * [Troubleshooting](#Troubleshooting)
   * [Contributions](#contributions)
+  * [Troubleshooting](#troubleshooting)
   * [Trademarks](#trademarks)
   * [License](#license)
 <!-- TOC -->
@@ -57,7 +57,7 @@ applications.
 * CMake 3.28 or above installed
 * Python 3.9 or above installed, python is used to download test resources and models
 * Android™ NDK (if building for Android™). Minimum version: 29.0.14206865 is recommended and can be downloaded
-  from [here](https://developer.android.com/ndk/downloads)
+  from [here](https://developer.android.com/ndk/downloads).
 * Building on macOS requires Xcode Command Line Tools, Android Studio installed and configured (NDK, CMake as above) and Clang (tested with 16.0.0)
 * Bazelisk or Bazel 7.4.1 to build mediapipe backend
 * Aarch64 GNU toolchain (version 14.1 or later) if cross-compiling from a Linux® based system which can be downloaded from [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads)
@@ -90,26 +90,18 @@ Test project /home/user/llm/build
 100% tests passed, 0 tests failed out of 2
 ```
 
-## Cross Compilation for Android and Aarch64
+## Cross Compilation for Android
 
 Cross compilation is also supported allowing the project to build binaries targeted to an OS/CPU architecture different from the host/build machine. For example it is possible to build the project on a Linux x86_64 platform and build binaries for Android™:
 
 ```shell
+export NDK_PATH=/home/username/ndk
 cmake --preset=x-android-aarch64  -B build 
 cmake --build ./build
 ```
 
 However, the binaries would need to be uploaded to an Android™ device to exercise the tests.
-
-To target Linux-aarch64:
-
-```shell
-cmake --preset=x-linux-aarch64  -B build -DCPU_ARCH=Armv8.2_3
-cmake --build ./build
-```
-*-DCPU_ARCH* must be specified for all linux-aarch64 targets (including native when run on linux-aarch64).
-
-See the section below for additional cross-compilation options. 
+See the section below for additional cross-compilation options.
 
 ## To build an executable benchmark binary
 
@@ -122,10 +114,10 @@ cmake -B build --preset=native -DCPU_ARCH=Armv8.2_4 -DBUILD_BENCHMARK=ON
 cmake --build ./build
 ```
 
-## Supported Platforms & cmake presets
+## Supported Platforms
 
-The supported build platforms and cmake presets matrix is given below. 
-The cmake presets (aka build target) are give in the first column and build platform are given in the first row. 
+The supported build platforms and cmake presets matrix is given below.
+The cmake presets (aka build target) are given in the first column and build platform are given in the first row.
 So for example native builds are have been tested on Linux-x86_64, Linux-aarch64 & macOS-aarch64. While x-android-aarch64 (targets Android™ devices running on aarch64) builds are only tested on Linux-x86_64 & macOS-aarch64.
 
 |  cmake-preset / Host Platform  | Linux-x86_64| Linux-aarch64                      | macOS-aarch64 | Android™ |
@@ -135,12 +127,12 @@ So for example native builds are have been tested on Linux-x86_64, Linux-aarch64
 | x-linux-aarch64                      | ✅            | ✅ †                              | -            | -      |
 
 
- \* Linux-aarch64 requires the additional CPU_ARCH build flag, see configuration options below    
- † Use 'native' preset
+\* Linux-aarch64 requires CPU_ARCH build flag when selecting llama.cpp
+† Use 'native' preset
 
 ## Configuration options
 
-Configuration options are divided into 2 parts. The first part (what is covered in this section) is the overall project configuration. The second part covers configuration options relating to the specific LLM framework being used, e.g. llama.cpp/ ONNX or MediaPipe, these items are covered in the sections that follow. 
+Configuration options are divided into 2 parts. The first part (what is covered in this section) is the overall project configuration. The second part covers configuration options relating to the specific LLM framework being used, e.g. llama.cpp/ ONNX or MediaPipe, these items are covered in the sections that follow.
 
 Configuration option can be used with cmake presets.
 
@@ -161,34 +153,45 @@ cmake --build ./build
 ctest --test-dir ./build
 ```
 
-Details on additional build options is given below: 
+Details of configurable build options are given below:
 
-Flag name | Default | Values | Description |
-|---|---|---|---|
-| LLM_FRAMEWORK | llama.cpp | llama.cpp / mediapipe / onnxruntime-genai / mnn | Specifies the backend framework to be used. |
-| BUILD_DEBUG | OFF | ON/OFF | If set to ON a debug build is configured. |
-| ENABLE_STREAMLINE | OFF | ON/OFF | Enables Arm Streamline timeline annotations for analyzing LLM initialization, encode, decode, and control-path performance. |
-| BUILD_LLM_TESTING | ON | ON/OFF | Builds the project's functional tests when ON. |
-| BUILD_BENCHMARK | OFF | ON/OFF | Builds the framework's benchmark binaries and arm-llm-bench-cli for the project when ON. |
-| BUILD_JNI_LIB| ON | ON/OFF | Builds the JNI bindings for the project. |
-| LOG_LEVEL | INFO/DEBUG | DEBUG, INFO, WARN &  ERROR | For BUILD_DEBUG=OFF the default value is INFO. For BUILD_DEBUG=ON, the default value is DEBUG. |
-| USE_KLEIDIAI | ON | ON/OFF | Build the project with KLEIDIAI CPU optimizations; if set to OFF, optimizations are turned off. |
-| CPU_ARCH | Not defined | Armv8.2_1, Armv8.2_2, Armv8.2_3, Armv8.2_4, Armv8.2_5, Armv8.6_1, Armv8.6_2, Armv9.2_1, Armv9.2_2 | Sets the target ISA architecture (AArch64). Not all targets support this flag. Only supported with LLM_FRAMEWORK=llama.cpp when targeting linux-aarch64 only. |
+Flag name | Default | Values                                                                                                   | Description                                                                                                                               |
+|---|---|----------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| LLM_FRAMEWORK | llama.cpp | llama.cpp / mediapipe / onnxruntime-genai / mnn                                                          | Specifies the backend framework to be used.                                                                                               |
+| BUILD_DEBUG | OFF | ON/OFF                                                                                                   | If set to ON a debug build is configured.                                                                                                 |
+| ENABLE_STREAMLINE | OFF | ON/OFF                                                                                                   | Enables Arm Streamline timeline annotations for analyzing LLM initialization, encode, decode, and control-path performance.               |
+| BUILD_LLM_TESTING | ON | ON/OFF                                                                                                   | Builds the project's functional tests when ON.                                                                                            |
+| BUILD_BENCHMARK | OFF | ON/OFF                                                                                                   | Builds the framework's benchmark binaries and arm-llm-bench-cli for the project when ON.                                                  |
+| BUILD_JNI_LIB| ON | ON/OFF                                                                                                   | Builds the JNI bindings for the project.                                                                                                  |
+| LOG_LEVEL | INFO/DEBUG | DEBUG, INFO, WARN &  ERROR                                                                               | For BUILD_DEBUG=OFF the default value is INFO. For BUILD_DEBUG=ON, the default value is DEBUG.                                            |
+| USE_KLEIDIAI | ON | ON/OFF                                                                                                   | Build the project with KLEIDIAI CPU optimizations; if set to OFF, optimizations are turned off.                                           |
+| CPU_ARCH | Not defined | Armv8.2_1, Armv8.2_2, Armv8.2_3, Armv8.2_4, Armv8.2_5, Armv8.6_1, Armv9.0_1_1, armv9.2_1_1, armv9.2_2_1 | Sets the target ISA architecture (AArch64) to ensure SVE is not enabled when LLM_FRAMEWORK=llama.cpp  (issue affects aarch64 only). |
+| GGML_METAL | OFF         | ON/OFF                                                                                                   | macOS specific. Enables Apple Metal backend in ggml for GPU acceleration (Apple Silicon only).                                            |
+| GGML_BLAS  | OFF         | ON/OFF                                                                                                   | macOS specific. Enables Accelerate/BLAS backend in ggml for CPU-optimized linear algebra kernels.                                         |
 
-The table below gives the mapping of CPU_ARCH flags to Arm CPU features
 
-| CPU_ARCH     | C/C++ compiler flags                             |
-|--------------|--------------------------------------------------|
-| Armv8.2_1    | -march=armv8.2-a+dotprod                       |
-| Armv8.2_2    | -march=armv8.2-a+dotprod+fp16                  |
-| Armv8.2_3    | -march=armv8.2-a+dotprod+fp16+sve              |
-| Armv8.2_4    | -march=armv8.2-a+dotprod+i8mm                  |
-| Armv8.2_5    | -march=armv8.2-a+dotprod+i8mm+sve+sme          |
-| Armv8.6_1    | -march=armv8.6-a+dotprod+fp16+sve+i8mm         |
-| Armv8.6_2    | -march=armv8.6-a+dotprod+fp16+sve+i8mm+sve2    |
-| armv9.0_1    | -march=armv9.2-a+dotprod+fp16+nosve+i8mm+sme   |
-| armv9.2_1    | -march=armv9.2-a+dotprod+fp16+nosve+i8mm+sme   |
-| armv9.2_2    | -march=armv9.2-a+dotprod+fp16+nosve+i8mm+sme   |
+# Known Issue with llama.cpp
+
+Currently there are issues with a specific architecture (SVE) integration in llama.cpp backend on aarch64. To ensure this feature is not enabled we enforce using one of our provided CPU_ARCH flag presets
+that ensure compiler flags do not enable SVE at build time.
+The table below gives the mapping of our preset CPU_ARCH flags to some common CPU feature flag sets.
+Other permutations are also supported and can be tailored accordingly. If you intend to use specific features you must ensure your specific CPU implements them e.g. i8mm  as this was
+optional in v8.2 for example. Compilers also need to support any chosen features.
+
+
+| CPU_ARCH     | C/C++ compiler flags                         |
+|--------------|----------------------------------------------|
+| Armv8.2_1    | -march=armv8.2-a+dotprod                     |
+| Armv8.2_2    | -march=armv8.2-a+dotprod+fp16                |
+| Armv8.2_3    | -march=armv8.2-a+dotprod+fp16+sve            |
+| Armv8.2_4    | -march=armv8.2-a+dotprod+i8mm                |
+| Armv8.2_5    | -march=armv8.2-a+dotprod+i8mm+sve+sme        |
+| Armv8.6_1    | -march=armv8.6-a+dotprod+fp16+i8mm           |
+| Armv9.0_1_1  | -march=armv8.6-a+dotprod+fp16+i8mm+nosve     |
+| *armv9.2_1_1 | -march=armv9.2-a+dotprod+fp16+nosve+i8mm+sme |
+| *armv9.2_2_1 | -march=armv9.2-a+dotprod+fp16+nosve+i8mm+sme |
+
+* Note: Different capitalisation for v9.2 presets.
 
 
 > **NOTE**: If you need specific version of Java set the path in `JAVA_HOME` environment variable.
@@ -269,6 +272,9 @@ For customising MNN framework , following parameters can be used:
 Although MNN can be built with USE_KLEIDIAI defined, the current MNN implementation does not fully enable KleidiAI™ optimizations at runtime.
 This limitation is due to the current MNN runtime initialization logic and will be resolved once full support is implemented upstream in MNN.
 
+### Shared libraries build parameter
+
+When targeting the llama.cpp LLM backend and Android (--preset=x-android-aarch64),  BUILD_SHARED_LIBS=ON is automatically configured. This ensures the build generates shared libraries, allowing the optimal hardware accelerated libraries to be loaded for the particular device at runtime.
 
 ### Supported Models
 
@@ -388,10 +394,9 @@ The `MNN` backend **also supports multimodal (image + text)** inference in this 
 You can find an example multimodal configuration in [mnnVisionConfig-qwen2.5-3B.json](model_configuration_files/mnnVisionConfig-qwen2.5-3B.json)
 
 
+### Aarch64 target
 
-#### Aarch64 target with SME
-
-To build for aarch64 Linux system with [Scalable Matrix Extensions](https://developer.arm.com/documentation/109246/0100/SME-Overview/SME-and-SME2):
+To build for aarch64 Linux system
 
 ```shell
 cmake -B build --preset=native -DCPU_ARCH=Armv8.2_5
@@ -547,7 +552,7 @@ Parameters:
 
 ## Troubleshooting
 
-For a list of common errors and their fixes, see TROUBLESHOOTING.md.
+For a list of common errors and their fixes, see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
 
 ## Contributions
 
