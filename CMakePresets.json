@@ -1,17 +1,16 @@
 {
   "version": 6,
   "cmakeMinimumRequired": { "major": 3, "minor": 27 },
-
   "configurePresets": [
     {
       "name": "base",
       "hidden": true,
-      "cacheVariables": { 
+      "cacheVariables": {
+        "BUILD_DEBUG": "OFF",
+        "BUILD_JNI_LIB": "ON",
         "LLM_FRAMEWORK": "llama.cpp",
-        "BUILD_DEBUG": false,
-        "BUILD_LLM_TESTING": true,
-        "BUILD_BENCHMARK": false,
-        "BUILD_JNI_LIB": true
+        "BUILD_LLM_TESTING": "ON",
+        "BUILD_BENCHMARK": "OFF"
       }
     },
     {
