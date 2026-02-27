@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright 2024-2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+# SPDX-FileCopyrightText: Copyright 2024-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -28,5 +28,6 @@ set(DOWNLOADS_LOCK_TIMEOUT 600
 option(BUILD_BENCHMARK    "Build benchmark binary"            ON)
 option(BUILD_LLM_TESTING  "Build unit tests"                  ON)
 option(BUILD_JNI_LIB      "Build JNI lib"                     ON)
+option(LLM_JNI_TIMING     "Enable JNI timing helpers"         OFF)
 option(LLAMA_BUILD_COMMON "Include LLAMA common"              ON)
 option(ENABLE_STREAMLINE  "Enable Arm Streamline annotations" OFF)

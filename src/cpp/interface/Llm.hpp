@@ -7,6 +7,7 @@
 #pragma once
 #include "LlmConfig.hpp"
 #include "LlmChat.hpp"
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -130,6 +131,18 @@ public:
      */
     std::string GeneratePromptWithNumTokens(size_t numPromptTokens);
 
+#if defined(LLM_JNI_TIMING)
+    /**
+     * @return last core encode duration in nanoseconds, or -1 if unset.
+     */
+    [[nodiscard]] int64_t GetLastEncodeCoreNs() const;
+
+    /**
+     * @return last core next-token duration in nanoseconds, or -1 if unset.
+     */
+    [[nodiscard]] int64_t GetLastNextTokenCoreNs() const;
+#endif
+
 protected:
     std::unique_ptr<LLMImpl> m_impl{};                  /**< Implementation pointer. */
 
@@ -143,4 +156,9 @@ private:
 
     LlmConfig m_config{};
     bool SupportsModality(const std::vector<std::string> &inptMods, std::string modality) const;
+
+#if defined(LLM_JNI_TIMING)
+    mutable int64_t m_lastEncodeCoreNs{-1};
+    mutable int64_t m_lastNextTokenCoreNs{-1};
+#endif
 };

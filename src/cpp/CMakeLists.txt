@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright 2024-2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+# SPDX-FileCopyrightText: Copyright 2024-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -38,6 +38,10 @@ target_link_libraries(arm-llm-cpp PUBLIC
     arm-llm-framework
     arm-llm-chat
     arm-llm-log)
+
+if (LLM_JNI_TIMING)
+    target_compile_definitions(arm-llm-cpp PUBLIC LLM_JNI_TIMING=1)
+endif()
 
 # Enable streamline annotation
 if(ENABLE_STREAMLINE)

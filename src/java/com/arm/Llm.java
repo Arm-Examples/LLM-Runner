@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Llm class that extends the SubmissionPublisher
@@ -21,6 +22,15 @@ public class Llm {
     private static String eosToken = "<eos>";
     private String imagePath = "";
     private boolean imageUploaded = false;
+    private static final String DEFAULT_TIMING_TAG = "LlmTiming";
+    private static volatile boolean JNI_TIMING_ENABLED = false;
+    private static final ThreadLocal<Long> NEXT_TOKEN_NATIVE_TOTAL = ThreadLocal.withInitial(() -> 0L);
+    private static final ThreadLocal<Long> NEXT_TOKEN_CORE_TOTAL = ThreadLocal.withInitial(() -> 0L);
+    private static final ThreadLocal<Long> NEXT_TOKEN_JAVA_TOTAL = ThreadLocal.withInitial(() -> 0L);
+    private static final ThreadLocal<Integer> NEXT_TOKEN_COUNT = ThreadLocal.withInitial(() -> 0);
+    private static final ThreadLocal<Long> ENCODE_JAVA_NS = ThreadLocal.withInitial(() -> -1L);
+    private static final ThreadLocal<Long> ENCODE_NATIVE_NS = ThreadLocal.withInitial(() -> -1L);
+    private static final ThreadLocal<Long> ENCODE_CORE_NS = ThreadLocal.withInitial(() -> -1L);
      /**
       * @brief Maximum allowed input image dimension (in pixels).
       */
@@ -29,6 +39,9 @@ public class Llm {
     static {
         try {
             System.loadLibrary("arm-llm-jni");
+            if (isJniTimingSupportedJNI()) {
+                JNI_TIMING_ENABLED = true;
+            }
         } catch (UnsatisfiedLinkError e) {
             System.err.println("Llama: Failed to load library: arm-llm-jni");
             e.printStackTrace();
@@ -123,6 +136,40 @@ public class Llm {
     private native void resetTimingsJNI(long nativeLlmHandle);
 
     /**
+     * Native method to generate a prompt with a fixed token count.
+     * @param numTokens token count for the generated prompt
+     * @param nativeLlmHandle handle to the native LLM instance
+     * @return generated prompt string
+     */
+    private native String generatePromptWithNumTokensJNI(int numTokens, long nativeLlmHandle);
+
+    /**
+     * Check if JNI timing support is compiled in.
+     * @return true if timing is supported, false otherwise
+     */
+    private static native boolean isJniTimingSupportedJNI();
+
+    /**
+     * @return last native encode duration in ns, or -1 if unsupported.
+     */
+    private native long getLastEncodeNativeNsJNI();
+
+    /**
+     * @return last native next-token duration in ns, or -1 if unsupported.
+     */
+    private native long getLastNextTokenNativeNsJNI();
+
+    /**
+     * @return last core encode duration in ns, or -1 if unsupported.
+     */
+    private native long getLastEncodeCoreNsJNI(long nativeLlmHandle);
+
+    /**
+     * @return last core next-token duration in ns, or -1 if unsupported.
+     */
+    private native long getLastNextTokenCoreNsJNI(long nativeLlmHandle);
+
+    /**
      * Native method to encode the given text.
      * @param nativeLlmHandle handle to the native LLM instance
      * @param text the prompt to be encoded
@@ -210,13 +257,166 @@ public class Llm {
     public native void resetTimings();
 
     /**
+     * Generate a prompt with a fixed number of tokens.
+     * @param numTokens token count for the generated prompt
+     * @return generated prompt string
+     */
+    public String generatePromptWithNumTokens(int numTokens) {
+        return generatePromptWithNumTokensJNI(numTokens, getNativeLlmHandle());
+    }
+
+    /**
+     * @return last native encode duration in ns, or -1 if disabled/unsupported.
+     */
+    public long getLastEncodeNativeNs() {
+        return getLastEncodeNativeNsJNI();
+    }
+
+    /**
+     * @return last native next-token duration in ns, or -1 if disabled/unsupported.
+     */
+    public long getLastNextTokenNativeNs() {
+        return getLastNextTokenNativeNsJNI();
+    }
+
+    /**
+     * @return last core encode duration in ns, or -1 if disabled/unsupported.
+     */
+    public long getLastEncodeCoreNs() {
+        return getLastEncodeCoreNsJNI(getNativeLlmHandle());
+    }
+
+    /**
+     * @return last core next-token duration in ns, or -1 if disabled/unsupported.
+     */
+    public long getLastNextTokenCoreNs() {
+        return getLastNextTokenCoreNsJNI(getNativeLlmHandle());
+    }
+
+    private void storeEncodeTimingSnapshot(long javaNs) {
+        long encodeNative = getLastEncodeNativeNs();
+        long encodeCore = getLastEncodeCoreNs();
+        ENCODE_JAVA_NS.set(javaNs);
+        ENCODE_NATIVE_NS.set(encodeNative);
+        ENCODE_CORE_NS.set(encodeCore);
+    }
+
+    /**
+     * Add one next-token timing sample to thread-local accumulators.
+     * @param javaNs total Java-side duration in ns
+     */
+    private void accumulateNextTokenTimings(long javaNs) {
+        long nextNative = getLastNextTokenNativeNs();
+        long nextCore = getLastNextTokenCoreNs();
+        if (nextNative >= 0 && nextCore >= 0) {
+            NEXT_TOKEN_NATIVE_TOTAL.set(NEXT_TOKEN_NATIVE_TOTAL.get() + nextNative);
+            NEXT_TOKEN_CORE_TOTAL.set(NEXT_TOKEN_CORE_TOTAL.get() + nextCore);
+            NEXT_TOKEN_JAVA_TOTAL.set(NEXT_TOKEN_JAVA_TOTAL.get() + javaNs);
+            NEXT_TOKEN_COUNT.set(NEXT_TOKEN_COUNT.get() + 1);
+        }
+    }
+
+    /**
+     * Log aggregated next-token timings and encode snapshot for the current thread.
+     * @param tag log tag
+     */
+    private void logNextTokenSummary(String tag) {
+        int count = NEXT_TOKEN_COUNT.get();
+        if (count <= 0) {
+            return;
+        }
+        long nativeTotal = NEXT_TOKEN_NATIVE_TOTAL.get();
+        long coreTotal = NEXT_TOKEN_CORE_TOTAL.get();
+        long javaTotal = NEXT_TOKEN_JAVA_TOTAL.get();
+        long nativeOverheadTotal = nativeTotal - coreTotal;
+        long javaOverheadTotal = javaTotal - coreTotal;
+        long nativeAvg = nativeTotal / count;
+        long coreAvg = coreTotal / count;
+        long javaAvg = javaTotal / count;
+        long nativeOverheadAvg = nativeOverheadTotal / count;
+        long javaOverheadAvg = javaOverheadTotal / count;
+        long encodeJava = ENCODE_JAVA_NS.get();
+        long encodeNative = ENCODE_NATIVE_NS.get();
+        long encodeCore = ENCODE_CORE_NS.get();
+        String encodePrefix;
+        if (encodeNative < 0 || encodeCore < 0) {
+            encodePrefix = "encodeJavaMs=" + formatMs(encodeJava)
+                + " encodeNativeMs=NA"
+                + " encodeCoreMs=NA";
+        } else {
+            long encodeNativeOverhead = encodeNative - encodeCore;
+            long encodeJavaOverhead = encodeJava - encodeCore;
+            encodePrefix = "encodeJavaMs=" + formatMs(encodeJava)
+                + " encodeNativeMs=" + formatMs(encodeNative)
+                + " encodeCoreMs=" + formatMs(encodeCore)
+                + " encodeNativeOverheadMs=" + formatMs(encodeNativeOverhead)
+                + " encodeJavaOverheadMs=" + formatMs(encodeJavaOverhead);
+        }
+        String msg = encodePrefix
+            + " nextTokenCount=" + count
+            + " nextTokenJavaTotalMs=" + formatMs(javaTotal)
+            + " nextTokenNativeTotalMs=" + formatMs(nativeTotal)
+            + " nextTokenCoreTotalMs=" + formatMs(coreTotal)
+            + " nextTokenNativeOverheadTotalMs=" + formatMs(nativeOverheadTotal)
+            + " nextTokenJavaOverheadTotalMs=" + formatMs(javaOverheadTotal)
+            + " nextTokenJavaAvgMs=" + formatMs(javaAvg)
+            + " nextTokenNativeAvgMs=" + formatMs(nativeAvg)
+            + " nextTokenCoreAvgMs=" + formatMs(coreAvg)
+            + " nextTokenNativeOverheadAvgMs=" + formatMs(nativeOverheadAvg)
+            + " nextTokenJavaOverheadAvgMs=" + formatMs(javaOverheadAvg);
+        logInfo(tag, msg);
+    }
+
+    /**
+     * Reset per-thread next-token accumulators.
+     */
+    private void resetNextTokenAccum() {
+        NEXT_TOKEN_NATIVE_TOTAL.set(0L);
+        NEXT_TOKEN_CORE_TOTAL.set(0L);
+        NEXT_TOKEN_JAVA_TOTAL.set(0L);
+        NEXT_TOKEN_COUNT.set(0);
+    }
+
+    /**
+     * Log helper that uses android.util.Log when available, falls back to stdout.
+     * @param tag log tag
+     * @param msg message to log
+     */
+    private static void logInfo(String tag, String msg) {
+        try {
+            Class<?> logClass = Class.forName("android.util.Log");
+            java.lang.reflect.Method method = logClass.getMethod("i", String.class, String.class);
+            method.invoke(null, tag, msg);
+        } catch (Exception e) {
+            System.out.println(tag + ": " + msg);
+        }
+    }
+
+    /**
+     * Format nanoseconds as milliseconds with millisecond precision.
+     * @param ns duration in ns
+     * @return formatted milliseconds
+     */
+    private static String formatMs(long ns) {
+        return String.format(Locale.US, "%.3f", ns / 1_000_000.0);
+    }
+
+    /**
      * Method to encode the given text and image
      * @param text               the prompt to be encoded
      * @param pathToImage        path to the image to be encoded
      * @param isFirstMessage     boolean flag to signal if its the first message or not
      */
     public void encode(String text, String pathToImage, boolean isFirstMessage) {
-         encodeJNI(text, pathToImage, isFirstMessage, getNativeLlmHandle());
+        if (JNI_TIMING_ENABLED) {
+            long javaStart = System.nanoTime();
+            encodeJNI(text, pathToImage, isFirstMessage, getNativeLlmHandle());
+            long javaEnd = System.nanoTime();
+            storeEncodeTimingSnapshot(javaEnd - javaStart);
+            resetNextTokenAccum();
+            return;
+        }
+        encodeJNI(text, pathToImage, isFirstMessage, getNativeLlmHandle());
     }
 
     /**
@@ -225,6 +425,17 @@ public class Llm {
      * @return next Token as String
      */
     public String getNextToken() {
+        if (JNI_TIMING_ENABLED) {
+            long javaStart = System.nanoTime();
+            String token = getNextTokenJNI(getNativeLlmHandle());
+            long javaEnd = System.nanoTime();
+            accumulateNextTokenTimings(javaEnd - javaStart);
+            if (isStopToken(token)) {
+                logNextTokenSummary(DEFAULT_TIMING_TAG);
+                resetNextTokenAccum();
+            }
+            return token;
+        }
         return getNextTokenJNI(getNativeLlmHandle());
     }
 
@@ -234,6 +445,17 @@ public class Llm {
      * @return the next Token for Encoded Prompt
      */
     public String getNextTokenCancellable(long operationId) {
+        if (JNI_TIMING_ENABLED) {
+            long javaStart = System.nanoTime();
+            String token = getNextTokenCancellableJNI(operationId, getNativeLlmHandle());
+            long javaEnd = System.nanoTime();
+            accumulateNextTokenTimings(javaEnd - javaStart);
+            if (isStopToken(token)) {
+                logNextTokenSummary(DEFAULT_TIMING_TAG);
+                resetNextTokenAccum();
+            }
+            return token;
+        }
         return getNextTokenCancellableJNI(operationId, getNativeLlmHandle());
     }
 
@@ -310,6 +532,10 @@ public class Llm {
             if (eosToken.equals(token)) {
                 break;
             }
+        }
+        if (JNI_TIMING_ENABLED && NEXT_TOKEN_COUNT.get() > 0) {
+            logNextTokenSummary(DEFAULT_TIMING_TAG);
+            resetNextTokenAccum();
         }
 
         return response.toString();

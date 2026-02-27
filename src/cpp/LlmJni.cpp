@@ -6,6 +6,8 @@
 
 #include <jni.h>
 
+#include <chrono>
+
 #include "LlmConfig.hpp"
 #include "LlmImpl.hpp"
 #include "Logger.hpp"
@@ -15,6 +17,35 @@
 
 static std::string benchmarkResults;
 static std::string benchmarkResultsJson;
+
+#if defined(LLM_JNI_TIMING)
+namespace {
+thread_local int64_t g_lastEncodeNs = -1;
+thread_local int64_t g_lastNextTokenNs = -1;
+
+int64_t DurationNs(const std::chrono::steady_clock::time_point& start,
+                   const std::chrono::steady_clock::time_point& end) {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+}
+
+template <typename F>
+void TimeCallVoid(F&& fn, int64_t* out) {
+    auto start = std::chrono::steady_clock::now();
+    fn();
+    auto end = std::chrono::steady_clock::now();
+    *out = DurationNs(start, end);
+}
+
+template <typename F>
+auto TimeCallResult(F&& fn, int64_t* out) -> decltype(fn()) {
+    auto start = std::chrono::steady_clock::now();
+    auto result = fn();
+    auto end = std::chrono::steady_clock::now();
+    *out = DurationNs(start, end);
+    return result;
+}
+}  // namespace
+#endif
 
 /**
 * @brief inline method to throw error in java
@@ -172,9 +203,12 @@ JNIEXPORT void JNICALL Java_com_arm_Llm_encodeJNI(JNIEnv *env, jobject thiz, jst
         std::string text(textChars.get());
         std::string imagePath(imageChars.get());
         LlmChat::Payload payload{text, imagePath, static_cast<bool>(is_first_message)};
+#if defined(LLM_JNI_TIMING)
+        TimeCallVoid([&] { llm->Encode(payload); }, &g_lastEncodeNs);
+#else
         llm->Encode(payload);
-    }
-    catch (const std::exception& e) {
+#endif
+    } catch (const std::exception& e) {
         ThrowJavaException(env, ("Failed to encode query: " + std::string(e.what())).c_str());
     }
 }
@@ -194,13 +228,77 @@ JNIEXPORT jstring JNICALL Java_com_arm_Llm_getNextTokenJNI(JNIEnv* env, jobject,
     }
 
     try {
-       std::string result = llm->NextToken();
-       return env->NewStringUTF(result.c_str());
+        std::string result;
+#if defined(LLM_JNI_TIMING)
+        result = TimeCallResult([&] { return llm->NextToken(); }, &g_lastNextTokenNs);
+#else
+        result = llm->NextToken();
+#endif
+        return env->NewStringUTF(result.c_str());
     } catch (const std::exception& e) {
         std::string msg = std::string("Failed to get next token: ") + e.what();
         ThrowJavaException(env,msg.c_str() );
         return nullptr;
     }
+}
+
+JNIEXPORT jboolean JNICALL Java_com_arm_Llm_isJniTimingSupportedJNI(JNIEnv*, jclass)
+{
+#if defined(LLM_JNI_TIMING)
+    return JNI_TRUE;
+#else
+    return JNI_FALSE;
+#endif
+}
+
+JNIEXPORT jlong JNICALL Java_com_arm_Llm_getLastEncodeNativeNsJNI(JNIEnv*, jobject)
+{
+#if defined(LLM_JNI_TIMING)
+    return static_cast<jlong>(g_lastEncodeNs);
+#else
+    return static_cast<jlong>(-1);
+#endif
+}
+
+JNIEXPORT jlong JNICALL Java_com_arm_Llm_getLastNextTokenNativeNsJNI(JNIEnv*, jobject)
+{
+#if defined(LLM_JNI_TIMING)
+    return static_cast<jlong>(g_lastNextTokenNs);
+#else
+    return static_cast<jlong>(-1);
+#endif
+}
+
+JNIEXPORT jlong JNICALL Java_com_arm_Llm_getLastEncodeCoreNsJNI(JNIEnv* env, jobject, jlong llmHandle)
+{
+#if defined(LLM_JNI_TIMING)
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return static_cast<jlong>(-1);
+    }
+    return static_cast<jlong>(llm->GetLastEncodeCoreNs());
+#else
+    (void)env;
+    (void)llmHandle;
+    return static_cast<jlong>(-1);
+#endif
+}
+
+JNIEXPORT jlong JNICALL Java_com_arm_Llm_getLastNextTokenCoreNsJNI(JNIEnv* env, jobject, jlong llmHandle)
+{
+#if defined(LLM_JNI_TIMING)
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return static_cast<jlong>(-1);
+    }
+    return static_cast<jlong>(llm->GetLastNextTokenCoreNs());
+#else
+    (void)env;
+    (void)llmHandle;
+    return static_cast<jlong>(-1);
+#endif
 }
 
 /**
@@ -218,7 +316,12 @@ JNIEXPORT jstring JNICALL Java_com_arm_Llm_getNextTokenCancellableJNI(JNIEnv* en
         return env->NewStringUTF("");
     }
 
-    std::string result = llm->CancellableNextToken(operationId);
+    std::string result;
+#if defined(LLM_JNI_TIMING)
+    result = TimeCallResult([&] { return llm->CancellableNextToken(operationId); }, &g_lastNextTokenNs);
+#else
+    result = llm->CancellableNextToken(operationId);
+#endif
     return env->NewStringUTF(result.c_str());
 }
 
@@ -255,6 +358,24 @@ JNIEXPORT jfloat JNICALL Java_com_arm_Llm_getDecodeRateJNI(JNIEnv* env, jobject,
     }
 
     return llm->GetDecodeTimings();
+}
+
+JNIEXPORT jstring JNICALL Java_com_arm_Llm_generatePromptWithNumTokensJNI(JNIEnv* env, jobject, jint numTokens, jlong llmHandle)
+{
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return env->NewStringUTF("");
+    }
+
+    try {
+        std::string result = llm->GeneratePromptWithNumTokens(static_cast<size_t>(numTokens));
+        return env->NewStringUTF(result.c_str());
+    } catch (const std::exception& e) {
+        std::string msg = std::string("Failed to generate prompt: ") + e.what();
+        ThrowJavaException(env,msg.c_str());
+        return nullptr;
+    }
 }
 
 /**
