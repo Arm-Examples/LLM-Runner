@@ -6,46 +6,35 @@
 
 #include <jni.h>
 
-#include <chrono>
-
 #include "LlmConfig.hpp"
 #include "LlmImpl.hpp"
 #include "Logger.hpp"
 #include "LlmBridge.hpp"
 #include "LlmCache.hpp"
-#include "LlmBenchmark.hpp"
+#include "LlmBench.hpp"
+#include "BenchRunner.hpp"
 
-static std::string benchmarkResults;
-static std::string benchmarkResultsJson;
+/**
+ * @struct BenchmarkSession
+ * @brief JNI benchmark-session container for Java-driven benchmark orchestration.
+ *
+ * Owns native LLM/benchmark instances and stores benchmark configuration plus
+ * measured iteration records for later JSON export.
+ */
+struct BenchmarkSession {
+    std::unique_ptr<LLM> llm;
+    std::unique_ptr<LlmBench> bench;
+    BenchRunConfig runConfig{};
+    std::vector<BenchIterationResult> results{};
+    std::string modelPath;
+    int contextSize = 0;
+    int numThreads = 0;
+    int numInputTokens = 0;
+    int numOutputTokens = 0;
+    std::string frameworkType;
+};
 
-#if defined(LLM_JNI_TIMING)
-namespace {
-thread_local int64_t g_lastEncodeNs = -1;
-thread_local int64_t g_lastNextTokenNs = -1;
-
-int64_t DurationNs(const std::chrono::steady_clock::time_point& start,
-                   const std::chrono::steady_clock::time_point& end) {
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-}
-
-template <typename F>
-void TimeCallVoid(F&& fn, int64_t* out) {
-    auto start = std::chrono::steady_clock::now();
-    fn();
-    auto end = std::chrono::steady_clock::now();
-    *out = DurationNs(start, end);
-}
-
-template <typename F>
-auto TimeCallResult(F&& fn, int64_t* out) -> decltype(fn()) {
-    auto start = std::chrono::steady_clock::now();
-    auto result = fn();
-    auto end = std::chrono::steady_clock::now();
-    *out = DurationNs(start, end);
-    return result;
-}
-}  // namespace
-#endif
+static std::unique_ptr<BenchmarkSession> g_benchmark;
 
 /**
 * @brief inline method to throw error in java
@@ -77,6 +66,38 @@ auto GetUtfChars = [](JNIEnv* env, jstring jStr) {
 
 const char* ILLEGAL_STATE_EXCEPTION_JAVA_CLASS_NAME = "java/lang/IllegalStateException";
 const char* ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE = "LLMHandle invalid, no LLM associated with llmHandle";
+const char* BENCHMARK_ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE = "Benchmark handle invalid, call benchmarkInitJNI first";
+
+/**
+ * @brief Return active benchmark session or throw Java exception if unavailable.
+ * @param env JNI environment variable passed from JVM layer
+ * @return pointer to active benchmark session; nullptr when exception is thrown
+ */
+inline BenchmarkSession* GetBenchmarkOrThrow(JNIEnv* env) {
+    if (!g_benchmark) {
+        ThrowJavaException(env, BENCHMARK_ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return nullptr;
+    }
+    if (!g_benchmark->bench) {
+        ThrowJavaException(env, BENCHMARK_ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return nullptr;
+    }
+    return g_benchmark.get();
+}
+
+/**
+ * @brief Construct a benchmark report from session data and computed summary.
+ * @param session benchmark session containing run config and results
+ * @return benchmark report with populated summary statistics
+ */
+inline BenchReport BuildBenchmarkReport(const BenchmarkSession& session)
+{
+    BenchReport report{};
+    report.config = session.runConfig;
+    report.results = session.results;
+    report.summary = BenchRunner::ComputeSummaryStats(report.results);
+    return report;
+}
 
 #ifdef __cplusplus
 extern "C" {
@@ -203,11 +224,7 @@ JNIEXPORT void JNICALL Java_com_arm_Llm_encodeJNI(JNIEnv *env, jobject thiz, jst
         std::string text(textChars.get());
         std::string imagePath(imageChars.get());
         LlmChat::Payload payload{text, imagePath, static_cast<bool>(is_first_message)};
-#if defined(LLM_JNI_TIMING)
-        TimeCallVoid([&] { llm->Encode(payload); }, &g_lastEncodeNs);
-#else
         llm->Encode(payload);
-#endif
     } catch (const std::exception& e) {
         ThrowJavaException(env, ("Failed to encode query: " + std::string(e.what())).c_str());
     }
@@ -228,77 +245,13 @@ JNIEXPORT jstring JNICALL Java_com_arm_Llm_getNextTokenJNI(JNIEnv* env, jobject,
     }
 
     try {
-        std::string result;
-#if defined(LLM_JNI_TIMING)
-        result = TimeCallResult([&] { return llm->NextToken(); }, &g_lastNextTokenNs);
-#else
-        result = llm->NextToken();
-#endif
+        std::string result = llm->NextToken();
         return env->NewStringUTF(result.c_str());
     } catch (const std::exception& e) {
         std::string msg = std::string("Failed to get next token: ") + e.what();
         ThrowJavaException(env,msg.c_str() );
         return nullptr;
     }
-}
-
-JNIEXPORT jboolean JNICALL Java_com_arm_Llm_isJniTimingSupportedJNI(JNIEnv*, jclass)
-{
-#if defined(LLM_JNI_TIMING)
-    return JNI_TRUE;
-#else
-    return JNI_FALSE;
-#endif
-}
-
-JNIEXPORT jlong JNICALL Java_com_arm_Llm_getLastEncodeNativeNsJNI(JNIEnv*, jobject)
-{
-#if defined(LLM_JNI_TIMING)
-    return static_cast<jlong>(g_lastEncodeNs);
-#else
-    return static_cast<jlong>(-1);
-#endif
-}
-
-JNIEXPORT jlong JNICALL Java_com_arm_Llm_getLastNextTokenNativeNsJNI(JNIEnv*, jobject)
-{
-#if defined(LLM_JNI_TIMING)
-    return static_cast<jlong>(g_lastNextTokenNs);
-#else
-    return static_cast<jlong>(-1);
-#endif
-}
-
-JNIEXPORT jlong JNICALL Java_com_arm_Llm_getLastEncodeCoreNsJNI(JNIEnv* env, jobject, jlong llmHandle)
-{
-#if defined(LLM_JNI_TIMING)
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
-    if (!llm) {
-        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
-        return static_cast<jlong>(-1);
-    }
-    return static_cast<jlong>(llm->GetLastEncodeCoreNs());
-#else
-    (void)env;
-    (void)llmHandle;
-    return static_cast<jlong>(-1);
-#endif
-}
-
-JNIEXPORT jlong JNICALL Java_com_arm_Llm_getLastNextTokenCoreNsJNI(JNIEnv* env, jobject, jlong llmHandle)
-{
-#if defined(LLM_JNI_TIMING)
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
-    if (!llm) {
-        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
-        return static_cast<jlong>(-1);
-    }
-    return static_cast<jlong>(llm->GetLastNextTokenCoreNs());
-#else
-    (void)env;
-    (void)llmHandle;
-    return static_cast<jlong>(-1);
-#endif
 }
 
 /**
@@ -316,12 +269,7 @@ JNIEXPORT jstring JNICALL Java_com_arm_Llm_getNextTokenCancellableJNI(JNIEnv* en
         return env->NewStringUTF("");
     }
 
-    std::string result;
-#if defined(LLM_JNI_TIMING)
-    result = TimeCallResult([&] { return llm->CancellableNextToken(operationId); }, &g_lastNextTokenNs);
-#else
-    result = llm->CancellableNextToken(operationId);
-#endif
+    std::string result = llm->CancellableNextToken(operationId);
     return env->NewStringUTF(result.c_str());
 }
 
@@ -478,8 +426,21 @@ Java_com_arm_Llm_supportsImageInputJNI(JNIEnv *env, jobject thiz, jlong llmHandl
     return JNI_FALSE;
 }
 
+/**
+ * @brief Initialize native benchmark session state for Java-side benchmark orchestration.
+ * @param env JNI environment variable passed from JVM layer
+ * @param jModelPath model/config path string
+ * @param jInputTokens benchmark prompt token count
+ * @param jOutputTokens benchmark decode token count
+ * @param jContextSize runtime context size
+ * @param jThreads runtime thread count
+ * @param jIterations measured iteration count
+ * @param jWarmupIterations warmup iteration count
+ * @param jSharedLibraryPath shared-library directory path
+ * @return 0 on success, -1 on failure
+ */
 JNIEXPORT jint JNICALL
-Java_com_arm_Llm_runBenchmark(
+Java_com_arm_Llm_benchmarkInitJNI(
     JNIEnv* env,
     jobject /* thisObj */,
     jstring jModelPath,
@@ -492,7 +453,8 @@ Java_com_arm_Llm_runBenchmark(
     jstring jSharedLibraryPath)
 {
     try {
-        // Convert Java strings -> std::string
+        g_benchmark.reset();
+
         const char* cModelPath = env->GetStringUTFChars(jModelPath, nullptr);
         if (!cModelPath) {
             ThrowJavaException(env, "Failed to get modelPath UTF chars");
@@ -509,80 +471,224 @@ Java_com_arm_Llm_runBenchmark(
         std::string sharedLibraryPath(cSharedLibPath);
         env->ReleaseStringUTFChars(jSharedLibraryPath, cSharedLibPath);
 
-        // Create benchmark on the stack – lifetime is this function only
-        LlmBenchmark bench(
-            modelPath,
-            static_cast<int>(jInputTokens),
-            static_cast<int>(jOutputTokens),
-            static_cast<int>(jThreads),
-            static_cast<int>(jIterations),
-            static_cast<int>(jWarmupIterations),
-            sharedLibraryPath,
-            static_cast<int>(jContextSize)
-        );
+        const int inputTokens = static_cast<int>(jInputTokens);
+        const int outputTokens = static_cast<int>(jOutputTokens);
+        const int contextSize = static_cast<int>(jContextSize);
+        const int numThreads = static_cast<int>(jThreads);
 
-        int rc = bench.Run();
+        auto session = std::make_unique<BenchmarkSession>();
+        session->llm = std::make_unique<LLM>();
+        session->bench = std::make_unique<LlmBench>(*session->llm, inputTokens, outputTokens);
+        if (session->bench->Initialize(modelPath, numThreads, contextSize, sharedLibraryPath) != 0) {
+            ThrowJavaException(env, "Failed to initialize benchmark");
+            return -1;
+        }
 
-        // Cache results in a simple string, not in a long-lived object
-        benchmarkResults = bench.GetResults();
-        benchmarkResultsJson = bench.GetResultsJson();
+        session->runConfig = BenchRunConfig{static_cast<int>(jWarmupIterations), static_cast<int>(jIterations)};
+        session->results.clear();
+        session->modelPath = modelPath;
+        session->contextSize = contextSize;
+        session->numThreads = numThreads;
+        session->numInputTokens = inputTokens;
+        session->numOutputTokens = outputTokens;
+        session->frameworkType = session->bench->GetFrameworkType();
 
-        return static_cast<jint>(rc);
+        g_benchmark = std::move(session);
+        return 0;
     } catch (const std::exception& e) {
-        std::string msg = std::string("JNI runBenchmark failed: ") + e.what();
+        std::string msg = std::string("benchmarkInitJNI failed: ") + e.what();
         ThrowJavaException(env, msg.c_str());
         return static_cast<jint>(-1);
     } catch (...) {
-        ThrowJavaException(env, "JNI runBenchmark failed: unknown error");
+        ThrowJavaException(env, "benchmarkInitJNI failed: unknown error");
         return static_cast<jint>(-1);
     }
 }
 
-JNIEXPORT jstring JNICALL
-Java_com_arm_Llm_getBenchmarkResults(JNIEnv* env,
-                                     jobject /* thisObj */)
+/**
+ * @brief Run one benchmark encode step and return elapsed seconds.
+ * @param env JNI environment variable passed from JVM layer
+ * @return encode step duration in seconds, or -1.0 on failure
+ */
+JNIEXPORT jdouble JNICALL
+Java_com_arm_Llm_benchmarkEncodeStepSecJNI(JNIEnv* env, jobject /* thisObj */)
 {
+    auto* session = GetBenchmarkOrThrow(env);
+    if (!session) {
+        return -1.0;
+    }
     try {
-        if (benchmarkResults.empty()) {
-            const char* msg = "No benchmark results available. Call runBenchmark() first.";
-            ThrowJavaException(env, msg);
-            return env->NewStringUTF(msg);
-        }
-        return env->NewStringUTF(benchmarkResults.c_str());
-    }
-    catch (const std::exception& e) {
-        std::string msg = std::string("getBenchmarkResults failed: ") + e.what();
+        return static_cast<jdouble>(session->bench->EncodeStep().encodeTimeSec);
+    } catch (const std::exception& e) {
+        std::string msg = std::string("benchmarkEncodeStepSecJNI failed: ") + e.what();
         ThrowJavaException(env, msg.c_str());
-        return env->NewStringUTF(msg.c_str());
-    }
-    catch (...) {
-        std::string msg = "getBenchmarkResults failed: unknown error";
-        ThrowJavaException(env, msg.c_str());
-        return env->NewStringUTF(msg.c_str());
+        return -1.0;
     }
 }
 
+/**
+ * @brief Run one benchmark decode step and return elapsed seconds.
+ * @param env JNI environment variable passed from JVM layer
+ * @return decode step duration in seconds, or -1.0 on failure
+ */
+JNIEXPORT jdouble JNICALL
+Java_com_arm_Llm_benchmarkDecodeStepSecJNI(JNIEnv* env, jobject /* thisObj */)
+{
+    auto* session = GetBenchmarkOrThrow(env);
+    if (!session) {
+        return -1.0;
+    }
+    try {
+        return static_cast<jdouble>(session->bench->DecodeStep().decodeTimeSec);
+    } catch (const std::exception& e) {
+        std::string msg = std::string("benchmarkDecodeStepSecJNI failed: ") + e.what();
+        ThrowJavaException(env, msg.c_str());
+        return -1.0;
+    }
+}
+
+/**
+ * @brief Stop ongoing generation for the active benchmark session.
+ * @param env JNI environment variable passed from JVM layer
+ */
+JNIEXPORT void JNICALL
+Java_com_arm_Llm_benchmarkStopGenerationJNI(JNIEnv* env, jobject /* thisObj */)
+{
+    auto* session = GetBenchmarkOrThrow(env);
+    if (!session) {
+        return;
+    }
+    session->bench->StopGeneration();
+}
+
+/**
+ * @brief Finalize current benchmark iteration (context reset).
+ * @param env JNI environment variable passed from JVM layer
+ */
+JNIEXPORT void JNICALL
+Java_com_arm_Llm_benchmarkFinishIterationJNI(JNIEnv* env, jobject /* thisObj */)
+{
+    auto* session = GetBenchmarkOrThrow(env);
+    if (!session) {
+        return;
+    }
+    session->bench->FinishIteration();
+}
+
+/**
+ * @brief Clear accumulated measured benchmark results.
+ * @param env JNI environment variable passed from JVM layer
+ */
+JNIEXPORT void JNICALL
+Java_com_arm_Llm_benchmarkClearResultsJNI(JNIEnv* env, jobject /* thisObj */)
+{
+    auto* session = GetBenchmarkOrThrow(env);
+    if (!session) {
+        return;
+    }
+    session->results.clear();
+}
+
+/**
+ * @brief Free the active benchmark session and all associated native resources.
+ */
+JNIEXPORT void JNICALL
+Java_com_arm_Llm_benchmarkFreeJNI(JNIEnv* /* env */, jobject /* thisObj */)
+{
+    g_benchmark.reset();
+}
+
+/**
+ * @brief Reserve capacity for measured benchmark results.
+ * @param env JNI environment variable passed from JVM layer
+ * @param jCount desired result capacity
+ */
+JNIEXPORT void JNICALL
+Java_com_arm_Llm_benchmarkReserveResultsJNI(JNIEnv* env, jobject /* thisObj */, jint jCount)
+{
+    auto* session = GetBenchmarkOrThrow(env);
+    if (!session) {
+        return;
+    }
+    if (jCount > 0) {
+        session->results.reserve(static_cast<size_t>(jCount));
+    }
+}
+
+/**
+ * @brief Add one measured benchmark iteration record to the active session.
+ * @param env JNI environment variable passed from JVM layer
+ * @param jEncodeSec measured encode duration in seconds
+ * @param jDecodeSec measured decode-loop duration in seconds
+ * @param jFirstTokenMs measured first-token latency from decode start in ms
+ * @param jTokensGenerated number of generated tokens for the iteration
+ */
+JNIEXPORT void JNICALL
+Java_com_arm_Llm_benchmarkAddResultJNI(JNIEnv* env,
+                                       jobject /* thisObj */,
+                                       jdouble jEncodeSec,
+                                       jdouble jDecodeSec,
+                                       jdouble jFirstTokenMs,
+                                       jint jTokensGenerated)
+{
+    auto* session = GetBenchmarkOrThrow(env);
+    if (!session) {
+        return;
+    }
+    try {
+        BenchEncodeStepResult encodeResult{};
+        encodeResult.encodeTimeSec = static_cast<double>(jEncodeSec);
+
+        BenchDecodeStepResult decodeResult{};
+        decodeResult.tokensGenerated = static_cast<int>(jTokensGenerated);
+        decodeResult.decodeTimeSec = static_cast<double>(jDecodeSec);
+        decodeResult.firstTokenFromDecodeStartMs = static_cast<double>(jFirstTokenMs);
+
+        session->results.push_back(session->bench->BuildIterationResult(encodeResult, decodeResult));
+    } catch (const std::exception& e) {
+        std::string msg = std::string("benchmarkAddResultJNI failed: ") + e.what();
+        ThrowJavaException(env, msg.c_str());
+    }
+}
+
+/**
+ * @brief Build and return benchmark results JSON for the active session.
+ * @param env JNI environment variable passed from JVM layer
+ * @return benchmark JSON string; null when an exception is raised
+ */
 JNIEXPORT jstring JNICALL
 Java_com_arm_Llm_getBenchmarkResultsJson(JNIEnv* env,
                                          jobject /* thisObj */)
 {
     try {
-        if (benchmarkResultsJson.empty()) {
+        auto* session = GetBenchmarkOrThrow(env);
+        if (!session) {
+            return nullptr;
+        }
+        if (session->results.empty()) {
             const char* msg = "No benchmark results available. Call runBenchmark() first.";
             ThrowJavaException(env, msg);
-            return env->NewStringUTF(msg);
+            return nullptr;
         }
-        return env->NewStringUTF(benchmarkResultsJson.c_str());
+        const BenchReport report = BuildBenchmarkReport(*session);
+        const std::string resultsJson = BenchRunner::FormatJson(report,
+                                                                session->modelPath,
+                                                                session->contextSize,
+                                                                session->numThreads,
+                                                                session->numInputTokens,
+                                                                session->numOutputTokens,
+                                                                session->frameworkType);
+        return env->NewStringUTF(resultsJson.c_str());
     }
     catch (const std::exception& e) {
         std::string msg = std::string("getBenchmarkResultsJson failed: ") + e.what();
         ThrowJavaException(env, msg.c_str());
-        return env->NewStringUTF(msg.c_str());
+        return nullptr;
     }
     catch (...) {
         std::string msg = "getBenchmarkResultsJson failed: unknown error";
         ThrowJavaException(env, msg.c_str());
-        return env->NewStringUTF(msg.c_str());
+        return nullptr;
     }
 }
 
@@ -606,20 +712,6 @@ Java_com_arm_voiceassistant_utils_LlmBridge_nativeCancel(
 
     state->cancelled.store(true, std::memory_order_release);
 }
-
-
-// Inline JNI–version wrapper with customizable args pointer
-#if defined(__ANDROID__)
-// Android NDK signature: jint AttachCurrentThread(JNIEnv**, void* args)
-#  define JNI_ATTACH_CURRENT_THREAD(vm, penv, args) \
-     ( (vm)->AttachCurrentThread( (penv), (args) ) )
-#else
-// OpenJDK 11+ signature: jint AttachCurrentThread(void** penv, void* args)
-#  define JNI_ATTACH_CURRENT_THREAD(vm, penv, args) \
-     ( (vm)->AttachCurrentThread( \
-         reinterpret_cast<void**>((penv)), (args) \
-     ) )
-#endif
 
 
 // Inline JNI–version wrapper with customizable args pointer

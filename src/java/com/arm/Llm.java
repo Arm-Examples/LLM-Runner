@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Llm class that extends the SubmissionPublisher
@@ -22,15 +21,13 @@ public class Llm {
     private static String eosToken = "<eos>";
     private String imagePath = "";
     private boolean imageUploaded = false;
-    private static final String DEFAULT_TIMING_TAG = "LlmTiming";
-    private static volatile boolean JNI_TIMING_ENABLED = false;
-    private static final ThreadLocal<Long> NEXT_TOKEN_NATIVE_TOTAL = ThreadLocal.withInitial(() -> 0L);
-    private static final ThreadLocal<Long> NEXT_TOKEN_CORE_TOTAL = ThreadLocal.withInitial(() -> 0L);
-    private static final ThreadLocal<Long> NEXT_TOKEN_JAVA_TOTAL = ThreadLocal.withInitial(() -> 0L);
-    private static final ThreadLocal<Integer> NEXT_TOKEN_COUNT = ThreadLocal.withInitial(() -> 0);
-    private static final ThreadLocal<Long> ENCODE_JAVA_NS = ThreadLocal.withInitial(() -> -1L);
-    private static final ThreadLocal<Long> ENCODE_NATIVE_NS = ThreadLocal.withInitial(() -> -1L);
-    private static final ThreadLocal<Long> ENCODE_CORE_NS = ThreadLocal.withInitial(() -> -1L);
+    // -1 marks "benchmark not run yet" to match the benchmark API's existing failure/unavailable sentinel.
+    private double lastBenchmarkJavaEncodeTotalMs = -1.0;
+    private double lastBenchmarkCoreCppEncodeTotalMs = -1.0;
+    private double lastBenchmarkEncodeOverheadMs = -1.0;
+    private double lastBenchmarkJavaDecodeLoopTotalMs = -1.0;
+    private double lastBenchmarkCoreCppDecodeTotalMs = -1.0;
+    private double lastBenchmarkDecodeOverheadMs = -1.0;
      /**
       * @brief Maximum allowed input image dimension (in pixels).
       */
@@ -39,11 +36,8 @@ public class Llm {
     static {
         try {
             System.loadLibrary("arm-llm-jni");
-            if (isJniTimingSupportedJNI()) {
-                JNI_TIMING_ENABLED = true;
-            }
         } catch (UnsatisfiedLinkError e) {
-            System.err.println("Llama: Failed to load library: arm-llm-jni");
+            System.err.println("LLM: Failed to load library: arm-llm-jni");
             e.printStackTrace();
         }
     }
@@ -144,39 +138,6 @@ public class Llm {
     private native String generatePromptWithNumTokensJNI(int numTokens, long nativeLlmHandle);
 
     /**
-     * Check if JNI timing support is compiled in.
-     * @return true if timing is supported, false otherwise
-     */
-    private static native boolean isJniTimingSupportedJNI();
-
-    /**
-     * @return last native encode duration in ns, or -1 if unsupported.
-     */
-    private native long getLastEncodeNativeNsJNI();
-
-    /**
-     * @return last native next-token duration in ns, or -1 if unsupported.
-     */
-    private native long getLastNextTokenNativeNsJNI();
-
-    /**
-     * @return last core encode duration in ns, or -1 if unsupported.
-     */
-    private native long getLastEncodeCoreNsJNI(long nativeLlmHandle);
-
-    /**
-     * @return last core next-token duration in ns, or -1 if unsupported.
-     */
-    private native long getLastNextTokenCoreNsJNI(long nativeLlmHandle);
-
-    /**
-     * Native method to encode the given text.
-     * @param nativeLlmHandle handle to the native LLM instance
-     * @param text the prompt to be encoded
-     */
-    private native void encodeJNI(long nativeLlmHandle, String text);
-
-    /**
      * Native method to get the next token once encoding is done.
      * Should be called in a loop while monitoring for stop-words.
      * @param nativeLlmHandle handle to the native LLM instance
@@ -266,156 +227,12 @@ public class Llm {
     }
 
     /**
-     * @return last native encode duration in ns, or -1 if disabled/unsupported.
-     */
-    public long getLastEncodeNativeNs() {
-        return getLastEncodeNativeNsJNI();
-    }
-
-    /**
-     * @return last native next-token duration in ns, or -1 if disabled/unsupported.
-     */
-    public long getLastNextTokenNativeNs() {
-        return getLastNextTokenNativeNsJNI();
-    }
-
-    /**
-     * @return last core encode duration in ns, or -1 if disabled/unsupported.
-     */
-    public long getLastEncodeCoreNs() {
-        return getLastEncodeCoreNsJNI(getNativeLlmHandle());
-    }
-
-    /**
-     * @return last core next-token duration in ns, or -1 if disabled/unsupported.
-     */
-    public long getLastNextTokenCoreNs() {
-        return getLastNextTokenCoreNsJNI(getNativeLlmHandle());
-    }
-
-    private void storeEncodeTimingSnapshot(long javaNs) {
-        long encodeNative = getLastEncodeNativeNs();
-        long encodeCore = getLastEncodeCoreNs();
-        ENCODE_JAVA_NS.set(javaNs);
-        ENCODE_NATIVE_NS.set(encodeNative);
-        ENCODE_CORE_NS.set(encodeCore);
-    }
-
-    /**
-     * Add one next-token timing sample to thread-local accumulators.
-     * @param javaNs total Java-side duration in ns
-     */
-    private void accumulateNextTokenTimings(long javaNs) {
-        long nextNative = getLastNextTokenNativeNs();
-        long nextCore = getLastNextTokenCoreNs();
-        if (nextNative >= 0 && nextCore >= 0) {
-            NEXT_TOKEN_NATIVE_TOTAL.set(NEXT_TOKEN_NATIVE_TOTAL.get() + nextNative);
-            NEXT_TOKEN_CORE_TOTAL.set(NEXT_TOKEN_CORE_TOTAL.get() + nextCore);
-            NEXT_TOKEN_JAVA_TOTAL.set(NEXT_TOKEN_JAVA_TOTAL.get() + javaNs);
-            NEXT_TOKEN_COUNT.set(NEXT_TOKEN_COUNT.get() + 1);
-        }
-    }
-
-    /**
-     * Log aggregated next-token timings and encode snapshot for the current thread.
-     * @param tag log tag
-     */
-    private void logNextTokenSummary(String tag) {
-        int count = NEXT_TOKEN_COUNT.get();
-        if (count <= 0) {
-            return;
-        }
-        long nativeTotal = NEXT_TOKEN_NATIVE_TOTAL.get();
-        long coreTotal = NEXT_TOKEN_CORE_TOTAL.get();
-        long javaTotal = NEXT_TOKEN_JAVA_TOTAL.get();
-        long nativeOverheadTotal = nativeTotal - coreTotal;
-        long javaOverheadTotal = javaTotal - coreTotal;
-        long nativeAvg = nativeTotal / count;
-        long coreAvg = coreTotal / count;
-        long javaAvg = javaTotal / count;
-        long nativeOverheadAvg = nativeOverheadTotal / count;
-        long javaOverheadAvg = javaOverheadTotal / count;
-        long encodeJava = ENCODE_JAVA_NS.get();
-        long encodeNative = ENCODE_NATIVE_NS.get();
-        long encodeCore = ENCODE_CORE_NS.get();
-        String encodePrefix;
-        if (encodeNative < 0 || encodeCore < 0) {
-            encodePrefix = "encodeJavaMs=" + formatMs(encodeJava)
-                + " encodeNativeMs=NA"
-                + " encodeCoreMs=NA";
-        } else {
-            long encodeNativeOverhead = encodeNative - encodeCore;
-            long encodeJavaOverhead = encodeJava - encodeCore;
-            encodePrefix = "encodeJavaMs=" + formatMs(encodeJava)
-                + " encodeNativeMs=" + formatMs(encodeNative)
-                + " encodeCoreMs=" + formatMs(encodeCore)
-                + " encodeNativeOverheadMs=" + formatMs(encodeNativeOverhead)
-                + " encodeJavaOverheadMs=" + formatMs(encodeJavaOverhead);
-        }
-        String msg = encodePrefix
-            + " nextTokenCount=" + count
-            + " nextTokenJavaTotalMs=" + formatMs(javaTotal)
-            + " nextTokenNativeTotalMs=" + formatMs(nativeTotal)
-            + " nextTokenCoreTotalMs=" + formatMs(coreTotal)
-            + " nextTokenNativeOverheadTotalMs=" + formatMs(nativeOverheadTotal)
-            + " nextTokenJavaOverheadTotalMs=" + formatMs(javaOverheadTotal)
-            + " nextTokenJavaAvgMs=" + formatMs(javaAvg)
-            + " nextTokenNativeAvgMs=" + formatMs(nativeAvg)
-            + " nextTokenCoreAvgMs=" + formatMs(coreAvg)
-            + " nextTokenNativeOverheadAvgMs=" + formatMs(nativeOverheadAvg)
-            + " nextTokenJavaOverheadAvgMs=" + formatMs(javaOverheadAvg);
-        logInfo(tag, msg);
-    }
-
-    /**
-     * Reset per-thread next-token accumulators.
-     */
-    private void resetNextTokenAccum() {
-        NEXT_TOKEN_NATIVE_TOTAL.set(0L);
-        NEXT_TOKEN_CORE_TOTAL.set(0L);
-        NEXT_TOKEN_JAVA_TOTAL.set(0L);
-        NEXT_TOKEN_COUNT.set(0);
-    }
-
-    /**
-     * Log helper that uses android.util.Log when available, falls back to stdout.
-     * @param tag log tag
-     * @param msg message to log
-     */
-    private static void logInfo(String tag, String msg) {
-        try {
-            Class<?> logClass = Class.forName("android.util.Log");
-            java.lang.reflect.Method method = logClass.getMethod("i", String.class, String.class);
-            method.invoke(null, tag, msg);
-        } catch (Exception e) {
-            System.out.println(tag + ": " + msg);
-        }
-    }
-
-    /**
-     * Format nanoseconds as milliseconds with millisecond precision.
-     * @param ns duration in ns
-     * @return formatted milliseconds
-     */
-    private static String formatMs(long ns) {
-        return String.format(Locale.US, "%.3f", ns / 1_000_000.0);
-    }
-
-    /**
      * Method to encode the given text and image
      * @param text               the prompt to be encoded
      * @param pathToImage        path to the image to be encoded
      * @param isFirstMessage     boolean flag to signal if its the first message or not
      */
     public void encode(String text, String pathToImage, boolean isFirstMessage) {
-        if (JNI_TIMING_ENABLED) {
-            long javaStart = System.nanoTime();
-            encodeJNI(text, pathToImage, isFirstMessage, getNativeLlmHandle());
-            long javaEnd = System.nanoTime();
-            storeEncodeTimingSnapshot(javaEnd - javaStart);
-            resetNextTokenAccum();
-            return;
-        }
         encodeJNI(text, pathToImage, isFirstMessage, getNativeLlmHandle());
     }
 
@@ -425,17 +242,6 @@ public class Llm {
      * @return next Token as String
      */
     public String getNextToken() {
-        if (JNI_TIMING_ENABLED) {
-            long javaStart = System.nanoTime();
-            String token = getNextTokenJNI(getNativeLlmHandle());
-            long javaEnd = System.nanoTime();
-            accumulateNextTokenTimings(javaEnd - javaStart);
-            if (isStopToken(token)) {
-                logNextTokenSummary(DEFAULT_TIMING_TAG);
-                resetNextTokenAccum();
-            }
-            return token;
-        }
         return getNextTokenJNI(getNativeLlmHandle());
     }
 
@@ -445,17 +251,6 @@ public class Llm {
      * @return the next Token for Encoded Prompt
      */
     public String getNextTokenCancellable(long operationId) {
-        if (JNI_TIMING_ENABLED) {
-            long javaStart = System.nanoTime();
-            String token = getNextTokenCancellableJNI(operationId, getNativeLlmHandle());
-            long javaEnd = System.nanoTime();
-            accumulateNextTokenTimings(javaEnd - javaStart);
-            if (isStopToken(token)) {
-                logNextTokenSummary(DEFAULT_TIMING_TAG);
-                resetNextTokenAccum();
-            }
-            return token;
-        }
         return getNextTokenCancellableJNI(operationId, getNativeLlmHandle());
     }
 
@@ -533,11 +328,6 @@ public class Llm {
                 break;
             }
         }
-        if (JNI_TIMING_ENABLED && NEXT_TOKEN_COUNT.get() > 0) {
-            logNextTokenSummary(DEFAULT_TIMING_TAG);
-            resetNextTokenAccum();
-        }
-
         return response.toString();
     }
 
@@ -576,11 +366,114 @@ public class Llm {
     }
 
     /**
-     * Run the native LLM benchmark with the given parameters.
+     * Native benchmark initialization entry point.
+     * Allocates a native benchmark session and initializes core benchmark state.
      *
-     * This will execute the benchmark on the C++ side, including warmup
-     * iterations and measured iterations. Timing results are cached and
-     * can be retrieved via getBenchmarkResults().
+     * @return 0 on success, non-zero on failure.
+     */
+    private native int benchmarkInitJNI(
+        String modelPath,
+        int inputTokens,
+        int outputTokens,
+        int contextSize,
+        int threads,
+        int iterations,
+        int warmupIterations,
+        String sharedLibraryPath
+    );
+    /**
+     * Native encode-step benchmark call.
+     *
+     * @return encode-step duration in seconds, or a negative value on failure.
+     */
+    private native double benchmarkEncodeStepSecJNI();
+    /**
+     * Native decode-step benchmark call.
+     *
+     * @return decode-step duration in seconds, or a negative value on failure.
+     */
+    private native double benchmarkDecodeStepSecJNI();
+    /**
+     * Native request to stop generation for the current benchmark iteration.
+     */
+    private native void benchmarkStopGenerationJNI();
+    /**
+     * Native request to finish current benchmark iteration (reset context).
+     */
+    private native void benchmarkFinishIterationJNI();
+    /**
+     * Native request to clear measured benchmark results.
+     */
+    private native void benchmarkClearResultsJNI();
+    /**
+     * Native request to free benchmark session resources.
+     */
+    private native void benchmarkFreeJNI();
+    /**
+     * Native request to reserve capacity for measured result records.
+     *
+     * @param count number of measured records to reserve.
+     */
+    private native void benchmarkReserveResultsJNI(int count);
+    /**
+     * Native request to append one measured iteration result.
+     *
+     * @param encodeSec measured encode duration in seconds.
+     * @param decodeSec measured decode-loop duration in seconds.
+     * @param firstTokenMs measured first-token latency in milliseconds.
+     * @param tokensGenerated number of decoded tokens generated in the iteration.
+     */
+    private native void benchmarkAddResultJNI(double encodeSec, double decodeSec, double firstTokenMs, int tokensGenerated);
+
+    /**
+     * Internal container for per-iteration decode timing metrics collected in Java benchmark flow.
+     *
+     * This keeps both Java wall-clock decode-loop timings and summed core C++ decode-step
+     * timings so overhead can be computed consistently.
+     */
+    private static final class BenchmarkIterationStats {
+        /** Sum of per-step native decode durations (seconds). */
+        double coreDecodeSec;
+        /** Java wall-clock decode loop duration (nanoseconds). */
+        long decodeLoopNs;
+        /** Java wall-clock decode loop duration (seconds). */
+        double decodeLoopSec;
+        /** Time to first generated token measured from decode start (milliseconds). */
+        double firstTokenMs;
+        /** Number of generated tokens in this iteration. */
+        int tokensGenerated;
+    }
+
+    /**
+     * Run a decode loop of {@code outputTokens} steps and collect core/Java timing breakdown.
+     *
+     * @param outputTokens number of decode steps to execute
+     * @return per-iteration decode timing stats, or {@code null} on native error
+     */
+    private BenchmarkIterationStats runBenchmarkIteration(int outputTokens) {
+        BenchmarkIterationStats stats = new BenchmarkIterationStats();
+        stats.tokensGenerated = outputTokens;
+        long decodeStartNs = System.nanoTime();
+        for (int tokenIdx = 0; tokenIdx < outputTokens; ++tokenIdx) {
+            double decodeStepSec = benchmarkDecodeStepSecJNI();
+            if (decodeStepSec < 0.0) {
+                return null;
+            }
+            stats.coreDecodeSec += decodeStepSec;
+            if (tokenIdx == 0) {
+                stats.firstTokenMs = decodeStepSec * 1000.0;
+            }
+        }
+        long decodeEndNs = System.nanoTime();
+        stats.decodeLoopNs = decodeEndNs - decodeStartNs;
+        stats.decodeLoopSec = stats.decodeLoopNs / 1_000_000_000.0;
+        return stats;
+    }
+
+    /**
+     * Run the native LLM benchmark with Java-side orchestration.
+     * Successful runs also update the last-benchmark timing getters so callers can
+     * inspect Java totals, core C++ totals, and Java-vs-core overhead afterwards.
      *
      * @param modelPath         Path to the model / config used by the LLM.
      * @param inputTokens       Number of input tokens for the prompt.
@@ -592,7 +485,7 @@ public class Llm {
      * @param sharedLibraryPath Path to directory with native shared libraries.
      * @return 0 on success, non-zero on failure.
      */
-    public native int runBenchmark(
+    public int runBenchmark(
         String modelPath,
         int inputTokens,
         int outputTokens,
@@ -601,17 +494,148 @@ public class Llm {
         int iterations,
         int warmupIterations,
         String sharedLibraryPath
-    );
+    ) {
+        long totalEncodeNs = 0L;
+        long totalDecodeLoopNs = 0L;
+        double totalCoreEncodeSec = 0.0;
+        double totalCoreDecodeSec = 0.0;
+        boolean success = false;
+        try {
+            int rc = benchmarkInitJNI(
+                modelPath,
+                inputTokens,
+                outputTokens,
+                contextSize,
+                threads,
+                iterations,
+                warmupIterations,
+                sharedLibraryPath
+            );
+            if (rc != 0) {
+                return rc;
+            }
+
+            for (int i = 0; i < warmupIterations; ++i) {
+                double encodeSec = benchmarkEncodeStepSecJNI();
+                if (encodeSec < 0.0) {
+                    return -1;
+                }
+                BenchmarkIterationStats decodeStats = runBenchmarkIteration(outputTokens);
+                if (decodeStats == null) {
+                    return -1;
+                }
+                benchmarkStopGenerationJNI();
+                benchmarkFinishIterationJNI();
+            }
+
+            benchmarkClearResultsJNI();
+            benchmarkReserveResultsJNI(iterations);
+            for (int i = 0; i < iterations; ++i) {
+                long encodeStartNs = System.nanoTime();
+                double encodeSec = benchmarkEncodeStepSecJNI();
+                totalEncodeNs += (System.nanoTime() - encodeStartNs);
+                totalCoreEncodeSec += encodeSec;
+                if (encodeSec < 0.0) {
+                    return -1;
+                }
+
+                BenchmarkIterationStats decodeStats = runBenchmarkIteration(outputTokens);
+                if (decodeStats == null) {
+                    return -1;
+                }
+                totalDecodeLoopNs += decodeStats.decodeLoopNs;
+                totalCoreDecodeSec += decodeStats.coreDecodeSec;
+                benchmarkStopGenerationJNI();
+                benchmarkAddResultJNI(
+                    encodeSec,
+                    decodeStats.decodeLoopSec,
+                    decodeStats.firstTokenMs,
+                    decodeStats.tokensGenerated
+                );
+                benchmarkFinishIterationJNI();
+            }
+
+            double javaEncodeMs = totalEncodeNs / 1_000_000.0;
+            double javaDecodeMs = totalDecodeLoopNs / 1_000_000.0;
+            double coreEncodeMs = totalCoreEncodeSec * 1000.0;
+            double coreDecodeMs = totalCoreDecodeSec * 1000.0;
+            double encodeOverheadMs = javaEncodeMs - coreEncodeMs;
+            double decodeOverheadMs = javaDecodeMs - coreDecodeMs;
+            lastBenchmarkJavaEncodeTotalMs = javaEncodeMs;
+            lastBenchmarkCoreCppEncodeTotalMs = coreEncodeMs;
+            lastBenchmarkEncodeOverheadMs = encodeOverheadMs;
+            lastBenchmarkJavaDecodeLoopTotalMs = javaDecodeMs;
+            lastBenchmarkCoreCppDecodeTotalMs = coreDecodeMs;
+            lastBenchmarkDecodeOverheadMs = decodeOverheadMs;
+
+            System.out.printf(
+                "Benchmark timings: java_encode_total_ms=%.4f core_cpp_encode_total_ms=%.4f encode_overhead_ms=%.4f "
+                    + "java_decode_loop_total_ms=%.4f core_cpp_decode_total_ms=%.4f decode_overhead_ms=%.4f%n",
+                javaEncodeMs,
+                coreEncodeMs,
+                encodeOverheadMs,
+                javaDecodeMs,
+                coreDecodeMs,
+                decodeOverheadMs
+            );
+
+            success = true;
+            return 0;
+        } finally {
+            if (!success) {
+                benchmarkFreeJNI();
+            }
+        }
+    }
 
     /**
-     * Get the last benchmark results as a formatted string.
-     *
-     * This does NOT run any benchmark; it simply returns the summary
-     * from the most recent runBenchmark() call.
-     *
-     * @return Human-readable benchmark report, or an error message.
+     * Free native benchmark session resources allocated by benchmarkInitJNI.
      */
-    public native String getBenchmarkResults();
+    public void freeBenchmark() {
+        benchmarkFreeJNI();
+    }
+
+    /**
+     * @return last benchmark total encode time measured in Java (milliseconds).
+     */
+    public double getLastBenchmarkJavaEncodeTotalMs() {
+        return lastBenchmarkJavaEncodeTotalMs;
+    }
+
+    /**
+     * @return last benchmark total encode time measured in core C++ (milliseconds).
+     */
+    public double getLastBenchmarkCoreCppEncodeTotalMs() {
+        return lastBenchmarkCoreCppEncodeTotalMs;
+    }
+
+    /**
+     * @return last benchmark encode overhead (Java total - core C++ total, milliseconds).
+     */
+    public double getLastBenchmarkEncodeOverheadMs() {
+        return lastBenchmarkEncodeOverheadMs;
+    }
+
+    /**
+     * @return last benchmark total decode loop time measured in Java (milliseconds).
+     */
+    public double getLastBenchmarkJavaDecodeLoopTotalMs() {
+        return lastBenchmarkJavaDecodeLoopTotalMs;
+    }
+
+    /**
+     * @return last benchmark total decode time measured in core C++ (milliseconds).
+     */
+    public double getLastBenchmarkCoreCppDecodeTotalMs() {
+        return lastBenchmarkCoreCppDecodeTotalMs;
+    }
+
+    /**
+     * @return last benchmark decode overhead (Java total - core C++ total, milliseconds).
+     */
+    public double getLastBenchmarkDecodeOverheadMs() {
+        return lastBenchmarkDecodeOverheadMs;
+    }
 
     /**
      * Get the last benchmark results as a JSON string.

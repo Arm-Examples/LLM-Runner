@@ -12,17 +12,19 @@ import static org.junit.Assume.assumeTrue;
 import static org.junit.Assert.assertEquals;
 
 import org.json.JSONObject;
-import org.json.JSONArray;
 import org.junit.Test;
 import org.junit.BeforeClass;
 
 import com.arm.Llm;
-import java.io.*;
-import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class LlmTestJNI {
 
@@ -191,20 +193,36 @@ public class LlmTestJNI {
         );
         assertEquals("runBenchmark should succeed", 0, rc);
         System.out.println("Benchmark done.");
-        String result = llm.getBenchmarkResults();
-        System.out.println(result);
-
         String jsonResult = llm.getBenchmarkResultsJson();
+        JSONObject benchmarkJson = new JSONObject(jsonResult);
+        JSONObject overheadMetrics = new JSONObject();
+        overheadMetrics.put("java_encode_total_ms", llm.getLastBenchmarkJavaEncodeTotalMs());
+        overheadMetrics.put("core_cpp_encode_total_ms", llm.getLastBenchmarkCoreCppEncodeTotalMs());
+        overheadMetrics.put("encode_overhead_ms", llm.getLastBenchmarkEncodeOverheadMs());
+        overheadMetrics.put("java_decode_loop_total_ms", llm.getLastBenchmarkJavaDecodeLoopTotalMs());
+        overheadMetrics.put("core_cpp_decode_total_ms", llm.getLastBenchmarkCoreCppDecodeTotalMs());
+        overheadMetrics.put("decode_overhead_ms", llm.getLastBenchmarkDecodeOverheadMs());
+        benchmarkJson.put("java_core_overhead_metrics", overheadMetrics);
         String configBaseName = Paths.get(configFilePath).getFileName().toString();
         int extIndex = configBaseName.lastIndexOf('.');
         if (extIndex > 0) {
             configBaseName = configBaseName.substring(0, extIndex);
         }
-        String outputFileName = configBaseName + ".benchmark.json";
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        Path buildDirPath = Paths.get(backendSharedLibDir).getParent();
+        if (buildDirPath == null) {
+            throw new RuntimeException("Unable to resolve build directory from backendSharedLibDir: " + backendSharedLibDir);
+        }
+        Path benchmarkResultsDir = buildDirPath.resolve("benchmark_results");
+        String outputFileName = configBaseName + ".benchmark." + timestamp + ".json";
+        Path outputPath = benchmarkResultsDir.resolve(outputFileName);
         try {
-            Files.writeString(Paths.get(outputFileName), jsonResult);
+            Files.createDirectories(benchmarkResultsDir);
+            Files.writeString(outputPath, benchmarkJson.toString(2));
         } catch (IOException e) {
-            throw new RuntimeException("Failed to write benchmark JSON to " + outputFileName, e);
+            throw new RuntimeException("Failed to write benchmark JSON to " + outputPath, e);
+        } finally {
+            llm.freeBenchmark();
         }
     }
 
