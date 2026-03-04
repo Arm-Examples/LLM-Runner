@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+# SPDX-FileCopyrightText: Copyright 2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -47,8 +47,9 @@ set(ONNX_BUILD_SHARED_LIBS                        OFF)
 
 set(ONNXRUNTIME_GIT_URL   "https://github.com/microsoft/onnxruntime.git"
         CACHE STRING "Git URL for onnxruntime repo")
-
-set(ONNXRUNTIME_GIT_TAG   "v1.23.2"
+        
+# Latest stable tag (March 2026)
+set(ONNXRUNTIME_GIT_TAG   "v1.24.2"
         CACHE STRING "Path where onnxruntime repo should be cloned")
 
 set(ONNXRUNTIME_SRC_DIR   "${CMAKE_BINARY_DIR}/onnxruntime"
@@ -120,8 +121,8 @@ set(ONNXRT_GENAI_SRC_DIR "${CMAKE_BINARY_DIR}/onnxruntime-genai"
 set(ONNXRT_GENAI_GIT_URL "https://github.com/microsoft/onnxruntime-genai.git"
         CACHE STRING "Git URL for onnxruntime-genai repo")
 
-# Latest stable tag (November 2025)
-set(ONNXRT_GENAI_GIT_TAG "v0.11.2"
+# Latest stable tag (March 2026)
+set(ONNXRT_GENAI_GIT_TAG "v0.12.0"
         CACHE STRING "Git tag / commit SHA for onnxruntime-genai repo")
 
 # --------------------------------------------------------------------

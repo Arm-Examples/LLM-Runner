@@ -239,8 +239,8 @@ onnxruntime-genai:
 - `ONNXRT_GENAI_GIT_URL`: Git URL to clone the sources from.
 - `ONNXRT_GENAI_GIT_TAG`: Git SHA for checkout.
 
-> **NOTE**: This repository has been tested with `onnxruntime` version `v1.23.2` and
-`onnxruntime-genai` version `v0.11.2`.
+> **NOTE**: This repository has been tested with `onnxruntime` version `v1.24.2` and
+`onnxruntime-genai` version `v0.12.0`.
 
 #### mediapipe options
 
