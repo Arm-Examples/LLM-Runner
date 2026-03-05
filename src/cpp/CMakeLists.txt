@@ -21,8 +21,19 @@ add_subdirectory(config)
 # Add chat lib;
 add_subdirectory(chat)
 
+set(ARM_LLM_BUILD_FRAMEWORK_NAME "${LLM_FRAMEWORK}")
+set(ARM_LLM_BUILD_FRAMEWORK_DEPENDENCY_VERSIONS "unknown")
+
 # Add frameworks lib:
 add_subdirectory(frameworks)
+
+set(ARM_LLM_BUILD_INFO_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+file(MAKE_DIRECTORY "${ARM_LLM_BUILD_INFO_DIR}")
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/log/LlmBuildInfoConfig.hpp.in"
+    "${ARM_LLM_BUILD_INFO_DIR}/LlmBuildInfoConfig.hpp"
+    @ONLY)
+target_include_directories(arm-llm-log PUBLIC "${ARM_LLM_BUILD_INFO_DIR}")
 
 # Add benchmark lib:
 add_subdirectory(benchmark)

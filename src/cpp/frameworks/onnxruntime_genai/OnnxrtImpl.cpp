@@ -190,7 +190,7 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPat
             LoadModel();
         }
         else {
-            LOG_WARN("Config is not initialized");
+            THROW_ERROR("Config is not initialized");
         }
 
         if (this->m_llmModelPtr != nullptr) {
@@ -199,7 +199,7 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPat
         }
 
         else {
-            LOG_INF("Model is not loaded");
+            THROW_ERROR("Model is not loaded");
         }
 
         if (this->m_llmConfigsPtr      != nullptr &&
@@ -267,14 +267,14 @@ bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
             m_tokenizerPtr->ApplyChatTemplate("", messages_json.c_str(), "", /*add_generation_prompt=*/true));
 
         if (formatted.empty()) {
-            LOG_INF("ApplyChatTemplate produced empty output. Falling back to default template.");
+            LOG_WARN("ApplyChatTemplate produced empty output. Falling back to default template.");
             return false;
         }
 
         payload.textPrompt = std::move(formatted);
         return true;
     } catch (const std::exception& e) {
-        LOG_INF("ApplyChatTemplate failed: %s . Falling back to default template.", e.what());
+        LOG_WARN("ApplyChatTemplate failed: %s . Falling back to default template.", e.what());
         return false;
     }
 }

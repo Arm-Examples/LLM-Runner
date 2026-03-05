@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 
         auto requireValue = [&](const std::string& name) {
                 if (i + 1 >= argc) {
-                LOG_INF("Missing value for argument: %s", name.c_str());
+                LOG_ERROR("Missing value for argument: %s", name.c_str());
                 PrintUsage(argv[0]);
                 std::exit(1);
             }
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
                 ++i; // consume value
                 return value;
             } catch (const std::exception&) {
-                LOG_INF("Invalid integer value for argument: %s", name.c_str());
+                LOG_ERROR("Invalid integer value for argument: %s", name.c_str());
                 PrintUsage(argv[0]);
                 std::exit(1);
             }
@@ -116,8 +116,8 @@ int main(int argc, char** argv)
                     return value > 0 && (value & (value - 1)) == 0;
                 };
             if (!isPowerOfTwo(contextSize)) {
-                LOG_INF("Invalid context length: %d", contextSize);
-                LOG_INF("Context length must be a positive power of two.");
+                LOG_ERROR("Invalid context length: %d", contextSize);
+                LOG_ERROR("Context length must be a positive power of two.");
                 return 1;
             }
         }
@@ -135,7 +135,7 @@ int main(int argc, char** argv)
             jsonOutputPath = argv[++i];
         }
         else {
-            LOG_INF("Unknown or incomplete argument: %s", arg.c_str());
+            LOG_ERROR("Unknown or incomplete argument: %s", arg.c_str());
             PrintUsage(argv[0]);
             return 1;
         }
@@ -149,7 +149,7 @@ int main(int argc, char** argv)
         numIterations <= 0 ||
         numWarmup < 0) {
 
-        LOG_INF("Error: Missing or invalid arguments.");
+        LOG_ERROR("Error: Missing or invalid arguments.");
         PrintUsage(argv[0]);
         return 1;
     }
@@ -158,7 +158,7 @@ int main(int argc, char** argv)
         const std::filesystem::path outputPath(jsonOutputPath);
         const std::filesystem::path outputDir = outputPath.parent_path();
         if (!outputDir.empty() && (!std::filesystem::exists(outputDir) || !std::filesystem::is_directory(outputDir))) {
-            LOG_INF("Error: JSON output directory does not exist: %s", outputDir.string().c_str());
+            LOG_ERROR("Error: JSON output directory does not exist: %s", outputDir.string().c_str());
             return 1;
         }
     }
@@ -174,7 +174,7 @@ int main(int argc, char** argv)
 
         LlmBench bench(llm, numInputTokens, numOutputTokens);
         if (bench.Initialize(modelPath, numThreads, contextSize, sharedLibraryPath) != 0) {
-            LOG_INF("Benchmark initialization failed.");
+            LOG_ERROR("Benchmark initialization failed.");
             return 1;
         }
 
@@ -197,10 +197,10 @@ int main(int argc, char** argv)
                                                   bench.GetFrameworkType());
         }
     } catch (const std::exception& ex) {
-        LOG_INF("Benchmark execution failed: %s", ex.what());
+        LOG_ERROR("Benchmark execution failed: %s", ex.what());
         rc = 1;
     } catch (...) {
-        LOG_INF("Benchmark execution failed: unknown error");
+        LOG_ERROR("Benchmark execution failed: unknown error");
         rc = 1;
     }
 
@@ -210,12 +210,12 @@ int main(int argc, char** argv)
     std::cout << resultsText << std::endl;
     if (!jsonOutputPath.empty()) {
         if (rc != 0) {
-            LOG_INF("JSON output requested but benchmark failed; no file written.");
+            LOG_ERROR("JSON output requested but benchmark failed; no file written.");
             return rc;
         }
         std::ofstream out(jsonOutputPath);
         if (!out) {
-            LOG_INF("Failed to open JSON output file: %s", jsonOutputPath.c_str());
+            LOG_ERROR("Failed to open JSON output file: %s", jsonOutputPath.c_str());
             return 1;
         }
         out << resultsJson << std::endl;

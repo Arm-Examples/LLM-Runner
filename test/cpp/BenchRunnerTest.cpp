@@ -9,6 +9,8 @@
 
 #include <atomic>
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <nlohmann/json.hpp>
 #include <vector>
 
@@ -16,6 +18,29 @@
 #include "catch2/catch_test_macros.hpp"
 
 namespace {
+
+std::filesystem::path CreateTinyModelFile()
+{
+    const auto path = std::filesystem::temp_directory_path() / "bench-runner-test-model.bin";
+    std::ofstream out(path, std::ios::binary);
+    out << 'x';
+    return path;
+}
+
+std::filesystem::path CreateEmptyModelFile()
+{
+    const auto path = std::filesystem::temp_directory_path() / "bench-runner-empty-model.bin";
+    std::ofstream out(path, std::ios::binary);
+    return path;
+}
+
+std::filesystem::path CreateEmptyModelDir()
+{
+    const auto path = std::filesystem::temp_directory_path() / "bench-runner-empty-model-dir";
+    std::filesystem::remove_all(path);
+    std::filesystem::create_directory(path);
+    return path;
+}
 
 class FakeBench final : public IBenchAdapter {
 public:
@@ -57,12 +82,14 @@ public:
     void StopGeneration() override { ++stopCalls; }
     void FinishIteration() override { ++finishCalls; }
     int GetOutputTokens() const override { return m_outputTokens; }
+    uintmax_t GetModelSizeBytes() const override { return modelSizeBytes; }
 
     mutable int buildCalls = 0;
     int encodeCalls = 0;
     int decodeCalls = 0;
     int stopCalls = 0;
     int finishCalls = 0;
+    uintmax_t modelSizeBytes = 1;
 
 private:
     int m_outputTokens;
@@ -132,17 +159,20 @@ TEST_CASE("BenchRunner: computes summary statistics correctly")
 
 TEST_CASE("BenchRunner: JSON formatter emits expected schema and rounded values")
 {
+    const auto modelPath = CreateTinyModelFile();
     BenchReport report{};
     report.config = BenchRunConfig{1, 2};
+    report.modelSizeBytes = std::filesystem::file_size(modelPath);
     report.results = {
         BenchIterationResult{11.1119, 22.2229, 4, 1.2349, 2.3459, 100.1239, 50.5679},
     };
     report.summary = BenchRunner::ComputeSummaryStats(report.results);
 
-    const std::string output = BenchRunner::FormatJson(report, "/tmp/model.bin", 512, 2, 128, 64, "mnn");
+    const std::string output = BenchRunner::FormatJson(report, modelPath.string(), 512, 2, 128, 64, "mnn");
     const auto parsed = nlohmann::json::parse(output);
 
-    CHECK(parsed["parameters"]["model_path"] == "/tmp/model.bin");
+    CHECK(parsed["parameters"]["model_path"] == modelPath.string());
+    CHECK(parsed["parameters"]["model_size"] == "0.00 GB");
     CHECK(parsed["parameters"]["num_input_tokens"] == 128);
     CHECK(parsed["parameters"]["num_output_tokens"] == 64);
     CHECK(parsed["parameters"]["context_size"] == 512);
@@ -153,25 +183,32 @@ TEST_CASE("BenchRunner: JSON formatter emits expected schema and rounded values"
     CHECK(parsed["iterations"].size() == 1);
     CHECK(parsed["iterations"][0]["time_to_first_token_ms"] == 11.112);
     CHECK(parsed["iterations"][0]["total_time_ms"] == 22.223);
+
+    std::filesystem::remove(modelPath);
 }
 
 TEST_CASE("BenchRunner: text formatter includes key headers and parameters")
 {
+    const auto modelPath = CreateTinyModelFile();
     BenchReport report{};
     report.config = BenchRunConfig{0, 1};
+    report.modelSizeBytes = std::filesystem::file_size(modelPath);
     report.results = {
         BenchIterationResult{10.0, 20.0, 4, 1.0, 2.0, 100.0, 2.0},
     };
     report.summary = BenchRunner::ComputeSummaryStats(report.results);
 
-    const std::string text = BenchRunner::FormatText(report, "/tmp/model.bin", 256, 4, 128, 64, "mnn");
+    const std::string text = BenchRunner::FormatText(report, modelPath.string(), 256, 4, 128, 64, "mnn");
 
     CHECK(text.find("ARM LLM Benchmark") != std::string::npos);
-    CHECK(text.find("model_path         : /tmp/model.bin") != std::string::npos);
+    CHECK(text.find("model_path         : " + modelPath.string()) != std::string::npos);
+    CHECK(text.find("model_size         : 0.00 GB") != std::string::npos);
     CHECK(text.find("Framework") != std::string::npos);
     CHECK(text.find("Threads") != std::string::npos);
     CHECK(text.find("Performance") != std::string::npos);
     CHECK(text.find("TTFT") != std::string::npos);
+
+    std::filesystem::remove(modelPath);
 }
 
 TEST_CASE("LlmBench: BuildIterationResult computes throughput rules")
@@ -199,6 +236,30 @@ TEST_CASE("LlmBench: BuildIterationResult handles zero durations")
     CHECK(out.encodeTokensPerSec == Catch::Approx(0.0));
     CHECK(out.decodeTokensPerSec == Catch::Approx(0.0));
     CHECK(out.totalTimeMs == Catch::Approx(0.0));
+}
+
+TEST_CASE("LlmBench: Initialize rejects empty model file")
+{
+    const auto modelPath = CreateEmptyModelFile();
+    LLM llm;
+    LlmBench bench(llm, 1, 1);
+
+    const int rc = bench.Initialize(modelPath.string(), 1, 4, ".");
+
+    CHECK(rc == 1);
+    std::filesystem::remove(modelPath);
+}
+
+TEST_CASE("LlmBench: Initialize rejects empty model directory")
+{
+    const auto modelPath = CreateEmptyModelDir();
+    LLM llm;
+    LlmBench bench(llm, 1, 1);
+
+    const int rc = bench.Initialize(modelPath.string(), 1, 4, ".");
+
+    CHECK(rc == 1);
+    std::filesystem::remove_all(modelPath);
 }
 
 TEST_CASE("LlmBench: MeasureTimingSec executes callable and returns elapsed time")

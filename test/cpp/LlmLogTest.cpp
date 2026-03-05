@@ -1,10 +1,11 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
 
 
+#include "BuildInfo.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "LlmConfig.hpp"
 #include "LlmImpl.hpp"
@@ -87,5 +88,13 @@ TEST_CASE("Test logging issues") {
                 CHECK(contains(e.what(),testDictionary[param]+" must be a positive integer."));
             }
         }
+    }
+
+    SECTION("Build metadata is available") {
+        const auto& metadata = LlmLog::GetBuildMetadata();
+        CHECK(std::strlen(metadata.moduleVersion) > 0);
+        CHECK(std::strlen(metadata.frameworkName) > 0);
+        CHECK(std::strlen(metadata.buildTimestampUtc) > 0);
+        CHECK(contains(LlmLog::FormatBuildMetadata(), metadata.frameworkName));
     }
 }

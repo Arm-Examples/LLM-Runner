@@ -8,11 +8,25 @@
 #include "Logger.hpp"
 
 #include <cmath>
+#include <fstream>
 #include <iomanip>
 #include <nlohmann/json.hpp>
 #include <sstream>
 
 using nlohmann::json;
+
+namespace {
+
+std::string FormatModelSize(uintmax_t sizeBytes)
+{
+    constexpr double bytesPerGb = 1000.0 * 1000.0 * 1000.0;
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2)
+        << (static_cast<double>(sizeBytes) / bytesPerGb) << " GB";
+    return oss.str();
+}
+
+}  // namespace
 
 BenchRunner::BenchRunner(IBenchAdapter& bench, const BenchRunConfig& config)
     : m_bench(bench)
@@ -28,6 +42,7 @@ int BenchRunner::Run(BenchReport& report)
 
     report = BenchReport{};
     report.config = m_config;
+    report.modelSizeBytes = m_bench.GetModelSizeBytes();
 
     report.results.reserve(static_cast<size_t>(m_config.measuredIterations));
     if (m_config.warmupIterations > 0) {
@@ -102,9 +117,12 @@ std::string BenchRunner::FormatText(const BenchReport& report,
                                     const std::string& frameworkType)
 {
     std::ostringstream oss;
+    const std::string modelSize = FormatModelSize(report.modelSizeBytes);
+
     oss << "\n=== ARM LLM Benchmark ===\n\n";
     oss << "Parameters:\n";
     oss << "  model_path         : " << modelPath << "\n";
+    oss << "  model_size         : " << modelSize << "\n";
     oss << "  num_input_tokens   : " << numInputTokens << "\n";
     oss << "  num_output_tokens  : " << numOutputTokens << "\n";
     oss << "  context_size       : " << contextSize << "\n";
@@ -182,10 +200,12 @@ std::string BenchRunner::FormatJson(const BenchReport& report,
     const auto round3 = [](double v) {
         return std::round(v * 1000.0) / 1000.0;
     };
+    const std::string modelSize = FormatModelSize(report.modelSizeBytes);
 
     json out;
     out["parameters"] = {
         {"model_path", modelPath},
+        {"model_size", modelSize},
         {"num_input_tokens", numInputTokens},
         {"num_output_tokens", numOutputTokens},
         {"context_size", contextSize},

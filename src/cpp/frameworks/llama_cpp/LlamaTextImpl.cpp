@@ -220,7 +220,7 @@ bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
 
     // if no template on the model, fall back to default implementation
     if (!tmpl) {
-        LOG_INF("ApplyAutoChatTemplate: no template found. Falling back to default template.");
+        LOG_WARN("ApplyAutoChatTemplate: no template found. Falling back to default template.");
         return false;
     }
 
@@ -251,7 +251,7 @@ bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
     );
 
     if (requiredMemory < 0) {
-        LOG_INF("ApplyAutoChatTemplate failed. Falling back to default template.");
+        LOG_WARN("ApplyAutoChatTemplate failed. Falling back to default template.");
         return false;
     }
 

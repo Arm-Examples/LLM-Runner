@@ -187,8 +187,10 @@ void LLM::LLMImpl::LoadEngine(const std::string& model_path, const std::string& 
     this->m_errorCode =
         LlmInferenceEngine_CreateEngine(&model_settings, &this->m_llmEngine, &this->m_errorMsg);
     if (this->m_errorCode) {
-        LOG_ERROR("Failed to create engine: %s", this->m_errorMsg);
+        const std::string errorMessage = this->m_errorMsg ? this->m_errorMsg : "unknown error";
         free(this->m_errorMsg);
+        this->m_errorMsg = nullptr;
+        THROW_ERROR("Failed to create engine: %s", errorMessage.c_str());
     }
 }
 
@@ -204,8 +206,10 @@ void LLM::LLMImpl::LoadSession()
     this->m_errorCode = LlmInferenceEngine_CreateSession(
         this->m_llmEngine, &session_config, &this->m_llmEngineSession, &this->m_errorMsg);
     if (this->m_errorCode) {
-        LOG_ERROR("Failed to load session: %s", this->m_errorMsg);
+        const std::string errorMessage = this->m_errorMsg ? this->m_errorMsg : "unknown error";
         free(this->m_errorMsg);
+        this->m_errorMsg = nullptr;
+        THROW_ERROR("Failed to load session: %s", errorMessage.c_str());
     }
 }
 
@@ -415,5 +419,4 @@ std::string LLM::LLMImpl::GeneratePromptWithNumTokens(size_t numPromptTokens)
         }
     }
 }
-
 
