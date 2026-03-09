@@ -34,6 +34,7 @@
     * [mnn](#mnn)
     * [arm llm benchmark](#arm-llm-benchmark)
   * [Troubleshooting](#Troubleshooting)
+  * [Contributions](#contributions)
   * [Trademarks](#trademarks)
   * [License](#license)
 <!-- TOC -->
@@ -550,6 +551,10 @@ Parameters:
 ## Troubleshooting
 
 For a list of common errors and their fixes, see TROUBLESHOOTING.md.
+
+## Contributions
+
+The LLM-Runner welcomes contributions. For more details on contributing to the repo please see the [contributors guide](./contributing.md#contributions).
 
 ## Trademarks
 
