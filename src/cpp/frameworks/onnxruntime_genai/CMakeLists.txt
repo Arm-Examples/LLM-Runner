@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright 2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
+# SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -17,6 +17,12 @@ if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14)
   message(STATUS "GCC >= 14 detected, disabling -Werror for range-loop-construct")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=range-loop-construct")
 endif()
+
+# Disabled array-bounds warning-as-error since NDK clang triggers it in MLAS code.
+# Setting it at this project level to ensure we cover all onnx binaries
+# ONNX project probably don't compile with these flags because if they did they 
+# probably would have seen this problem
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=array-bounds")
 
 # --------------------------------------------------------------------
 # onnxruntime build
