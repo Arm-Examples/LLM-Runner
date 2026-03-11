@@ -39,10 +39,6 @@ target_link_libraries(arm-llm-cpp PUBLIC
     arm-llm-chat
     arm-llm-log)
 
-if (LLM_JNI_TIMING)
-    target_compile_definitions(arm-llm-cpp PUBLIC LLM_JNI_TIMING=1)
-endif()
-
 # Enable streamline annotation
 if(ENABLE_STREAMLINE)
     include(streamline)

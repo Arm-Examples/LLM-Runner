@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright 2024-2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+# SPDX-FileCopyrightText: Copyright 2024-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -50,12 +50,16 @@ set(TEST_TARGET llm-cpp-tests)
 add_executable(${TEST_TARGET}
         ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmTest.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmConfigTest.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmLogTest.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmLogTest.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/cpp/BenchRunnerTest.cpp)
 
 target_compile_definitions(${TEST_TARGET}
         PUBLIC
         TEST_MODELS_DIR="${TEST_MODELS_DIR}"
         TEST_RESOURCE_DIR="${TEST_RESOURCE_DIR}")
+
+target_include_directories(${TEST_TARGET} PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/cpp/benchmark)
 
 # Android specific definition for Catch
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Android")
@@ -64,7 +68,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Android")
 endif()
 
 # Assert dependency on the actual C++ interface or library.
-target_link_libraries(${TEST_TARGET} PUBLIC arm-llm-cpp Catch2::Catch2)
+target_link_libraries(${TEST_TARGET} PUBLIC arm-llm-cpp arm-llm-bench Catch2::Catch2)
 
 foreach(CFG_FILE ${CONFIG_FILE_NAME})
 

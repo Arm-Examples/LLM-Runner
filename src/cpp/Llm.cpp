@@ -132,15 +132,8 @@ void LLM::Encode(LlmChat::Payload& payload) {
             THROW_ERROR("Error. Attempting to Encode an unsupported Image payload");
         }
     }
-#if defined(LLM_JNI_TIMING)
-    auto start = std::chrono::steady_clock::now();
-#endif
     this->m_impl->QueryBuilder(payload);
     this->m_impl->Encode(payload);
-#if defined(LLM_JNI_TIMING)
-    auto end = std::chrono::steady_clock::now();
-    m_lastEncodeCoreNs = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-#endif
 }
 
 bool LLM::SupportsModality(const std::vector<std::string> &inptMods, std::string modality) const {
@@ -167,14 +160,7 @@ std::string LLM::NextToken()
     sl::Scope scope(sl::CH_DECODE, ANNOTATE_PURPLE, "LLM::NextToken");
 #endif
 
-#if defined(LLM_JNI_TIMING)
-    auto start = std::chrono::steady_clock::now();
-#endif
     auto token = this->m_impl->NextToken();
-#if defined(LLM_JNI_TIMING)
-    auto end = std::chrono::steady_clock::now();
-    m_lastNextTokenCoreNs = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-#endif
 
     if (this->isStopToken(token)) {
         return endToken;
@@ -193,14 +179,7 @@ std::string LLM::CancellableNextToken(long operationId) const
     state->operationId = operationId;
     addWork(state);
 
-#if defined(LLM_JNI_TIMING)
-    auto start = std::chrono::steady_clock::now();
-#endif
     std::string nextToken = this->m_impl->NextToken();
-#if defined(LLM_JNI_TIMING)
-    auto end = std::chrono::steady_clock::now();
-    m_lastNextTokenCoreNs = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-#endif
 
     auto work = removeWork(state->operationId);
 
@@ -276,18 +255,6 @@ std::string LLM::GeneratePromptWithNumTokens(size_t numPromptTokens)
 #endif
     return this->m_impl->GeneratePromptWithNumTokens(numPromptTokens);
 }
-
-#if defined(LLM_JNI_TIMING)
-int64_t LLM::GetLastEncodeCoreNs() const
-{
-    return m_lastEncodeCoreNs;
-}
-
-int64_t LLM::GetLastNextTokenCoreNs() const
-{
-    return m_lastNextTokenCoreNs;
-}
-#endif
 
 void LLM::StopGeneration()
 {

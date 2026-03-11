@@ -4,7 +4,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "LlmBenchmark.hpp"
+#include "BenchRunner.hpp"
+#include "LlmBench.hpp"
+#include "Logger.hpp"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -73,8 +75,8 @@ int main(int argc, char** argv)
         }
 
         auto requireValue = [&](const std::string& name) {
-            if (i + 1 >= argc) {
-                std::cerr << "Missing value for argument: " << name << "\n";
+                if (i + 1 >= argc) {
+                LOG_INF("Missing value for argument: %s", name.c_str());
                 PrintUsage(argv[0]);
                 std::exit(1);
             }
@@ -92,7 +94,7 @@ int main(int argc, char** argv)
                 ++i; // consume value
                 return value;
             } catch (const std::exception&) {
-                std::cerr << "Invalid integer value for argument: " << name << "\n";
+                LOG_INF("Invalid integer value for argument: %s", name.c_str());
                 PrintUsage(argv[0]);
                 std::exit(1);
             }
@@ -114,8 +116,8 @@ int main(int argc, char** argv)
                     return value > 0 && (value & (value - 1)) == 0;
                 };
             if (!isPowerOfTwo(contextSize)) {
-                std::cerr << "Invalid context length: " << contextSize << "\n";
-                std::cerr << "Context length must be a positive power of two.\n";
+                LOG_INF("Invalid context length: %d", contextSize);
+                LOG_INF("Context length must be a positive power of two.");
                 return 1;
             }
         }
@@ -133,7 +135,7 @@ int main(int argc, char** argv)
             jsonOutputPath = argv[++i];
         }
         else {
-            std::cerr << "Unknown or incomplete argument: " << arg << "\n";
+            LOG_INF("Unknown or incomplete argument: %s", arg.c_str());
             PrintUsage(argv[0]);
             return 1;
         }
@@ -147,7 +149,7 @@ int main(int argc, char** argv)
         numIterations <= 0 ||
         numWarmup < 0) {
 
-        std::cerr << "Error: Missing or invalid arguments.\n";
+        LOG_INF("Error: Missing or invalid arguments.");
         PrintUsage(argv[0]);
         return 1;
     }
@@ -156,36 +158,67 @@ int main(int argc, char** argv)
         const std::filesystem::path outputPath(jsonOutputPath);
         const std::filesystem::path outputDir = outputPath.parent_path();
         if (!outputDir.empty() && (!std::filesystem::exists(outputDir) || !std::filesystem::is_directory(outputDir))) {
-            std::cerr << "Error: JSON output directory does not exist: " << outputDir.string() << "\n";
+            LOG_INF("Error: JSON output directory does not exist: %s", outputDir.string().c_str());
             return 1;
         }
     }
 
     std::string sharedLibraryPath = std::filesystem::current_path().string();
-    // Run benchmark
-    LlmBenchmark bench(modelPath,
-                       numInputTokens,
-                       numOutputTokens,
-                       numThreads,
-                       numIterations,
-                       numWarmup,
-                       sharedLibraryPath,
-                       contextSize);
 
-    int rc = bench.Run();
-    auto results = bench.GetResults();
-    std::cout << results << std::endl;
+    int rc = 0;
+    BenchReport report{};
+    std::string resultsText;
+    std::string resultsJson;
+    try {
+        LLM llm;
+
+        LlmBench bench(llm, numInputTokens, numOutputTokens);
+        if (bench.Initialize(modelPath, numThreads, contextSize, sharedLibraryPath) != 0) {
+            LOG_INF("Benchmark initialization failed.");
+            return 1;
+        }
+
+        BenchRunner runner(bench, BenchRunConfig{numWarmup, numIterations});
+        rc = runner.Run(report);
+        if (rc == 0) {
+            resultsText = BenchRunner::FormatText(report,
+                                                  modelPath,
+                                                  contextSize,
+                                                  numThreads,
+                                                  numInputTokens,
+                                                  numOutputTokens,
+                                                  bench.GetFrameworkType());
+            resultsJson = BenchRunner::FormatJson(report,
+                                                  modelPath,
+                                                  contextSize,
+                                                  numThreads,
+                                                  numInputTokens,
+                                                  numOutputTokens,
+                                                  bench.GetFrameworkType());
+        }
+    } catch (const std::exception& ex) {
+        LOG_INF("Benchmark execution failed: %s", ex.what());
+        rc = 1;
+    } catch (...) {
+        LOG_INF("Benchmark execution failed: unknown error");
+        rc = 1;
+    }
+
+    if (rc != 0 && resultsText.empty()) {
+        resultsText = "No benchmark results available.\n";
+    }
+    std::cout << resultsText << std::endl;
     if (!jsonOutputPath.empty()) {
         if (rc != 0) {
-            std::cerr << "JSON output requested but benchmark failed; no file written.\n";
+            LOG_INF("JSON output requested but benchmark failed; no file written.");
             return rc;
         }
         std::ofstream out(jsonOutputPath);
         if (!out) {
-            std::cerr << "Failed to open JSON output file: " << jsonOutputPath << "\n";
+            LOG_INF("Failed to open JSON output file: %s", jsonOutputPath.c_str());
             return 1;
         }
-        out << bench.GetResultsJson() << std::endl;
+        out << resultsJson << std::endl;
         const std::string absoluteOutputPath = std::filesystem::absolute(jsonOutputPath).string();
         std::cout << "JSON output written to: " << absoluteOutputPath << "\n";
     }

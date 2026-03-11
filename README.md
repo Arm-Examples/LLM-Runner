@@ -171,7 +171,6 @@ Flag name | Default | Values | Description |
 | BUILD_LLM_TESTING | ON | ON/OFF | Builds the project's functional tests when ON. |
 | BUILD_BENCHMARK | OFF | ON/OFF | Builds the framework's benchmark binaries and arm-llm-bench-cli for the project when ON. |
 | BUILD_JNI_LIB| ON | ON/OFF | Builds the JNI bindings for the project. |
-| LLM_JNI_TIMING | OFF | ON/OFF | Enables optional JNI timing helpers for encode/next-token overhead measurement. |
 | LOG_LEVEL | INFO/DEBUG | DEBUG, INFO, WARN &  ERROR | For BUILD_DEBUG=OFF the default value is INFO. For BUILD_DEBUG=ON, the default value is DEBUG. |
 | USE_KLEIDIAI | ON | ON/OFF | Build the project with KLEIDIAI CPU optimizations; if set to OFF, optimizations are turned off. |
 | CPU_ARCH | Not defined | Armv8.2_1, Armv8.2_2, Armv8.2_3, Armv8.2_4, Armv8.2_5, Armv8.6_1, Armv8.6_2, Armv9.2_1, Armv9.2_2 | Sets the target ISA architecture (AArch64). Not all targets support this flag. Only supported with LLM_FRAMEWORK=llama.cpp when targeting linux-aarch64 only. |
@@ -199,8 +198,6 @@ The table below gives the mapping of CPU_ARCH flags to Arm CPU features
 > Failure to locate "jni.h" occurs if compatible JDK is not on the system path.
 > If you want to experiment with the repository without JNI libs, turn the `BUILD_JNI_LIB` option off by
 > configuring with `-DBUILD_JNI_LIB=OFF`.
-> When `LLM_JNI_TIMING=ON`, the Java API exposes timing helpers (for example, `getLastEncodeNativeNs()` and
-> `getLastEncodeCoreNs()`), and Android builds emit timing summaries to logcat by default.
 
 - `DOWNLOADS_LOCK_TIMEOUT`: A timeout value in seconds indicating how much time a lock should be tried for
   when downloading resources. This is a one-time download that CMake configuration will initiate unless it
