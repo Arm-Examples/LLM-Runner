@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <chrono>
 #include "Logger.hpp"
+#include "BuildInfo.hpp"
 #include "LlmBridge.hpp"
 #if defined(ENABLE_STREAMLINE)
 #include "profiling/StreamlineLlm.hpp"
@@ -41,12 +42,26 @@ void LLM::LlmInit(const LlmConfig &llmConfig, std::string sharedLibraryPath)
     sl::marker(ANNOTATE_BLUE, "Init start");
 #endif
     LLMFactory factory;
-    this->m_impl = factory.CreateLLMImpl(llmConfig);
-    this->m_config = llmConfig;
-    this->m_impl->InitChatParams(this->m_config.GetChat());
-    const auto &stopWords = this->m_config.GetStopWords();
+    LlmLog::LogBuildMetadataOnce();
 
-    this->m_impl->LlmInit(this->m_config, sharedLibraryPath);
+    std::string frameworkType = LlmLog::GetBuildMetadata().frameworkName;
+    try {
+        this->m_impl = factory.CreateLLMImpl(llmConfig);
+        if (!this->m_impl) {
+            throw std::runtime_error("Failed to create LLM implementation");
+        }
+
+        frameworkType = this->m_impl->GetFrameworkType();
+        this->m_config = llmConfig;
+        this->m_impl->InitChatParams(this->m_config.GetChat());
+
+        LOG_BUILD_INFO("Initializing LLM with framework='%s'", frameworkType.c_str());
+        this->m_impl->LlmInit(this->m_config, sharedLibraryPath);
+        LOG_BUILD_INFO("LLM initialization complete using framework='%s'", frameworkType.c_str());
+    } catch (const std::exception& e) {
+        LlmLog::LogInitializationFailure(frameworkType, e.what());
+        throw;
+    }
 
 #if defined(ENABLE_STREAMLINE)
     sl::marker(ANNOTATE_BLUE, "Init complete");
@@ -58,7 +73,20 @@ void LLM::FreeLlm()
 #if defined(ENABLE_STREAMLINE)
     sl::Scope scope(sl::CH_CONTROL, ANNOTATE_DKGRAY, "LLM::FreeLlm");
 #endif
-    this->m_impl->FreeLlm();
+    if (!this->m_impl) {
+        return;
+    }
+
+    const std::string frameworkType = this->m_impl->GetFrameworkType();
+    try {
+        this->m_impl->FreeLlm();
+    } catch (const std::exception& e) {
+        LOG_ERROR("LLM cleanup failed using framework='%s': %s", frameworkType.c_str(), e.what());
+    } catch (...) {
+        LOG_ERROR("LLM cleanup failed using framework='%s': unknown error", frameworkType.c_str());
+    }
+
+    this->m_impl.reset();
 }
 
 float LLM::GetEncodeTimings() const

@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -40,6 +40,7 @@ namespace LlmLog {
 #ifdef __ANDROID__
     #include <android/log.h>
     #define LOG_TAG "large-language-models"
+    #define LOG_BUILD_INFO(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
     #define LOG_ERROR(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
     #if ACTIVE_LOG_LEVEL >= LOG_LEVEL_WARN
         #define LOG_WARN(...)  __android_log_print(ANDROID_LOG_WARN,  LOG_TAG, __VA_ARGS__)
@@ -58,6 +59,7 @@ namespace LlmLog {
     #endif
 #else
     #include <cstdio>
+    #define LOG_BUILD_INFO(...) do { fprintf(stdout, "INFO : "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); } while(0)
     #define LOG_ERROR(...) do { fprintf(stderr, "ERROR: "); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } while(0)
     #if ACTIVE_LOG_LEVEL >= LOG_LEVEL_WARN
         #define LOG_WARN(...)  do { fprintf(stderr, "WARN : "); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } while(0)

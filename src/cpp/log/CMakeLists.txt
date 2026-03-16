@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+# SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -10,7 +10,8 @@ project(arm-llm-log
 
 # Add the LLM config library
 add_library(arm-llm-log STATIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/Logger.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/Logger.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/BuildInfo.cpp)
 
 target_include_directories(arm-llm-log PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR} )

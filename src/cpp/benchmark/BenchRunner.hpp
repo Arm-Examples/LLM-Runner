@@ -8,6 +8,7 @@
 #define LLM_BENCH_RUNNER_HPP
 
 #include "LlmBench.hpp"
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -42,6 +43,7 @@ struct BenchSummaryStats {
  */
 struct BenchReport {
     BenchRunConfig config{};                     ///< Runner configuration used for this report.
+    uintmax_t modelSizeBytes = 0;               ///< Validated model package size captured before execution.
     std::vector<BenchIterationResult> results{}; ///< Per-iteration measured benchmark records.
     BenchSummaryStats summary{};                 /// Aggregate summary statistics computed from results.
 };

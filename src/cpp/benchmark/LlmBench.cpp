@@ -8,8 +8,46 @@
 #include "Logger.hpp"
 
 #include <chrono>
+#include <filesystem>
 
 using namespace std::chrono;
+
+namespace {
+
+uintmax_t ValidateAndComputeModelSizeBytes(const std::filesystem::path& path)
+{
+    if (!std::filesystem::exists(path)) {
+        THROW_ERROR("Configured model path does not exist: %s", path.string().c_str());
+    }
+
+    if (std::filesystem::is_regular_file(path)) {
+        const uintmax_t sizeBytes = std::filesystem::file_size(path);
+        if (sizeBytes == 0) {
+            THROW_ERROR("Configured model file is empty: %s. This may indicate an incomplete download.", path.string().c_str());
+        }
+        return sizeBytes;
+    }
+
+    if (std::filesystem::is_directory(path)) {
+        uintmax_t totalSizeBytes = 0;
+        bool hasRegularFiles = false;
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
+            if (!entry.is_regular_file()) {
+                continue;
+            }
+            hasRegularFiles = true;
+            totalSizeBytes += entry.file_size();
+        }
+        if (!hasRegularFiles || totalSizeBytes == 0) {
+            THROW_ERROR("Configured model directory is empty: %s. This may indicate an incomplete download.", path.string().c_str());
+        }
+        return totalSizeBytes;
+    }
+
+    THROW_ERROR("Configured model path is neither a regular file nor a directory: %s", path.string().c_str());
+}
+
+}  // namespace
 
 LlmBench::LlmBench(LLM& llm, int numInputTokens, int numOutputTokens)
     : m_llm(llm)
@@ -51,6 +89,8 @@ int LlmBench::Initialize(const std::string& modelPath,
     }
 
     try {
+        m_modelSizeBytes = ValidateAndComputeModelSizeBytes(modelPath);
+
         LlmConfig config(R"JSON(
             {
                 "chat" : {

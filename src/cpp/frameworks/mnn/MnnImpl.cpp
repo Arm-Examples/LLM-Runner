@@ -135,7 +135,7 @@ bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
         return true;
     } catch (const std::exception& e) {
         // Fallback to default implementation if auto failed or produced empty output
-        LOG_INF("ApplyChatTemplate failed. Falling back to default template");
+        LOG_WARN("ApplyChatTemplate failed. Falling back to default template");
         return false;
     }
 }

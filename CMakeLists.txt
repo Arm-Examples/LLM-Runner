@@ -72,6 +72,22 @@ project(arm-llm-wrapper
         DESCRIPTION "An LLM interface library"
         LANGUAGES   C CXX ASM)
 
+set(ARM_LLM_MODULE_VERSION "${CMAKE_PROJECT_VERSION}")
+set(ARM_LLM_MODULE_GIT_SHA "unknown")
+find_package(Git QUIET)
+if(Git_FOUND)
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_SOURCE_DIR}" rev-parse --short=12 HEAD
+        RESULT_VARIABLE ARM_LLM_GIT_SHA_RESULT
+        OUTPUT_VARIABLE ARM_LLM_GIT_SHA_OUTPUT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET)
+    if(ARM_LLM_GIT_SHA_RESULT EQUAL 0 AND NOT ARM_LLM_GIT_SHA_OUTPUT STREQUAL "")
+        set(ARM_LLM_MODULE_GIT_SHA "${ARM_LLM_GIT_SHA_OUTPUT}")
+    endif()
+endif()
+string(TIMESTAMP ARM_LLM_BUILD_TIMESTAMP "%Y-%m-%dT%H:%M:%SZ" UTC)
+
 if (USE_KLEIDIAI)
     # Ensure target or host is Arm
     if (NOT CMAKE_CROSSCOMPILING)

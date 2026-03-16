@@ -9,6 +9,7 @@
 
 #include "Llm.hpp"
 #include "LlmConfig.hpp"
+#include <cstdint>
 #include <functional>
 #include <string>
 
@@ -62,6 +63,7 @@ public:
     virtual void StopGeneration() = 0;
     virtual void FinishIteration() = 0;
     virtual int GetOutputTokens() const = 0;
+    virtual uintmax_t GetModelSizeBytes() const = 0;
 };
 
 class LlmBench : public IBenchAdapter {
@@ -134,6 +136,10 @@ public:
      * @brief Return the framework/backend type reported by the wrapped LLM.
      */
     std::string GetFrameworkType() const { return m_frameworkType; }
+    /**
+     * @brief Return the validated model package size in bytes.
+     */
+    uintmax_t GetModelSizeBytes() const override { return m_modelSizeBytes; }
 
     /**
      * @brief Measure wall-clock duration of an operation and optionally emit debug timing logs.
@@ -149,6 +155,7 @@ private:
     LLM& m_llm;
     int m_numInputTokens;
     int m_numOutputTokens;
+    uintmax_t m_modelSizeBytes = 0;
     std::string m_frameworkType;
     LlmChat::Payload m_payload;
 };

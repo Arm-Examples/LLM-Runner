@@ -9,6 +9,7 @@
 #include "LlmConfig.hpp"
 #include "LlmImpl.hpp"
 #include "Logger.hpp"
+#include "BuildInfo.hpp"
 #include "LlmBridge.hpp"
 #include "LlmCache.hpp"
 #include "LlmBench.hpp"
@@ -115,25 +116,6 @@ jmethodID g_onNativeComplete = nullptr;        // Cached method ID
  */
 const char *g_nativeBridgeClassName = "com/arm/voiceassistant/utils/NativeBridge";
 
-// ------------------------------------------------------------
-// Logging helpers
-// ------------------------------------------------------------
-
-#define LOGD(fmt, ...)                                              \
-        do {                                                                \
-            fprintf(stdout, "[%s:%d] " fmt "\n",                            \
-                    __FILE__, __LINE__, ##__VA_ARGS__);                     \
-            fflush(stdout);                                                 \
-        } while (0)
-
-
-#define LOGE(fmt, ...)                                              \
-        do {                                                                \
-            fprintf(stdout, "[%s:%d] " fmt "\n",                            \
-                    __FILE__, __LINE__, ##__VA_ARGS__);                     \
-            fflush(stdout);                                                 \
-        } while (0)
-
 
 /**
  * @brief JNI entry point to initialize an LLM instance and return a handle.
@@ -147,21 +129,26 @@ JNIEXPORT jlong JNICALL Java_com_arm_Llm_llmInitJNI(JNIEnv* env,
                         jstring jsonConfig,
                         jstring sharedLibraryPath) {
     try {
+        LlmLog::LogBuildMetadataOnce();
         if (jsonConfig == nullptr) {
+                LOG_ERROR("Failed to initialize LLM module: config json string is null");
                 ThrowJavaException(env, "Failed to initialize LLM module, error in config json string ");
                 return 0;
         }
         auto modelCStr = GetUtfChars(env, jsonConfig);
         if (modelCStr.get() == nullptr) {
+            LOG_ERROR("Failed to initialize LLM module: jstring to utf conversion failed for config json");
             ThrowJavaException(env, "Failed to initialize LLM module, jstring to utf conversion failed for config json");
             return 0;
         }
         if (sharedLibraryPath == nullptr) {
+            LOG_ERROR("Failed to initialize LLM module: shared-library-path is null");
             ThrowJavaException(env, "Failed to initialize LLM module, jstring shared-library-path is null");
             return 0;
         }
         auto sharedLibraryPathNative = GetUtfChars(env,sharedLibraryPath);
         if (sharedLibraryPathNative.get() == nullptr) {
+            LOG_ERROR("Failed to initialize LLM module: unable to parse shared-library-path into string");
             ThrowJavaException(env, "Failed to initialize LLM module, unable to parse shared-library-path into string");
             return 0;
         }
@@ -173,11 +160,13 @@ JNIEXPORT jlong JNICALL Java_com_arm_Llm_llmInitJNI(JNIEnv* env,
             return LLMCache::Instance().Add(std::move(llm));
         } catch (const std::exception& e) {
             std::string msg = std::string("Failed to create Llm from config : ") + e.what();
+            LlmLog::LogInitializationFailure(LlmLog::GetBuildMetadata().frameworkName, msg);
             ThrowJavaException(env, msg.c_str());
             return 0;
         }
     } catch (const std::exception& e) {
         std:: string msg = std::string("Failed to create Llm Instance due to error: ") + e.what();
+        LlmLog::LogInitializationFailure(LlmLog::GetBuildMetadata().frameworkName, msg);
         //  prevents C++ exceptions escaping JNI
         ThrowJavaException(env, msg.c_str());
     }

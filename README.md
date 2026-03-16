@@ -114,6 +114,10 @@ cmake -B build --preset=native -DCPU_ARCH=Armv8.2_4 -DBUILD_BENCHMARK=ON
 cmake --build ./build
 ```
 
+The benchmark summary and JSON output report `model_size` as a formatted value like `1.23 GB`. The size is
+derived from the total configured model package for the benchmarked model path. If the configured path is a
+directory, the size is computed recursively.
+
 ## Supported Platforms
 
 The supported build platforms and cmake presets matrix is given below.
@@ -201,6 +205,8 @@ optional in v8.2 for example. Compilers also need to support any chosen features
 > Failure to locate "jni.h" occurs if compatible JDK is not on the system path.
 > If you want to experiment with the repository without JNI libs, turn the `BUILD_JNI_LIB` option off by
 > configuring with `-DBUILD_JNI_LIB=OFF`.
+> On first LLM initialization, the module also emits a build metadata line to CLI logs and Android logcat
+> containing the selected backend, pinned backend dependency revisions, module version/git SHA, and build timestamp.
 
 - `DOWNLOADS_LOCK_TIMEOUT`: A timeout value in seconds indicating how much time a lock should be tried for
   when downloading resources. This is a one-time download that CMake configuration will initiate unless it
