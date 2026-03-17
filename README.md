@@ -512,7 +512,7 @@ Instead of writing your own prompts or relying on framework-specific benchmarkin
     --threads   <num_threads>         | -t <num_threads> \
     --iterations <num_iterations>     | -n <num_iterations> \
     [ --context <tokens>              | -c <tokens> ] \
-    [ --json-output <path>            | -j <path> ] \
+    [ --json-output <path>            | -J <path> ] \
     [ --warmup <warmup_iterations>    | -w <warmup_iterations> ]
 ```
 
@@ -527,7 +527,8 @@ Instead of writing your own prompts or relying on framework-specific benchmarkin
     -c 2048 \
     -t 4 \
     -n 3 \
-    -w 1
+    -w 1 \
+    -J /path/to/result.json
 
 Terminal Output:
 
@@ -537,6 +538,7 @@ INFO : Running 1 warmup iteration(s) (results ignored)...
 
 Parameters:
   model_path         : ./resources_downloaded/models/llama.cpp/llama-3.2-1b/Llama-3.2-1B-Instruct-Q4_0.gguf
+  model_size         : 0.77 GB
   num_input_tokens   : 128
   num_output_tokens  : 64
   context_size       : 2048
@@ -554,6 +556,7 @@ Parameters:
 | llama.cpp          | 5       | TTFT   |   648.401 ± 13.798 (ms)    |
 | llama.cpp          | 5       | Total  |  1959.827 ± 14.433 (ms)    |
 
+JSON output written to: /path/to/result.json
 ```
 
 ## Troubleshooting

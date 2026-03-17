@@ -181,7 +181,7 @@ public class LlmTestJNI {
         Llm llm = new Llm();
         JSONObject modelObj = configJson.getJSONObject("model");
         String modelName = modelObj.getString("llmModelName");
-        int rc = llm.runBenchmark(
+        int resultCode = llm.runBenchmark(
             modelName,
             128, /* Input tokens size */
             64,  /* Output tokens size */
@@ -191,7 +191,7 @@ public class LlmTestJNI {
             1,   /* Number of warm up */
             backendSharedLibDir
         );
-        assertEquals("runBenchmark should succeed", 0, rc);
+        assertEquals("runBenchmark should succeed", 0, resultCode);
         System.out.println("Benchmark done.");
         String jsonResult = llm.getBenchmarkResultsJson();
         JSONObject benchmarkJson = new JSONObject(jsonResult);

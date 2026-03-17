@@ -103,9 +103,9 @@ TEST_CASE("BenchRunner: rejects non-positive measured iterations")
     BenchRunner runner(bench, BenchRunConfig{1, 0});
     BenchReport report{};
 
-    const int rc = runner.Run(report);
+    const int resultCode = runner.Run(report);
 
-    CHECK(rc == 1);
+    CHECK(resultCode == 1);
     CHECK(bench.encodeCalls == 0);
     CHECK(bench.decodeCalls == 0);
     CHECK(bench.stopCalls == 0);
@@ -118,9 +118,9 @@ TEST_CASE("BenchRunner: warmup is excluded and measured iterations are recorded"
     BenchRunner runner(bench, BenchRunConfig{2, 3});
     BenchReport report{};
 
-    const int rc = runner.Run(report);
+    const int resultCode = runner.Run(report);
 
-    REQUIRE(rc == 0);
+    REQUIRE(resultCode == 0);
     CHECK(report.results.size() == 3);
     CHECK(report.config.warmupIterations == 2);
     CHECK(report.config.measuredIterations == 3);
@@ -244,9 +244,9 @@ TEST_CASE("LlmBench: Initialize rejects empty model file")
     LLM llm;
     LlmBench bench(llm, 1, 1);
 
-    const int rc = bench.Initialize(modelPath.string(), 1, 4, ".");
+    const int resultCode = bench.Initialize(modelPath.string(), 1, 4, ".");
 
-    CHECK(rc == 1);
+    CHECK(resultCode == 1);
     std::filesystem::remove(modelPath);
 }
 
@@ -256,9 +256,9 @@ TEST_CASE("LlmBench: Initialize rejects empty model directory")
     LLM llm;
     LlmBench bench(llm, 1, 1);
 
-    const int rc = bench.Initialize(modelPath.string(), 1, 4, ".");
+    const int resultCode = bench.Initialize(modelPath.string(), 1, 4, ".");
 
-    CHECK(rc == 1);
+    CHECK(resultCode == 1);
     std::filesystem::remove_all(modelPath);
 }
 

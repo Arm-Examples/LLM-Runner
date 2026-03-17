@@ -501,7 +501,7 @@ public class Llm {
         double totalCoreDecodeSec = 0.0;
         boolean success = false;
         try {
-            int rc = benchmarkInitJNI(
+            int resultCode = benchmarkInitJNI(
                 modelPath,
                 inputTokens,
                 outputTokens,
@@ -511,8 +511,8 @@ public class Llm {
                 warmupIterations,
                 sharedLibraryPath
             );
-            if (rc != 0) {
-                return rc;
+            if (resultCode != 0) {
+                return resultCode;
             }
 
             for (int i = 0; i < warmupIterations; ++i) {

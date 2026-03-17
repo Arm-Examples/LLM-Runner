@@ -36,12 +36,12 @@ static void PrintUsage(const char* prog)
     std::cerr << "  --threads,     -t    Number of runtime threads\n";
     std::cerr << "  --iterations,  -n    Number of benchmark iterations (default: 5)\n";
     std::cerr << "  --warmup,      -w    Number of warm-up iterations (default: 1)\n";
-    std::cerr << "  --json-output, -j    Write benchmark results to JSON file\n";
+    std::cerr << "  --json-output, -J    Write benchmark results to JSON file\n";
     std::cerr << "  --help,        -h    Show this help message and exit\n\n";
 
     std::cerr << "Example:\n";
     std::cerr << "  " << prog
-              << " --model models/llama2.json"
+              << " --model models/llama3.gguf"
               << " --input 128 --output 128"
               << " --context 2048"
               << " --threads 4 --iterations 5 --warmup 2\n\n";
@@ -130,7 +130,7 @@ int main(int argc, char** argv)
         else if (arg == "--warmup" || arg == "-w") {
             numWarmup = parseIntArg(arg);
         }
-        else if (arg == "--json-output" || arg == "--json_output" || arg == "-j") {
+        else if (arg == "--json-output" || arg == "--json_output" || arg == "-J") {
             requireValue(arg);
             jsonOutputPath = argv[++i];
         }
@@ -165,7 +165,7 @@ int main(int argc, char** argv)
 
     std::string sharedLibraryPath = std::filesystem::current_path().string();
 
-    int rc = 0;
+    int resultCode = 0;
     BenchReport report{};
     std::string resultsText;
     std::string resultsJson;
@@ -179,8 +179,8 @@ int main(int argc, char** argv)
         }
 
         BenchRunner runner(bench, BenchRunConfig{numWarmup, numIterations});
-        rc = runner.Run(report);
-        if (rc == 0) {
+        resultCode = runner.Run(report);
+        if (resultCode == 0) {
             resultsText = BenchRunner::FormatText(report,
                                                   modelPath,
                                                   contextSize,
@@ -198,20 +198,20 @@ int main(int argc, char** argv)
         }
     } catch (const std::exception& ex) {
         LOG_ERROR("Benchmark execution failed: %s", ex.what());
-        rc = 1;
+        resultCode = 1;
     } catch (...) {
         LOG_ERROR("Benchmark execution failed: unknown error");
-        rc = 1;
+        resultCode = 1;
     }
 
-    if (rc != 0 && resultsText.empty()) {
+    if (resultCode != 0 && resultsText.empty()) {
         resultsText = "No benchmark results available.\n";
     }
     std::cout << resultsText << std::endl;
     if (!jsonOutputPath.empty()) {
-        if (rc != 0) {
+        if (resultCode != 0) {
             LOG_ERROR("JSON output requested but benchmark failed; no file written.");
-            return rc;
+            return resultCode;
         }
         std::ofstream out(jsonOutputPath);
         if (!out) {
@@ -222,5 +222,5 @@ int main(int argc, char** argv)
         const std::string absoluteOutputPath = std::filesystem::absolute(jsonOutputPath).string();
         std::cout << "JSON output written to: " << absoluteOutputPath << "\n";
     }
-    return rc;
+    return resultCode;
 }
