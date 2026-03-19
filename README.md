@@ -7,47 +7,53 @@
 
 # LLM library
 
-<!-- TOC -->
-* [LLM library](#llm-library)
-  * [Prerequisites](#prerequisites)
-  * [Quick start](#quick-start)
-  * [Cross Compilation for Android](#cross-compilation-for-android)
-  * [To build an executable benchmark binary](#to-build-an-executable-benchmark-binary)
-  * [Supported Platforms](#supported-platforms)
-  * [Configuration options](#configuration-options)
-    * [Conditional options](#conditional-options)
-      * [llama cpp options](#llama-cpp-options)
-      * [onnxruntime genai options](#onnxruntime-genai-options)
-      * [mediapipe options](#mediapipe-options)
-      * [mnn options](#mnn-options)
-    * [Supported Models](#supported-models)
-      * [llama cpp model](#llama-cpp-model)
-        * [llama cpp multimodal](#llama-cpp-multimodal)
-      * [onnxruntime genai model](#onnxruntime-genai-model)
-      * [mediapipe model](#mediapipe-model)
-      * [mnn model](#mnn-model)
-        * [mnn multimodal](#mnn-multimodal)
-    * [Shared libraries build parameter](#shared-libraries-build-parameter)
-    * [To Build for macOS](#to-build-for-macos)
-    * [llama cpp](#llama-cpp)
-    * [onnxruntime genai](#onnxruntime-genai)
-    * [mnn](#mnn)
-    * [arm llm benchmark](#arm-llm-benchmark)
-  * [Contributions](#contributions)
-  * [Troubleshooting](#troubleshooting)
-  * [Trademarks](#trademarks)
-  * [License](#license)
-<!-- TOC -->
+## Table of Contents
+
+- [Overview](#overview)
+- [Documentation](#documentation)
+- [Quick start](#quick-start)
+- [Supported Models](#supported-models)
+- [Supported Platforms](#supported-platforms)
+- [Framework specific configuration options](#framework-specific-configuration-options)
+  - [llama cpp options](#llama-cpp-options)
+  - [onnxruntime genai options](#onnxruntime-genai-options)
+  - [mediapipe options](#mediapipe-options)
+  - [mnn options](#mnn-options)
+- [Shared libraries build parameter](#shared-libraries-build-parameter)
+- [Known Issue with llama.cpp](#known-issue-with-llamacpp)
+- [llama cpp model](#llama-cpp-model)
+  - [llama cpp multimodal](#llama-cpp-multimodal)
+- [onnxruntime genai model](#onnxruntime-genai-model)
+- [mediapipe model](#mediapipe-model)
+- [mnn model](#mnn-model)
+  - [mnn multimodal](#mnn-multimodal)
+- [To build an executable benchmark binary](#to-build-an-executable-benchmark-binary)
+- [arm llm benchmark](#arm-llm-benchmark)
+- [Troubleshooting](#troubleshooting)
+- [Contributions](#contributions)
+- [Trademarks](#trademarks)
+- [License](#license)
+
+---
+
+## Overview
 
 This repo is designed for building an
 [Arm® KleidiAI™](https://www.arm.com/markets/artificial-intelligence/software/kleidi)
-enabled LLM library using CMake build system. It intends to provide an abstraction for different Machine Learning
-frameworks/backends that Arm® KleidiAI™ kernels have been integrated into.
-Currently, it supports [llama.cpp](https://github.com/ggml-org/llama.cpp), [mediapipe](https://github.com/google-ai-edge/mediapipe),
-[onnxruntime-genai](https://github.com/microsoft/onnxruntime-genai), and [MNN](https://github.com/alibaba/MNN) backends.
-The backend library (selected at CMake configuration stage) is wrapped by this project's thin C++ layer that could be used
-directly for testing and evaluations. However, JNI bindings are also provided for developers targeting Android™ based
-applications.
+enabled LLM library using CMake build system.
+Provides a single API (Java & C++) to various LLM frameworks
+that Arm® KleidiAI™ kernels have been integrated into.
+Currently, it supports [llama.cpp](https://github.com/ggml-org/llama.cpp),
+[mediapipe](https://github.com/google-ai-edge/mediapipe),
+[onnxruntime-genai](https://github.com/microsoft/onnxruntime-genai), and
+[MNN](https://github.com/alibaba/MNN) backends.
+The backend library (selected at CMake configuration stage) is wrapped by this project's thin
+C++ layer that could be used directly for testing and evaluations.
+However, JNI bindings are also provided for developers targeting Android™ based applications.
+
+# Quick start
+
+This guide covers the recommended build and run flows for supported platforms. For configuration options and model details, see `docs/build_and_config_guide.md`.
 
 ## Prerequisites
 
@@ -64,7 +70,6 @@ applications.
 * Java Development Kit required for building JNI wrapper library necessary to utilise this module in an Android/Java application.
 * Create a [Hugging Face](https://huggingface.co) account and obtain a Hugging Face access token.
 
-
 ## Quick start
 
 The project can be built and LLM tests exercised by simply running the following commands on supported platforms:
@@ -74,6 +79,7 @@ cmake --preset=native -B build
 cmake --build ./build
 ctest --test-dir ./build
 ```
+
 The commands above will use the default LLM framework (llama.cpp) and download a small number of LLM models. The tests exercise both vision and text queries. See [`LlmTest.cpp`](test/cpp/LlmTest.cpp) & [`LlmTestJNI.java`](test/java/com/arm/LlmTestJNI.java) for details.
 
 
@@ -90,58 +96,62 @@ Test project /home/user/llm/build
 100% tests passed, 0 tests failed out of 2
 ```
 
-## Cross Compilation for Android
 
-Cross compilation is also supported allowing the project to build binaries targeted to an OS/CPU architecture different from the host/build machine. For example it is possible to build the project on a Linux x86_64 platform and build binaries for Android™:
+## Documentation
 
-```shell
-export NDK_PATH=/home/username/ndk
-cmake --preset=x-android-aarch64  -B build 
-cmake --build ./build
-```
+| Document                                             | Purpose |
+|------------------------------------------------------| --- |
+| [`docs/README.md`](docs/README.md)                   | Documentation index and update guidance. |
+| [`docs/build_and_config_guide.md`](docs/build_and_config_guide.md)           | Build/run steps, platform matrix, and common build commands. |
+| [`docs/architecture.md`](docs/architecture.md)       | Architecture overview, components, and execution flow. |
+| [`docs/benchmarking.md`](docs/benchmarking.md)         | Benchmarking and profiling guidance. |
+| [`docs/integration.md`](docs/integration.md)             | Configuration options and integration notes. |
+| [`docs/troubleshooting.md`](docs/troubleshooting.md) | Common errors and fixes. |
+| [`docs/contributing.md`](docs/contributing.md)       | Contribution process and SPDX guidance. |
 
-However, the binaries would need to be uploaded to an Android™ device to exercise the tests.
-See the section below for additional cross-compilation options.
+## Repository Layout
 
-## To build an executable benchmark binary
+| Source Folder                | Purpose                                                                                         |
+|------------------------------|-------------------------------------------------------------------------------------------------|
+| `src/cpp/`                   | Core C++ wrapper implementing the LLM-Runner abstraction layer and backend integration.         |
+| `src/java/`                  | Java/JNI bindings.                                                                              |
+| `scripts/py/`                | Python utilities for downloading models, test resources, and performing data preparation tasks. |
+| `scripts/cmake/`             | Toolchains and CMake helper scripts for cross-compilation and platform configuration.           |
+| `model_configuration_files/` | Model configuration files used by the build system and runtime.                                 |
+| `resources_downloaded/`      | Default directory where models and example assets are downloaded.                               |
+| `test/`                      | C++/Java unit tests  and supporting test resources.                                             |
 
-To build a standalone benchmark binary add the configuration option `-DBUILD_BENCHMARK=ON` to any of the build
-commands above. For example:
 
-On Aarch-64
-```shell
-cmake -B build --preset=native -DCPU_ARCH=Armv8.2_4 -DBUILD_BENCHMARK=ON
-cmake --build ./build
-```
+## Supported Models
 
-The benchmark summary and JSON output report `model_size` as a formatted value like `1.23 GB`. The size is
-derived from the total configured model package for the benchmarked model path. If the configured path is a
-directory, the size is computed recursively.
+| Framework / Backend    | Supported Models                           | Licenses                                                                                                                                                                                                                                       |
+|------------------------|--------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **llama.cpp**          | `phi-2`<br/>`qwen-2-VL`<br/>`llama-3.2-1B` | [mit](https://huggingface.co/microsoft/phi-2/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
+| **onnxruntime-genai**  | `phi4-mini-instruct`                       | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)                                                                                                                                                                  |
+| **mediapipe**          | `gemma-2B`                                 | [Gemma](https://www.kaggle.com/models/google/gemma/license/consent)                                                                                                                                                                             |
+| **mnn**                | `qwen-2.5-VL`<br/>`llama-3.2-1B`           | [apache-2.0](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
+
 
 ## Supported Platforms
 
 The supported build platforms and cmake presets matrix is given below.
 The cmake presets (aka build target) are given in the first column and build platform are given in the first row.
-So for example native builds are have been tested on Linux-x86_64, Linux-aarch64 & macOS-aarch64. While x-android-aarch64 (targets Android™ devices running on aarch64) builds are only tested on Linux-x86_64 & macOS-aarch64.
+So for example native builds have been tested on Linux-x86_64, Linux-aarch64 & macOS-aarch64. While x-android-aarch64 (targets Android™ devices running on aarch64) builds are only tested on Linux-x86_64 & macOS-aarch64.
 
-|  cmake-preset / Host Platform  | Linux-x86_64| Linux-aarch64                      | macOS-aarch64 | Android™ |
-|--------------------------------------|---------------|------------------------------------|---------------|---------|
+|  cmake-preset / Host Platform  | Linux-x86_64 | Linux-aarch64                      | macOS-aarch64 | Android™ |
+|--------------------------------------|--------------|------------------------------------|---------------|---------|
 | native                               | ✅            | ✅ *                              | ✅            | -      |
 | x-android-aarch64                    | ✅            | -                                 | ✅            | -      |
-| x-linux-aarch64                      | ✅            | ✅ †                              | -            | -      |
+| x-linux-aarch64                      | ✅ *          | ✅ †                              | -            | -      |
 
 
-\* Linux-aarch64 requires CPU_ARCH build flag when selecting llama.cpp
+\* When targeting the Linux-aarch64 platform and the llama.cpp backend (using either native or x-linux-aarch64 presets) CPU_ARCH build flag must be specified. See the [CPU_ARCH table](#cpu-arch-table) for supported configuration.
 † Use 'native' preset
-
-## Configuration options
-
-Configuration options are divided into 2 parts. The first part (what is covered in this section) is the overall project configuration. The second part covers configuration options relating to the specific LLM framework being used, e.g. llama.cpp/ ONNX or MediaPipe, these items are covered in the sections that follow.
 
 Configuration option can be used with cmake presets.
 
-For example aarch64 CPU hardware acceleration can be disabled by setting USE_KLEIDIAI=OFF, e.g.
-This is useful when testing the uplift in performance due to Arm CPU hardware acceleration. 
+For example KleidiAI acceleration can be disabled by setting USE_KLEIDIAI=OFF, e.g.
+This is useful when testing the uplift in performance due to Arm CPU hardware acceleration.
 
 ```shell
 cmake --preset=native -B build -DUSE_KLEIDIAI=OFF
@@ -149,7 +159,7 @@ cmake --build ./build
 ctest --test-dir ./build
 ```
 
-LLM_FRAMEWORK can be used to select the LLM framework, e.g. 
+LLM_FRAMEWORK can be used to select the LLM framework, e.g.
 
 ```shell
 cmake --preset=native -B build -DLLM_FRAMEWORK=onnxruntime-genai
@@ -173,48 +183,12 @@ Flag name | Default | Values                                                    
 | GGML_METAL | OFF         | ON/OFF                                                                                                   | macOS specific. Enables Apple Metal backend in ggml for GPU acceleration (Apple Silicon only).                                            |
 | GGML_BLAS  | OFF         | ON/OFF                                                                                                   | macOS specific. Enables Accelerate/BLAS backend in ggml for CPU-optimized linear algebra kernels.                                         |
 
-
-# Known Issue with llama.cpp
-
-Currently there are issues with a specific architecture (SVE) integration in llama.cpp backend on aarch64. To ensure this feature is not enabled we enforce using one of our provided CPU_ARCH flag presets
-that ensure compiler flags do not enable SVE at build time.
-The table below gives the mapping of our preset CPU_ARCH flags to some common CPU feature flag sets.
-Other permutations are also supported and can be tailored accordingly. If you intend to use specific features you must ensure your specific CPU implements them e.g. i8mm  as this was
-optional in v8.2 for example. Compilers also need to support any chosen features.
-
-
-| CPU_ARCH     | C/C++ compiler flags                         |
-|--------------|----------------------------------------------|
-| Armv8.2_1    | -march=armv8.2-a+dotprod                     |
-| Armv8.2_2    | -march=armv8.2-a+dotprod+fp16                |
-| Armv8.2_3    | -march=armv8.2-a+dotprod+fp16+sve            |
-| Armv8.2_4    | -march=armv8.2-a+dotprod+i8mm                |
-| Armv8.2_5    | -march=armv8.2-a+dotprod+i8mm+sve+sme        |
-| Armv8.6_1    | -march=armv8.6-a+dotprod+fp16+i8mm           |
-| Armv9.0_1_1  | -march=armv8.6-a+dotprod+fp16+i8mm+nosve     |
-| *armv9.2_1_1 | -march=armv9.2-a+dotprod+fp16+nosve+i8mm+sme |
-| *armv9.2_2_1 | -march=armv9.2-a+dotprod+fp16+nosve+i8mm+sme |
-
-* Note: Different capitalisation for v9.2 presets.
-
-
-> **NOTE**: If you need specific version of Java set the path in `JAVA_HOME` environment variable.
-> ```shell
-> export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-> ```
-> Failure to locate "jni.h" occurs if compatible JDK is not on the system path.
-> If you want to experiment with the repository without JNI libs, turn the `BUILD_JNI_LIB` option off by
-> configuring with `-DBUILD_JNI_LIB=OFF`.
-> On first LLM initialization, the module also emits a build metadata line to CLI logs and Android logcat
-> containing the selected backend, pinned backend dependency revisions, module version/git SHA, and build timestamp.
-
 - `DOWNLOADS_LOCK_TIMEOUT`: A timeout value in seconds indicating how much time a lock should be tried for
   when downloading resources. This is a one-time download that CMake configuration will initiate unless it
   has been run by the user directly or another prior CMake configuration. The lock prevents multiple CMake
   configuration processes running in parallel downloading files to the same location.
-- `LLM_LOG_LEVEL` Choose appropriate logging level ("ERROR","WARN","INFO","DEBUG") with this flag, if  LLM_LOG_LEVEL is not provided, it will be inferred from the CMAKE-BUILD-TYPE.
 
-### Conditional options
+### Framework specific configuration options
 
 There are different conditional options for different frameworks.
 
@@ -282,17 +256,43 @@ This limitation is due to the current MNN runtime initialization logic and will 
 
 When targeting the llama.cpp LLM backend and Android (--preset=x-android-aarch64),  BUILD_SHARED_LIBS=ON is automatically configured. This ensures the build generates shared libraries, allowing the optimal hardware accelerated libraries to be loaded for the particular device at runtime.
 
-### Supported Models
+## Known Issue with llama.cpp
 
-| Framework / Backend    | Supported Models                           | Licenses                                                                                                                                                                                                                                       |
-|------------------------|--------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **llama.cpp**          | `phi-2`<br/>`qwen-2-VL`<br/>`llama-3.2-1B` | [mit](https://huggingface.co/microsoft/phi-2/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
-| **onnxruntime-genai**  | `phi4-mini-instruct`                       | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)                                                                                                                                                                  |
-| **mediapipe**          | `gemma-2B`                                 | [Gemma](https://www.kaggle.com/models/google/gemma/license/consent)                                                                                                                                                                             |
-| **mnn**                | `qwen-2.5-VL`<br/>`llama-3.2-1B`           | [apache-2.0](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
+Currently there are issues with a specific architecture (SVE) integration in llama.cpp backend on aarch64. To ensure this feature is not enabled we enforce using one of our provided `CPU_ARCH` flag presets
+that ensure compiler flags do not enable SVE at build time.
+The table below gives the mapping of our preset CPU_ARCH flags to some common CPU feature flag sets.
+Other permutations are also supported and can be tailored accordingly. If you intend to use specific features you must ensure your specific CPU implements them e.g. i8mm  as this was
+optional in v8.2 for example. Compilers also need to support any chosen features.
+
+<a id="cpu-arch-table"></a>
+
+| CPU_ARCH     | C/C++ compiler flags                         |
+|--------------|----------------------------------------------|
+| Armv8.2_1    | -march=armv8.2-a+dotprod                     |
+| Armv8.2_2    | -march=armv8.2-a+dotprod+fp16                |
+| Armv8.2_3    | -march=armv8.2-a+dotprod+fp16+sve            |
+| Armv8.2_4    | -march=armv8.2-a+dotprod+i8mm                |
+| Armv8.2_5    | -march=armv8.2-a+dotprod+i8mm+sve+sme        |
+| Armv8.6_1    | -march=armv8.6-a+dotprod+fp16+i8mm           |
+| Armv9.0_1_1  | -march=armv8.6-a+dotprod+fp16+i8mm+nosve     |
+| *armv9.2_1_1 | -march=armv9.2-a+dotprod+fp16+nosve+i8mm+sme |
+| *armv9.2_2_1 | -march=armv9.2-a+dotprod+fp16+nosve+i8mm+sme |
+
+* Note: Different capitalisation for v9.2 presets.
 
 
-#### llama cpp model
+> **NOTE**: If you need specific version of Java set the path in `JAVA_HOME` environment variable.
+> ```shell
+> export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+> ```
+> Failure to locate "jni.h" occurs if compatible JDK is not on the system path.
+> If you want to experiment with the repository without JNI libs, turn the `BUILD_JNI_LIB` option off by
+> configuring with `-DBUILD_JNI_LIB=OFF`.
+> On first LLM initialization, the module also emits a build metadata line to CLI logs and Android logcat
+> containing the selected backend, pinned backend dependency revisions, module version/git SHA, and build timestamp.
+
+
+### llama cpp model
 
 This project uses the **phi-2 model** as its default network for `llama.cpp` framework.
 The model is distributed using the **Q4_0 quantization format**, which is highly recommended as it
@@ -306,7 +306,7 @@ However, any model supported by the backend library could be used.
 > **NOTE**: Currently only Q4_0 models are accelerated by Arm® KleidiAI™ kernels in `llama.cpp`.
 
 
-##### llama cpp multimodal
+#### llama cpp multimodal
 
 The `llama.cpp` backend **also supports multimodal (image + text)** inference in this project.
 
@@ -325,7 +325,7 @@ If `"isVision"` is `true`, a valid `llmMmProjModelName` is required; omitting `"
 
 You can find an example of multimodal settings in [`llamaVisionConfig-qwen2-vl-2B.json`](model_configuration_files/llamaVisionConfig-qwen2-vl-2B.json).
 
-#### onnxruntime genai model
+### onnxruntime genai model
 
 This project uses the **Phi-4-mini-instruct-onnx** as its default network for `onnxruntime-genai` framework.
 The model is distributed using **int4 quantization format** with the **block size: 32**, which is highly recommended as it
@@ -347,13 +347,15 @@ These files are essential for loading and running ONNX models effectively.
 
 > **NOTE**: Currently only int4 and block size 32 models are accelerated by Arm® KleidiAI™ kernels in `onnxruntime-genai`.
 
-#### mediapipe model
+### mediapipe model
 
 To use the **Gemma 2B** model, add your [Hugging Face](https://huggingface.co) access token to the build environment after accepting the [*Gemma license*](https://www.kaggle.com/models/google/gemma/license/consent) .
 ```shell
 export HF_TOKEN=<your hugging-face access token>
 ```
+
 or
+
 Append the following lines to your ~/.netrc file:
 ```text
 machine huggingface.co
@@ -364,7 +366,7 @@ Ensure the .netrc file is secured with the correct permissions.
 Alternatively, you can quantize other models listed in [conversion colab](https://colab.research.google.com/github/googlesamples/mediapipe/blob/main/examples/llm_inference/conversion/llm_conversion.ipynb) from [Hugging Face](https://huggingface.co) to TensorFlow Lite™ (.tflite) format. Copy the resulting 4-bit models to `resources_downloaded/models/mediapipe`.
 It is recommended to use *mediapipe python package version 0.10.15* for stable conversion to 4-bit models.
 
-#### mnn model
+### mnn model
 
 This project uses the **Llama 3.2 1B model** as its default network for the MNN framework.
 The model is distributed using the **4-bit quantization** format, which is highly recommended as it delivers efficient inference performance while maintaining strong text generation quality on Arm® CPUs.
@@ -385,7 +387,7 @@ To use an MNN model with this framework, the following files are required:
 
 These files are essential for loading and running MNN models effectively.
 
-##### mnn multimodal
+#### mnn multimodal
 
 The `MNN` backend **also supports multimodal (image + text)** inference in this project.
 
@@ -399,89 +401,22 @@ The `MNN` backend **also supports multimodal (image + text)** inference in this 
 
 You can find an example multimodal configuration in [mnnVisionConfig-qwen2.5-3B.json](model_configuration_files/mnnVisionConfig-qwen2.5-3B.json)
 
+## To build an executable benchmark binary
 
-### Aarch64 target
+To build a standalone benchmark binary add the configuration option `-DBUILD_BENCHMARK=ON`
+to any of the build commands above. For example:
 
-To build for aarch64 Linux system
-
+On Aarch-64
 ```shell
-cmake -B build --preset=native -DCPU_ARCH=Armv8.2_5
+cmake -B build --preset=native -DCPU_ARCH=Armv8.2_4 -DBUILD_BENCHMARK=ON
 cmake --build ./build
 ```
+The benchmark summary and JSON output report `model_size` as a formatted value e.g. `1.23 GB`.
+The size is derived from the total configured model package for the benchmarked model path.
+If the configured path is a directory, the size is computed recursively.
 
-Once built, a standalone application can be executed to get performance.
 
-If `FEAT_SME` is available on deployment target, environment variable `GGML_KLEIDIAI_SME` can be used to
-toggle the use of SME kernels during execution for `llama.cpp`. For example:
-
-```shell
-GGML_KLEIDIAI_SME=1 ./build/bin/llama-cli -m resources_downloaded/models/llama.cpp/model.gguf -t 1 -p "What is a car?"
-```
-
-To run without invoking SME kernels, set `GGML_KLEIDIAI_SME=0` during execution:
-
-```shell
-GGML_KLEIDIAI_SME=0 ./build/bin/llama-cli -m resources_downloaded/models/llama.cpp/model.gguf -t 1 -p "What is a car?"
-```
-
-> **NOTE**: In some cases, it may be desirable to build a statically linked executable. For llama.cpp backend
-> this can be done by adding these configuration parameters to the CMake command for Clang or GNU toolchains:
-> ```shell
->    -DCMAKE_EXE_LINKER_FLAGS="-static"   \
->    -DGGML_OPENMP=OFF
-> ```
-
-### To Build for macOS
-
-To build for the CPU backend on macOS®, you can use the native CMake toolchain.
-
-```shell
-cmake -B build --preset=native
-cmake --build ./build
-```
-> **NOTE**: If you need specific version of Java set the path in `JAVA_HOME` environment variable.
-> ```shell
-> export JAVA_HOME=$(/usr/libexec/java_home)
-> ```
-
-Once built, a standalone application can be executed to get performance.
-
-If `FEAT_SME` is available on deployment target, environment variable `GGML_KLEIDIAI_SME` can be used to
-toggle the use of SME kernels during execution for `llama.cpp`. For example:
-
-```shell
-GGML_KLEIDIAI_SME=1 ./build/bin/llama-cli -m resources_downloaded/models/llama.cpp/model.gguf -t 1 -p "What is a car?"
-```
-
-To run without invoking SME kernels, set `GGML_KLEIDIAI_SME=0` during execution:
-
-```shell
-GGML_KLEIDIAI_SME=0 ./build/bin/llama-cli -m resources_downloaded/models/llama.cpp/model.gguf -t 1 -p "What is a car?"
-```
-
-### llama cpp
-
-You can run either executable from command line and add your prompt for example the following:
-```
-./build/bin/llama-cli -m resources_downloaded/models/llama.cpp/phi-2/phi2_Q4_model.gguf --prompt "What is the capital of France"
-```
-More information can be found at `llama.cpp/examples/main/README.md` on how this executable can be run.
-
-### onnxruntime genai
-
-You can run model_benchmark executable from command line:
-```
-./build/bin/model_benchmark -i resources_downloaded/models/onnxruntime-genai/phi-4-mini/
-```
-More information can be found at `onnxruntime-genai/benchmark/c/readme.md` on how this executable can be run.
-
-### mnn
-
-You can run llm_bench executable from command line:
-```
-./build/bin/llm_bench -m resources_downloaded/models/mnn/llama-3.2-1b/config.json -t 4 -p 128 -n 64
-```
-### arm llm benchmark
+## arm llm benchmark
 
 The Arm LLM Benchmark tool (arm-llm-bench-cli) is a framework-agnostic, standalone executable designed to measure both prompt-processing and token-generation performance across all supported LLM backends.
 
@@ -493,7 +428,7 @@ The Arm LLM Benchmark tool (arm-llm-bench-cli) is a framework-agnostic, standalo
 
 Instead of writing your own prompts or relying on framework-specific benchmarking tools, `arm-llm-bench-cli` provides a unified benchmarking pipeline. It automatically detects the backend specified in the LLM configuration file and benchmarks it consistently. The tool repeatedly runs the LLM prompt-processing and token-generation  operations and reports timing and throughput metrics in a standardized format.
 
-> **NOTE**: To build `arm-llm-bench-cli`, enable the benchmarking flag in CMake by setting `-DBUILD_BENCHMARK=ON`.
+> **NOTE**: To build `arm-llm-bench-cli`, ensure the benchmarking flag is set in CMake by setting `-DBUILD_BENCHMARK=ON`.
 
 **Measures**
 
@@ -561,11 +496,11 @@ JSON output written to: /path/to/result.json
 
 ## Troubleshooting
 
-For a list of common errors and their fixes, see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
+For a list of common errors and their fixes, see [`docs/troubleshooting.md`](docs/troubleshooting.md).
 
 ## Contributions
 
-The LLM-Runner welcomes contributions. For more details on contributing to the repo please see the [contributors guide](./contributing.md#contributions).
+The LLM-Runner welcomes contributions. For more details on contributing to the repo please see the [contributors guide](docs/contributing.md#contributions).
 
 ## Trademarks
 

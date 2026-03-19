@@ -32,7 +32,7 @@ Prefer the short, machine-readable SPDX tags:
 
 ## Examples
 
-**C / C++ / Java** 
+**C / C++ / Java**
 ```c
 //
 // SPDX-FileCopyrightText: Copyright <years additions were made to project> <your name>, Arm Limited and/or its affiliates <open-source-office@arm.com>
@@ -40,7 +40,7 @@ Prefer the short, machine-readable SPDX tags:
 // SPDX-License-Identifier: Apache-2.0
 //
   ```
-**Python / bash / sh** 
+**Python / bash / sh**
 ```python
 #
 # SPDX-FileCopyrightText: Copyright <years additions were made to project> <your name>, Arm Limited and/or its affiliates <open-source-office@arm.com>
@@ -77,7 +77,7 @@ Direct pushes to this repository are not permitted.
 ## Code Reviews
 
 All contributions must go through code review.
-Pull requests are reviewed by project maintainers through the public pull request discussion. In addition, 
+Pull requests are reviewed by project maintainers through the public pull request discussion. In addition,
 maintainers may perform internal validation and compliance checks as part of the review process.
 A contribution will only be merged once it passes all required checks and receives approval from a maintainer.
 
