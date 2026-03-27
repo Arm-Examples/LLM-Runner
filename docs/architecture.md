@@ -16,18 +16,21 @@ The project uses **CMake presets** to support native x86, macOS or aarch64 build
 
 ```mermaid
 graph TD
-    Prompt[Input Prompt<br/>(text or text+image)]
-    --> App[Application<br/>(C++ API or JNI)]
+    Prompt["Input Prompt (text or text+image)"]
+    App["Application (C++ API or JNI)"]
+    LLMRunner["LLM-Runner API"]
+    Backend["Selected Backend llama.cpp | onnxruntime-genai | Mediapipe | MNN"]
+    Inference["Inference with model + config"]
+    KleidiAI["Arm® KleidiAI™ Acceleration - default on Arm"]
+    Output["Generated tokens / text"]
 
-    App --> LLMRunner[LLM-Runner API]
+    Prompt --> App
+    App --> LLMRunner
+    LLMRunner --> Backend
+    Backend --> Inference
+    Inference --> KleidiAI
+    KleidiAI --> Output
 
-    LLMRunner --> Backend[Selected Backend<br/>llama.cpp | onnxruntime-genai | Mediapipe | MNN]
-
-    Backend --> Inference[Inference with model + config]
-
-    Inference --> KleidiAI[Arm KleidiAI kernels (if enabled)]
-
-    KleidiAI --> Output[Generated tokens / text]
 ```
 ---
 Typical Flow:
