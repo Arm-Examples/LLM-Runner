@@ -12,14 +12,14 @@
 - Select backend: `-DLLM_FRAMEWORK=<llama.cpp|onnxruntime-genai|mediapipe|mnn>`
 - Disable JNI during iteration: `-DBUILD_JNI_LIB=OFF`
 
-## Running `arm-llm-bench-cli`
+## Running `llm-bench-cli`
 
-`arm-llm-bench-cli` measures encode/decode performance with a consistent harness and reports metrics like throughput, latency, and TTFT.
+`llm-bench-cli` measures encode/decode performance with a consistent harness and reports metrics like throughput, latency, and TTFT.
 
 Example:
 
 ```sh
-./build/bin/arm-llm-bench-cli -m <model_or_config_path> -i 128 -o 64 -c 2048 -t 4 -n 3 -w 1
+./build/bin/llm-bench-cli -m <model_or_config_path> -i 128 -o 64 -c 2048 -t 4 -n 3 -w 1
 ```
 
 Key args:
@@ -33,7 +33,7 @@ Key args:
 ## Common runtime pitfalls
 
 - **Models not present**: configure triggers downloads; gated models require `HF_TOKEN` or `~/.netrc`.
-- **Shared libraries** (especially on-device/Android): keep `arm-llm-bench-cli` and required backend `.so` files in the same directory, or set `LD_LIBRARY_PATH` appropriately.
+- **Shared libraries** (especially on-device/Android): keep `llm-bench-cli` and required backend `.so` files in the same directory, or set `LD_LIBRARY_PATH` appropriately.
 - **OpenMP on Android**: if built with OpenMP, ensure required runtime libraries are present (see `TROUBLESHOOTING.md`).
 
 ## When changing benchmark code

@@ -67,7 +67,7 @@ if(ANDROID OR DEFINED ANDROID_ABI)
 endif()
 
 # Declare project
-project(arm-llm-wrapper
+project(llm-wrapper
         VERSION     0.0.1
         DESCRIPTION "An LLM interface library"
         LANGUAGES   C CXX ASM)

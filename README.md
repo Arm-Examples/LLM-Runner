@@ -28,7 +28,7 @@
 - [mnn model](#mnn-model)
   - [mnn multimodal](#mnn-multimodal)
 - [To build an executable benchmark binary](#to-build-an-executable-benchmark-binary)
-- [arm llm benchmark](#arm-llm-benchmark)
+- [llm benchmark](#llm-benchmark)
 - [Troubleshooting](#troubleshooting)
 - [Contributions](#contributions)
 - [Trademarks](#trademarks)
@@ -416,9 +416,9 @@ The size is derived from the total configured model package for the benchmarked 
 If the configured path is a directory, the size is computed recursively.
 
 
-## arm llm benchmark
+## llm benchmark
 
-The Arm LLM Benchmark tool (arm-llm-bench-cli) is a framework-agnostic, standalone executable designed to measure both prompt-processing and token-generation performance across all supported LLM backends.
+The Arm LLM Benchmark tool (llm-bench-cli) is a framework-agnostic, standalone executable designed to measure both prompt-processing and token-generation performance across all supported LLM backends.
 
 **Supported Frameworks**
 - `llama.cpp`
@@ -426,9 +426,9 @@ The Arm LLM Benchmark tool (arm-llm-bench-cli) is a framework-agnostic, standalo
 - `MNN`
 - `mediapipe`
 
-Instead of writing your own prompts or relying on framework-specific benchmarking tools, `arm-llm-bench-cli` provides a unified benchmarking pipeline. It automatically detects the backend specified in the LLM configuration file and benchmarks it consistently. The tool repeatedly runs the LLM prompt-processing and token-generation  operations and reports timing and throughput metrics in a standardized format.
+Instead of writing your own prompts or relying on framework-specific benchmarking tools, `llm-bench-cli` provides a unified benchmarking pipeline. It automatically detects the backend specified in the LLM configuration file and benchmarks it consistently. The tool repeatedly runs the LLM prompt-processing and token-generation  operations and reports timing and throughput metrics in a standardized format.
 
-> **NOTE**: To build `arm-llm-bench-cli`, ensure the benchmarking flag is set in CMake by setting `-DBUILD_BENCHMARK=ON`.
+> **NOTE**: To build `llm-bench-cli`, ensure the benchmarking flag is set in CMake by setting `-DBUILD_BENCHMARK=ON`.
 
 **Measures**
 
@@ -440,7 +440,7 @@ Instead of writing your own prompts or relying on framework-specific benchmarkin
 
 **Usage**
 ```
-./build/bin/arm-llm-bench-cli \
+./build/bin/llm-bench-cli \
     --model     <model_path>          | -m <model_path> \
     --input     <tokens>              | -i <tokens> \
     --output    <tokens>              | -o <tokens> \
@@ -451,11 +451,11 @@ Instead of writing your own prompts or relying on framework-specific benchmarkin
     [ --warmup <warmup_iterations>    | -w <warmup_iterations> ]
 ```
 
-> **NOTE**: On-device execution requires that `arm-llm-bench-cli` and its backend shared libraries reside in the same directory. Builds using `GGML_OPENMP=ON` additionally require `libomp.so` to be placed in that directory as well.
+> **NOTE**: On-device execution requires that `llm-bench-cli` and its backend shared libraries reside in the same directory. Builds using `GGML_OPENMP=ON` additionally require `libomp.so` to be placed in that directory as well.
 
 **Example**
 ```
-./build/bin/arm-llm-bench-cli \
+./build/bin/llm-bench-cli \
     -m ./resources_downloaded/models/llama.cpp/llama-3.2-1b/Llama-3.2-1B-Instruct-Q4_0.gguf \
     -i 128 \
     -o 64 \

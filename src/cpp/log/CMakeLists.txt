@@ -3,17 +3,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-project(arm-llm-log
+project(llm-log
         VERSION 0.0.1
         DESCRIPTION "LLM log"
         LANGUAGES CXX)
 
 # Add the LLM config library
-add_library(arm-llm-log STATIC
+add_library(llm-log STATIC
         ${CMAKE_CURRENT_SOURCE_DIR}/Logger.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/BuildInfo.cpp)
 
-target_include_directories(arm-llm-log PUBLIC
+target_include_directories(llm-log PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR} )
 
 
@@ -53,12 +53,12 @@ else()
     message(STATUS "Using deduced LLM_LOG_LEVEL='${DEDUCTED_LEVEL}' (${ACTIVE_LOG_LEVEL})")
 endif ()
 
-target_compile_definitions(arm-llm-log PUBLIC ACTIVE_LOG_LEVEL=${ACTIVE_LOG_LEVEL})
+target_compile_definitions(llm-log PUBLIC ACTIVE_LOG_LEVEL=${ACTIVE_LOG_LEVEL})
 
 if(ANDROID)
     find_library(log-lib log)
     if(log-lib)
-        target_link_libraries(arm-llm-log PUBLIC ${log-lib})
+        target_link_libraries(llm-log PUBLIC ${log-lib})
     else()
         message(WARNING "Android liblog not found — __android_log_print may be undefined")
     endif()

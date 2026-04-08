@@ -1,6 +1,6 @@
 ---
 name: llm-benchmark-workflow
-description: Build and run the benchmarking tools in this repository (including arm-llm-bench-cli) across supported backends, and triage benchmark build/runtime issues (shared libs placement, model paths, threads/tokens, JNI off). Use when changing benchmark code, adding metrics, comparing performance, or verifying benchmark binaries for a backend.
+description: Build and run the benchmarking tools in this repository (including llm-bench-cli) across supported backends, and triage benchmark build/runtime issues (shared libs placement, model paths, threads/tokens, JNI off). Use when changing benchmark code, adding metrics, comparing performance, or verifying benchmark binaries for a backend.
 ---
 
 # Benchmark workflow
@@ -37,13 +37,13 @@ If you want to avoid Java/JNI setup during benchmark iteration:
 cmake --preset=native -B build -DBUILD_BENCHMARK=ON -DBUILD_JNI_LIB=OFF
 ```
 
-### 2) Run `arm-llm-bench-cli`
+### 2) Run `llm-bench-cli`
 
-`arm-llm-bench-cli` is backend-agnostic; it infers backend behavior from the model/config file you pass.
+`llm-bench-cli` is backend-agnostic; it infers backend behavior from the model/config file you pass.
 Passing a config JSON is recommended because it encodes the backend and paths.
 
 ```sh
-./build/bin/arm-llm-bench-cli -m <model_or_config_path> -i 128 -o 64 -c 2048 -t 4 -n 3 -w 1
+./build/bin/llm-bench-cli -m <model_or_config_path> -i 128 -o 64 -c 2048 -t 4 -n 3 -w 1
 ```
 
 For specifics and runtime pitfalls, load `skills/llm-benchmark-workflow/references/bench-notes.md`.

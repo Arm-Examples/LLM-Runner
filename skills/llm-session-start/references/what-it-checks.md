@@ -11,7 +11,7 @@
 - Cache highlights (if present): `LLM_FRAMEWORK`, `BUILD_JNI_LIB`, `BUILD_LLM_TESTING`, `BUILD_BENCHMARK`, `USE_KLEIDIAI`, `CMAKE_BUILD_TYPE`
 - Tooling (when JNI enabled): `java`, `javac`, `JAVA_HOME`
 - Test wiring sanity: config filenames referenced in `test/CMakeLists.txt` exist in `model_configuration_files/` and parse as JSON
-- Artifacts (best-effort): `build/bin/llm-cpp-tests`, `build/lib/libarm-llm-jni.so` (when JNI enabled)
+- Artifacts (best-effort): `build/bin/llm-cpp-tests`, `build/lib/libllm-jni.so` (when JNI enabled)
 
 It is intentionally “fast”: it does not rebuild, run tests, or re-download models.
 

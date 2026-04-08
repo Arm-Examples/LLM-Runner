@@ -20,7 +20,7 @@ Select the API that best fits your application.
 |-------------| --- |----------------------------------------------------------------|
 | C++ API     | Native applications and services | Static or shared library                                       |
 | JNI API     | Android applications | Java / Kotlin API                                              |
-| CLI samples | Quick evaluation and benchmarking | `arm-llm-bench-cli`,`llama-cli`, `model_benchmark`, `llm_bench` |
+| CLI samples | Quick evaluation and benchmarking | `llm-bench-cli`,`llama-cli`, `model_benchmark`, `llm_bench` |
 
 ---
 
@@ -79,7 +79,7 @@ Example embedding (CMake + C++):
 add_executable(my_app main.cpp)
 set(BUILD_LLM_TESTING OFF)
 add_subdirectory(/path/to/LLM-Runner llm_runner)
-target_link_libraries(my_app PRIVATE arm-llm-cpp)
+target_link_libraries(my_app PRIVATE llm-cpp)
 ```
 
 ## Standalone App Build
@@ -162,7 +162,7 @@ project(my_app LANGUAGES CXX)
 
 add_executable(my_app main.cpp)
 add_subdirectory(/path/to/LLM-Runner llm_runner)
-target_link_libraries(my_app PRIVATE arm-llm-cpp)
+target_link_libraries(my_app PRIVATE llm-cpp)
 target_compile_features(my_app PRIVATE cxx_std_17)
 ```
 

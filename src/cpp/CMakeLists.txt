@@ -5,7 +5,7 @@
 #
 
 # Declare project
-project(arm-llm-cpp-prj
+project(llm-cpp-prj
         DESCRIPTION "An LLM CPP library"
         LANGUAGES   C CXX ASM)
 
@@ -33,27 +33,27 @@ configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/log/LlmBuildInfoConfig.hpp.in"
     "${ARM_LLM_BUILD_INFO_DIR}/LlmBuildInfoConfig.hpp"
     @ONLY)
-target_include_directories(arm-llm-log PUBLIC "${ARM_LLM_BUILD_INFO_DIR}")
+target_include_directories(llm-log PUBLIC "${ARM_LLM_BUILD_INFO_DIR}")
 
 # Add benchmark lib:
 add_subdirectory(benchmark)
 
 # Actual API library that depends on framework
-add_library(arm-llm-cpp STATIC
+add_library(llm-cpp STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/Llm.cpp ${CMAKE_CURRENT_SOURCE_DIR}/LlmBridge.cpp)
 
 # Libraries needed
-target_link_libraries(arm-llm-cpp PUBLIC
-    arm-llm-interface
-    arm-llm-config
-    arm-llm-framework
-    arm-llm-chat
-    arm-llm-log)
+target_link_libraries(llm-cpp PUBLIC
+    llm-interface
+    llm-config
+    llm-framework
+    llm-chat
+    llm-log)
 
 # Enable streamline annotation
 if(ENABLE_STREAMLINE)
     include(streamline)
-    arm_enable_streamline(arm-llm-cpp)
+    arm_enable_streamline(llm-cpp)
 endif()
 
 # If building with JNI support, build a separate
@@ -62,15 +62,15 @@ if (BUILD_JNI_LIB)
     # Make sure JNI include directories have been set.
     include(find-jni)
 
-    add_library(arm-llm-jni SHARED
+    add_library(llm-jni SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/LlmJni.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/LlmCache.cpp)
 
-    target_link_libraries(arm-llm-jni PUBLIC 
-        arm-llm-cpp 
-        arm-llm-bench)
+    target_link_libraries(llm-jni PUBLIC 
+        llm-cpp 
+        llm-bench)
 
-    target_include_directories(arm-llm-jni PUBLIC
+    target_include_directories(llm-jni PUBLIC
         ${JNI_INCLUDE_DIRS} # Populated by FindJNI CMake module
     )
 endif()

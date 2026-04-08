@@ -251,8 +251,8 @@ def main() -> int:
         artifacts.append(CheckResult(llm_cpp_tests.exists(), "llm-cpp-tests", str(llm_cpp_tests) if llm_cpp_tests.exists() else "missing"))
         if build_jni in {"ON", "TRUE", "1"}:
             # Output directory is set to build/lib for shared libs in this repo.
-            jni_so = build_dir / "lib" / "libarm-llm-jni.so"
-            artifacts.append(CheckResult(jni_so.exists(), "arm-llm-jni", str(jni_so) if jni_so.exists() else "missing"))
+            jni_so = build_dir / "lib" / "libllm-jni.so"
+            artifacts.append(CheckResult(jni_so.exists(), "llm-jni", str(jni_so) if jni_so.exists() else "missing"))
     report["artifacts"] = {r.label: r.ok for r in artifacts}
     ok_artifacts = _print_results("Artifacts", artifacts)
 

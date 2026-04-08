@@ -17,8 +17,8 @@ set(TEST_UTILS_DIR  ${DOWNLOADS_DIR}/test_utils)
 set(TEST_MODELS_DIR  ${DOWNLOADS_DIR}/models)
 
 
-if (NOT TARGET arm-llm-cpp)
-    message(FATAL_ERROR "llm-cpp-tests requires target arm-llm-cpp")
+if (NOT TARGET llm-cpp)
+    message(FATAL_ERROR "llm-cpp-tests requires target llm-cpp")
 endif()
 
 message(STATUS "Adding C++ tests")
@@ -68,7 +68,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Android")
 endif()
 
 # Assert dependency on the actual C++ interface or library.
-target_link_libraries(${TEST_TARGET} PUBLIC arm-llm-cpp arm-llm-bench Catch2::Catch2)
+target_link_libraries(${TEST_TARGET} PUBLIC llm-cpp llm-bench Catch2::Catch2)
 
 foreach(CFG_FILE ${CONFIG_FILE_NAME})
 
@@ -93,10 +93,10 @@ foreach(CFG_FILE ${CONFIG_FILE_NAME})
 endforeach()
 
 # If JNI libs are being built, add tests for these here.
-if(TARGET arm-llm-jni)
+if(TARGET llm-jni)
     message(STATUS "Adding JNI tests")
 
-    if (NOT TARGET arm-llm-java)
+    if (NOT TARGET llm-java)
         message(FATAL_ERROR "JNI tests cannot be built without Java interface")
     endif()
 
@@ -108,7 +108,7 @@ if(TARGET arm-llm-jni)
 
     # Get the Java interface source file path.
     get_target_property(LLM_JAVA_INTERFACE_SOURCES
-            arm-llm-java INTERFACE_SOURCES)
+            llm-java INTERFACE_SOURCES)
     message(STATUS "Java interface sources: ${LLM_JAVA_INTERFACE_SOURCES}")
 
     # Build Java archive using the interface and test sources.
@@ -122,7 +122,7 @@ if(TARGET arm-llm-jni)
 
     get_target_property(_jarFile llm-jni-tests JAR_FILE)
     get_target_property(_classDir llm-jni-tests CLASSDIR)
-    get_target_property(_jniLibPath arm-llm-jni LIBRARY_OUTPUT_DIRECTORY)
+    get_target_property(_jniLibPath llm-jni LIBRARY_OUTPUT_DIRECTORY)
 
     message(STATUS "Jar file:          ${_jarFile}")
     message(STATUS "Class compiled to: ${_classDir}")

@@ -46,21 +46,21 @@ cmake --build build
 
 ## 3) Run baseline measurements
 
-The benchmark binary`arm-llm-bench-cli` allows you to capture encode/decode rates and time-to-first-token alongside wall-clock time. Ensure the benchmark binary is built by configuring with `-DBUILD_BENCHMARK=ON` and follow the build/run steps in `README.md` (`To build an executable benchmark binary` and `arm llm benchmark`).
+The benchmark binary`llm-bench-cli` allows you to capture encode/decode rates and time-to-first-token alongside wall-clock time. Ensure the benchmark binary is built by configuring with `-DBUILD_BENCHMARK=ON` and follow the build/run steps in `README.md` (`To build an executable benchmark binary` and `llm benchmark`).
 
 Example:
 
 ```shell
 
-./build/bin/arm-llm-bench-cli -m resources_downloaded/models/llama.cpp/llama-3.2-1b/Llama-3.2-1B-Instruct-Q4_0.gguf -i 128 -o 64 -c 2048 -t 1 -n 3 -w 1
+./build/bin/llm-bench-cli -m resources_downloaded/models/llama.cpp/llama-3.2-1b/Llama-3.2-1B-Instruct-Q4_0.gguf -i 128 -o 64 -c 2048 -t 1 -n 3 -w 1
 ```
 
-For estimate of wall-clock time run arm-llm-bench-cli for 3 measured iterations (with 1 warmup), benchmarking encode/decode performance for the specified model and token counts, 
+For estimate of wall-clock time run llm-bench-cli for 3 measured iterations (with 1 warmup), benchmarking encode/decode performance for the specified model and token counts, 
  /usr/bin/time -v reports the process’s wall time and resource usage.
 
 
 ```shell
-  /usr/bin/time -v ./build/bin/arm-llm-bench-cli \
+  /usr/bin/time -v ./build/bin/llm-bench-cli \
     -m resources_downloaded/models/llama.cpp/llama-3.2-1b/Llama-3.2-1B-Instruct-Q4_0.gguf \
     -i 128 -o 64 -c 2048 -t 1 -n 3 -w 1
 ```
@@ -72,7 +72,7 @@ Collect at least 3 runs and report the median.
 SME kernels can also be toggled at runtime:
 
 ```shell
-GGML_KLEIDIAI_SME=1 ./build/bin/arm-llm-bench-cli \
+GGML_KLEIDIAI_SME=1 ./build/bin/llm-bench-cli \
 -m resources_downloaded/models/llama.cpp/llama-3.2-1b/Llama-3.2-1B-Instruct-Q4_0.gguf \
 -i 128 -o 64 -c 2048 -t 1 -n 3 -w 1
 ```
@@ -80,7 +80,7 @@ GGML_KLEIDIAI_SME=1 ./build/bin/arm-llm-bench-cli \
 Disable to compare:
 
 ```shell
-GGML_KLEIDIAI_SME=0 ./build/bin/arm-llm-bench-cli \
+GGML_KLEIDIAI_SME=0 ./build/bin/llm-bench-cli \
 -m resources_downloaded/models/llama.cpp/llama-3.2-1b/Llama-3.2-1B-Instruct-Q4_0.gguf \
 -i 128 -o 64 -c 2048 -t 1 -n 3 -w 1
 ```
@@ -115,7 +115,7 @@ When enabled, CMake fetches Arm Gator annotation sources and adds markers around
 2. Build the library.
 3. Launch Streamline, create a new capture, and select the target device.
 4. Select metrics for CPU, cache, and memory bandwidth. Where available, enable SVE/SME-related counters.
-5. Start capture, run the `arm-llm-bench-cli` workload (or `llama-cli` for an interactive run), then stop capture.
+5. Start capture, run the `llm-bench-cli` workload (or `llama-cli` for an interactive run), then stop capture.
 6. Inspect hotspots, core utilization, and memory pressure.
 
 Use the capture to identify whether the workload is compute-bound, memory-bound, or impacted by scheduling.
@@ -133,7 +133,7 @@ Push the `gatord` binary to the target device. The binary is included with Arm P
 Start Gator with process synchronization enabled so that data collection begins when the benchmark process starts:
 
 ```bash
-./gatord --allow-command --wait-process arm-llm-bench-cli
+./gatord --allow-command --wait-process llm-bench-cli
 ```
 
 When Gator is ready, the terminal displays:
@@ -151,7 +151,7 @@ Perfetto helps analyze scheduling, CPU frequency changes, and system events.
 
 1. Install Perfetto on the target or ensure it is available in PATH.
 2. Create a trace config that includes CPU scheduling and frequency events.
-3. Start the trace, run `arm-llm-bench-cli`, then stop the trace.
+3. Start the trace, run `llm-bench-cli`, then stop the trace.
 4. Open the trace in the Perfetto UI to inspect CPU timelines and task slices.
 
 

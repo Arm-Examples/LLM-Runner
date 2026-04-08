@@ -35,9 +35,9 @@ public class Llm {
 
     static {
         try {
-            System.loadLibrary("arm-llm-jni");
+            System.loadLibrary("llm-jni");
         } catch (UnsatisfiedLinkError e) {
-            System.err.println("LLM: Failed to load library: arm-llm-jni");
+            System.err.println("LLM: Failed to load library: llm-jni");
             e.printStackTrace();
         }
     }

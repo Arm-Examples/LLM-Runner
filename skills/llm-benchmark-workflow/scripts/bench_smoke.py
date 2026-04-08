@@ -15,7 +15,7 @@ import sys
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="bench_smoke.py",
-        description="Smoke-checks that arm-llm-bench-cli exists and its --help mentions --context.",
+        description="Smoke-checks that llm-bench-cli exists and its --help mentions --context.",
     )
     parser.add_argument("build_dir", help="e.g. build")
     args = parser.parse_args()
@@ -23,8 +23,8 @@ def main() -> int:
     build_dir = Path(args.build_dir)
 
     candidates = [
-        build_dir / "bin" / "arm-llm-bench-cli",
-        build_dir / "bin" / "arm-llm-bench-cli.exe",
+        build_dir / "bin" / "llm-bench-cli",
+        build_dir / "bin" / "llm-bench-cli.exe",
     ]
     bench_bin = next((p for p in candidates if p.is_file()), None)
     if bench_bin is None:
