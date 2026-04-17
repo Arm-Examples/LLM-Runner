@@ -7,16 +7,12 @@
 include_guard(GLOBAL)
 include(configuration-options)
 
-find_package(
-    Python3 3.9...3.13
-    COMPONENTS Interpreter
-    REQUIRED)
+include(python-deps)
 
-if (NOT Python3_FOUND)
-    message(FATAL_ERROR "Required version of Python3 not found!")
-else()
-    message(STATUS "Python3 (v${Python3_VERSION}) found: ${Python3_EXECUTABLE}")
-endif()
+set(LLM_HF_HUB_PIP_PACKAGE "huggingface_hub")
+set(LLM_HF_HUB_PIP_CONSTRAINT ">=0.20.0")
+set(LLM_HF_HUB_PIP_SPEC "${LLM_HF_HUB_PIP_PACKAGE}${LLM_HF_HUB_PIP_CONSTRAINT}")
+llm_ensure_python_dependency("huggingface_hub" "${LLM_HF_HUB_PIP_SPEC}")
 
 # If the downloads directory doesn't exist, create one
 if (NOT EXISTS ${DOWNLOADS_DIR})
@@ -38,8 +34,8 @@ if (NOT ${lock_return_code} STREQUAL 0)
 endif()
 message(STATUS "${DOWNLOADS_DIR} locked; running downloads script...")
 
-# Hugging Face token from command line argument takes precedence
 if (DOWNLOAD_LLM_MODELS)
+    # Hugging Face token from command line argument takes precedence
     if(DEFINED HF_TOKEN AND NOT HF_TOKEN STREQUAL "")
         set(HF_TOKEN "${HF_TOKEN}" CACHE STRING "HF token" FORCE)
     elseif(DEFINED ENV{HF_TOKEN} AND NOT "$ENV{HF_TOKEN}" STREQUAL "")
