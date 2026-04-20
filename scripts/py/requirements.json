@@ -32,7 +32,7 @@
           "purpose": "To enable basic testing",
           "destination": "llama.cpp/qwen2vl-2b/qwen2vl-2b_Q4_0.gguf",
           "url": "https://huggingface.co/bartowski/Qwen2-VL-2B-Instruct-GGUF/resolve/main/Qwen2-VL-2B-Instruct-Q4_0.gguf?download=true",
-          "sha256sum": "5745685d2e607a82a0696c1118e56a2a1ae0901da450fd9cd4f161c6b62867d7"
+          "sha256sum": "4154d891fd4ea54ce368c52031588a50493fa4c118faefb0ac23a9bfbc36c098"
           }
       ]
     },
