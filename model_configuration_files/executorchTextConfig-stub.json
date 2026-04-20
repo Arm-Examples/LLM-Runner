@@ -1,0 +1,20 @@
+{
+    "chat": {
+        "systemPrompt": "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",
+        "applyDefaultChatTemplate": false,
+        "systemTemplate": "<|system|>%s<|end|>",
+        "userTemplate": "<|user|>%s<|end|><|assistant|>"
+    },
+    "model": {
+        "llmModelName": "executorch/placeholder-model.pte",
+        "isVision": false
+    },
+    "runtime": {
+        "batchSize": 256,
+        "numThreads": 4,
+        "contextSize": 2048
+    },
+    "stopWords": [
+        "endoftext"
+    ]
+}

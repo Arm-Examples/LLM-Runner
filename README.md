@@ -19,6 +19,7 @@
   - [onnxruntime genai options](#onnxruntime-genai-options)
   - [mediapipe options](#mediapipe-options)
   - [mnn options](#mnn-options)
+  - [executorch options](#executorch-options)
 - [Shared libraries build parameter](#shared-libraries-build-parameter)
 - [Known Issue with llama.cpp](#known-issue-with-llamacpp)
 - [llama cpp model](#llama-cpp-model)
@@ -46,7 +47,10 @@ that Arm® KleidiAI™ kernels have been integrated into.
 Currently, it supports [llama.cpp](https://github.com/ggml-org/llama.cpp),
 [mediapipe](https://github.com/google-ai-edge/mediapipe),
 [onnxruntime-genai](https://github.com/microsoft/onnxruntime-genai), and
-[MNN](https://github.com/alibaba/MNN) backends.
+[MNN](https://github.com/alibaba/MNN) backends. An
+[ExecuTorch](https://github.com/pytorch/executorch) backend scaffold is also
+available for build-time integration work; runtime inference support is not yet
+implemented.
 The backend library (selected at CMake configuration stage) is wrapped by this project's thin
 C++ layer that could be used directly for testing and evaluations.
 However, JNI bindings are also provided for developers targeting Android™ based applications.
@@ -130,6 +134,7 @@ Test project /home/user/llm/build
 | **onnxruntime-genai**  | `phi4-mini-instruct`                       | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)                                                                                                                                                                  |
 | **mediapipe**          | `gemma-2B`                                 | [Gemma](https://www.kaggle.com/models/google/gemma/license/consent)                                                                                                                                                                             |
 | **mnn**                | `qwen-2.5-VL`<br/>`llama-3.2-1B`           | [apache-2.0](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
+| **executorch**         | Scaffold only                              | n/a |
 
 
 ## Supported Platforms
@@ -171,7 +176,7 @@ Details of configurable build options are given below:
 
 Flag name | Default | Values                                                                                                   | Description                                                                                                                               |
 |---|---|----------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| LLM_FRAMEWORK | llama.cpp | llama.cpp / mediapipe / onnxruntime-genai / mnn                                                          | Specifies the backend framework to be used.                                                                                               |
+| LLM_FRAMEWORK | llama.cpp | llama.cpp / mediapipe / onnxruntime-genai / mnn / executorch                                             | Specifies the backend framework to be used.                                                                                               |
 | BUILD_DEBUG | OFF | ON/OFF                                                                                                   | If set to ON a debug build is configured.                                                                                                 |
 | ENABLE_STREAMLINE | OFF | ON/OFF                                                                                                   | Enables Arm Streamline timeline annotations for analyzing LLM initialization, encode, decode, and control-path performance.               |
 | BUILD_LLM_TESTING | ON | ON/OFF                                                                                                   | Builds the project's functional tests when ON.                                                                                            |
@@ -251,6 +256,13 @@ For customising MNN framework , following parameters can be used:
 > **KleidiAI™ NOTE**: :
 Although MNN can be built with USE_KLEIDIAI defined, the current MNN implementation does not fully enable KleidiAI™ optimizations at runtime.
 This limitation is due to the current MNN runtime initialization logic and will be resolved once full support is implemented upstream in MNN.
+
+#### executorch options
+
+The current `executorch` backend is a build-time scaffold only. It introduces
+`LLM_FRAMEWORK=executorch`, backend selection wiring, a local wrapper target,
+and a placeholder model configuration file without fetching or linking the
+actual ExecuTorch runtime yet.
 
 ### Shared libraries build parameter
 

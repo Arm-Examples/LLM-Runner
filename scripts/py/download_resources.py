@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+# SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--llm-framework",
         help="LLM framework from which the model will be downloaded.",
-        choices=["llama.cpp", "mediapipe", "onnxruntime-genai", "mnn"],
+        choices=["llama.cpp", "mediapipe", "onnxruntime-genai", "mnn", "executorch"],
         default=default_llm_framework)
 
     args = parser.parse_args()

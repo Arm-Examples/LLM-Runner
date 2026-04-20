@@ -203,6 +203,8 @@
         "sha256sum": "176452e0eef32e7cd477e5609160278f3f5cbfeeb46d2cb2d37bd631af1b0bea"
         }
       ]
+    },
+    "executorch" : {
     }
   },
   "test_utils":

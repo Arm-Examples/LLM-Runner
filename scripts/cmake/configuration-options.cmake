@@ -14,7 +14,8 @@ set(CACHE LLM_FRAMEWORK PROPERTY STRINGS
     "llama.cpp"
     "onnxruntime-genai"
     "mediapipe"
-    "mnn")
+    "mnn"
+    "executorch")
 
 set(DOWNLOADS_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/resources_downloaded
     CACHE STRING
