@@ -182,7 +182,7 @@ Flag name | Default | Values                                                    
 | CPU_ARCH | Not defined | Armv8.2_1, Armv8.2_2, Armv8.2_3, Armv8.2_4, Armv8.6_1, Armv9.2_1 | Sets the target ISA architecture (AArch64). Choose a nosve preset to keep SVE disabled when LLM_FRAMEWORK=llama.cpp (issue affects aarch64 only). |
 | GGML_METAL | OFF         | ON/OFF                                                           | macOS specific. Enables Apple Metal backend in ggml for GPU acceleration (Apple Silicon only).                                        |
 | GGML_BLAS  | OFF         | ON/OFF                                                           | macOS specific. Enables Accelerate/BLAS backend in ggml for CPU-optimized linear algebra kernels.                                     |
-
+| DOWNLOAD_LLM_MODELS | ON | ON/OFF                                                                                                   | Download LLM models for the selected `LLM_FRAMEWORK` during configuration.
 - `DOWNLOADS_LOCK_TIMEOUT`: A timeout value in seconds indicating how much time a lock should be tried for
   when downloading resources. This is a one-time download that CMake configuration will initiate unless it
   has been run by the user directly or another prior CMake configuration. The lock prevents multiple CMake

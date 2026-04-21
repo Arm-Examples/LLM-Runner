@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+# SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -12,7 +12,6 @@ import logging
 import sys
 import os
 import netrc
-
 from argparse import ArgumentParser
 
 
@@ -44,7 +43,7 @@ def get_huggingface_token():
 
     return None
 
-def download_file(url: str, dest: Path,huggingface_token:str =None) -> None:
+def download_file(url: str, dest: Path, huggingface_token: str = None) -> None:
     """
     Download a file
 
@@ -103,7 +102,8 @@ def validate_download(filepath, expected_hash):
         return False
 
 
-def download_resources(resources_file: Path, download_dir: Path,huggingface_token:str=None) -> None:
+def download_resources(resources_file: Path, download_dir: Path, huggingface_token: str = None,
+                       download_models: bool = True) -> None:
     """
     Downloads resource files as per the resource file json into the
     download dir.
@@ -111,6 +111,8 @@ def download_resources(resources_file: Path, download_dir: Path,huggingface_toke
     @param resources_file:  Path to the resource file (JSON) to read URLs from
     @param download_dir:    Download location (parent directory) where files should
                             be placed.
+    @param huggingface_token: Optional Hugging Face token for gated model downloads.
+    @param download_models: Whether to download models from the requirements file.
     """
     download_dir.mkdir(exist_ok=True)
     with (open(resources_file, encoding="utf8") as f):
@@ -121,6 +123,9 @@ def download_resources(resources_file: Path, download_dir: Path,huggingface_toke
             resource_dir.mkdir(exist_ok=True)
 
             if resource_type == "models":
+                if not download_models:
+                    logging.info("Skipping model downloads (download_models=False)")
+                    continue
                 model_resources = resource_list[resource_type][llm_framework]
                 for model_name in model_resources:
                     model_dir = Path(resource_dir / llm_framework / model_name)
@@ -176,17 +181,28 @@ if __name__ == "__main__":
         "--llm-framework",
         help="LLM framework from which the model will be downloaded.",
         choices=["llama.cpp", "mediapipe", "onnxruntime-genai", "mnn"],
-        default=default_llm_framework)
-
+        default=None)
+    parser.add_argument(
+        "--download-models",
+        help="Whether to download LLM models (ON/OFF).",
+        choices=["ON", "OFF"],
+        default="ON")
     args = parser.parse_args()
     req_file = Path(args.requirements_file)
     download_dir = Path(args.download_dir)
     llm_framework = args.llm_framework
-    hf_token = get_huggingface_token()
-    if not hf_token:
-        logging.error("HF_TOKEN is not set in the environment")
+    download_models = args.download_models == "ON"
+    hf_token = None
+    if download_models:
+        hf_token = get_huggingface_token()
+        if not hf_token:
+            logging.error("HF_TOKEN is not set in the environment")
 
     if not req_file.exists():
         raise FileNotFoundError(f'{req_file} does not exist')
 
-    download_resources(req_file, download_dir,hf_token)
+    download_resources(
+        req_file,
+        download_dir,
+        hf_token,
+        download_models)

@@ -30,3 +30,5 @@ option(BUILD_LLM_TESTING  "Build unit tests"                  ON)
 option(BUILD_JNI_LIB      "Build JNI lib"                     ON)
 option(LLAMA_BUILD_COMMON "Include LLAMA common"              ON)
 option(ENABLE_STREAMLINE  "Enable Arm Streamline annotations" OFF)
+
+option(DOWNLOAD_LLM_MODELS "Download LLM models during configure" ON)

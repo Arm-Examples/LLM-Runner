@@ -40,6 +40,15 @@ elseif (${LLM_FRAMEWORK} STREQUAL "mnn")
             CACHE STRING "Path to the MNN config files")
 endif ()
 
+if (NOT DOWNLOAD_LLM_MODELS)
+    if (NOT EXISTS "${TEST_MODELS_DIR}/${LLM_FRAMEWORK}")
+        message(FATAL_ERROR
+            "Model downloads are disabled (DOWNLOAD_LLM_MODELS=OFF) but no models were found under "
+            "${TEST_MODELS_DIR}/${LLM_FRAMEWORK}. Reconfigure without -DDOWNLOAD_LLM_MODELS=OFF or "
+            "disable BUILD_LLM_TESTING.")
+    endif()
+endif()
+
 # Download Catch and add to the build.
 include(find-catch)
 
