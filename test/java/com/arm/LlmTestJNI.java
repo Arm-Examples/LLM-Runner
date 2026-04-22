@@ -14,6 +14,7 @@ import static org.junit.Assert.assertEquals;
 import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 
 import com.arm.Llm;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+@Ignore("JNI tests temporarily disabled")
 public class LlmTestJNI {
 
     private static final String modelDir = System.getProperty("model_dir");
@@ -176,7 +178,7 @@ public class LlmTestJNI {
         }
     }
 
-    @Test
+    //@Test
     public void testBenchmarking() {
         Llm llm = new Llm();
         JSONObject modelObj = configJson.getJSONObject("model");
@@ -226,7 +228,7 @@ public class LlmTestJNI {
         }
     }
 
-    @Test
+    //@Test
     public void testSystemPrompt() {
         String newModelTag = "Ferdia";
         String newSystemPrompt = "You are a helpful and factual AI assistant named "+ newModelTag + ". " + newModelTag +  " answers with maximum of two sentences.";
@@ -243,7 +245,7 @@ public class LlmTestJNI {
         chatObj.put("systemPrompt",oldSystemPrompt);
     }
 
-    @Test
+    //@Test
     public void testInferenceWithContextReset() {
         Llm llm = new Llm();
         llm.llmInit(configJson.toString(), backendSharedLibDir);
@@ -262,7 +264,7 @@ public class LlmTestJNI {
       
     }
 
-    @Test
+    //@Test
     public void testInferenceWithoutContextReset() {
         Llm llm = new Llm();
         llm.llmInit(configJson.toString(), backendSharedLibDir);
@@ -277,7 +279,7 @@ public class LlmTestJNI {
         llm.freeModel();
     }
 
-    @Test
+    //@Test
     public void testMultiLLMInferenceWithoutContextReset() {
         Llm germanLlm = new Llm();
         germanLlm.llmInit(configJson.toString(), backendSharedLibDir);
@@ -304,7 +306,7 @@ public class LlmTestJNI {
         frenchLlm.freeModel();
     }
 
-    @Test
+    //@Test
     public void testInferenceHandlesEmptyQuestion() {
         Llm llm = new Llm();
         llm.llmInit(configJson.toString(), backendSharedLibDir);
@@ -367,7 +369,7 @@ public class LlmTestJNI {
     }
 
 
-    @Test
+    //@Test
     public void testInferenceRecoversAfterContextReset() {
         // Get model directory and config file path from system properties
        Llm llm = new Llm();

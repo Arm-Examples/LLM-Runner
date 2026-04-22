@@ -40,7 +40,7 @@ elseif (${LLM_FRAMEWORK} STREQUAL "mnn")
             CACHE STRING "Path to the MNN config files")
 elseif (${LLM_FRAMEWORK} STREQUAL "executorch")
     set(CONFIG_FILE_NAME
-            "executorchTextConfig-stub.json"
+            "executorchTextConfig-llama-3.2-1B.json"
             CACHE STRING "Path to the ExecuTorch scaffold config file")
 else()
     message(FATAL_ERROR "${LLM_FRAMEWORK} is currently not supported :(")

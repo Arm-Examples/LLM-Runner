@@ -2,11 +2,11 @@
     "chat": {
         "systemPrompt": "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",
         "applyDefaultChatTemplate": false,
-        "systemTemplate": "<|system|>%s<|end|>",
-        "userTemplate": "<|user|>%s<|end|><|assistant|>"
+        "systemTemplate" : "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n%s<|eot_id|>\n",
+        "userTemplate"   : "<|start_header_id|>user<|end_header_id|>\n%s<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n"
     },
     "model": {
-        "llmModelName": "executorch/placeholder-model.pte",
+        "llmModelName": "executorch/llama-3.2-1b/Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8.pte",
         "isVision": false
     },
     "runtime": {

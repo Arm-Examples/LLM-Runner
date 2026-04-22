@@ -134,7 +134,7 @@ Test project /home/user/llm/build
 | **onnxruntime-genai**  | `phi4-mini-instruct`                       | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)                                                                                                                                                                  |
 | **mediapipe**          | `gemma-2B`                                 | [Gemma](https://www.kaggle.com/models/google/gemma/license/consent)                                                                                                                                                                             |
 | **mnn**                | `qwen-2.5-VL`<br/>`llama-3.2-1B`           | [apache-2.0](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
-| **executorch**         | Scaffold only                              | n/a |
+| **executorch**         | `llama-3.2-1B`                             | [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)|
 
 
 ## Supported Platforms
@@ -259,10 +259,50 @@ This limitation is due to the current MNN runtime initialization logic and will 
 
 #### executorch options
 
-The current `executorch` backend is a build-time scaffold only. It introduces
-`LLM_FRAMEWORK=executorch`, backend selection wiring, a local wrapper target,
-and a placeholder model configuration file without fetching or linking the
-actual ExecuTorch runtime yet.
+The `executorch` backend now pulls in the upstream ExecuTorch runtime as part
+of the project build and links the wrapper against the upstream runtime,
+backend, extension, and kernel targets.
+
+- `EXECUTORCH_SRC_DIR`: Source directory path that will be populated by CMake.
+- `EXECUTORCH_GIT_URL`: Git URL to clone the sources from.
+- `EXECUTORCH_GIT_TAG`: Git tag / commit SHA for checkout.
+- `EXECUTORCH_BUILD_PRESET_FILE`: Upstream preset file used to enable
+  LLM-oriented runtime features. Defaults to the upstream `llm.cmake` preset.
+
+The backend config explicitly enables the upstream XNNPACK backend together
+with the LLM/data-loader/module/tensor/runner utility extensions required for
+text-path bring-up, and it explicitly disables `pybind` because only the C++
+runtime integration is needed in this phase.
+
+> **NOTE**: This repository is currently pinned to ExecuTorch `v1.2.0`
+for the runtime integration work.
+
+> **NOTE**: ExecuTorch runs Python code generation during CMake configure.
+The Python interpreter used for configure must have the dependencies listed in
+`scripts/py/requirements-executorch.txt`, including a compatible PyTorch
+installation that provides the `torchgen` module. The requirements file adds
+the PyTorch CPU wheel index so `torch==2.11.0+cpu` resolves as part of the
+same `pip install -r ...` step.
+
+Recommended setup:
+
+```sh
+python3 -m venv .venv-executorch
+source .venv-executorch/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r scripts/py/requirements-executorch.txt
+python -c "import yaml, torch, torchgen"
+cmake --preset=native -B build \
+  -DLLM_FRAMEWORK=executorch \
+  -DPython3_EXECUTABLE=$(which python)
+```
+
+If you already have a Python environment with those packages installed, you can
+verify it first with `python -c "import yaml, torch, torchgen"`. If that succeeds,
+skip the virtual environment creation step and pass that interpreter to CMake
+with `-DPython3_EXECUTABLE=/path/to/python`. If the import check fails, go
+back to the recommended flow above to create a virtual environment and install
+`scripts/py/requirements-executorch.txt`.
 
 ### Shared libraries build parameter
 

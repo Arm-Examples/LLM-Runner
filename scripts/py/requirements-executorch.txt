@@ -1,0 +1,11 @@
+#
+# SPDX-FileCopyrightText: Copyright 2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+pyyaml==6.0.3
+typing_extensions==4.15.0
+torch==2.11.0+cpu ; platform_system == "Linux"
+torch==2.11.0 ; platform_system == "Darwin"
