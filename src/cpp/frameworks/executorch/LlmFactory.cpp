@@ -10,7 +10,7 @@
 std::unique_ptr<LLM::LLMImpl> LLMFactory::CreateLLMImpl(const LlmConfig& config)
 {
     if (config.GetConfigBool(LlmConfig::ConfigParam::IsVision)) {
-        THROW_ERROR("ExecuTorch backend skeleton only supports text models");
+        THROW_ERROR("ExecuTorch backend only supports text models");
     }
 
     return std::make_unique<LLM::LLMImpl>();

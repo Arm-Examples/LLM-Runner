@@ -46,11 +46,9 @@ Provides a single API (Java & C++) to various LLM frameworks
 that Arm® KleidiAI™ kernels have been integrated into.
 Currently, it supports [llama.cpp](https://github.com/ggml-org/llama.cpp),
 [mediapipe](https://github.com/google-ai-edge/mediapipe),
-[onnxruntime-genai](https://github.com/microsoft/onnxruntime-genai), and
-[MNN](https://github.com/alibaba/MNN) backends. An
-[ExecuTorch](https://github.com/pytorch/executorch) backend scaffold is also
-available for build-time integration work; runtime inference support is not yet
-implemented.
+[onnxruntime-genai](https://github.com/microsoft/onnxruntime-genai),
+[MNN](https://github.com/alibaba/MNN), and
+[ExecuTorch](https://github.com/pytorch/executorch) text backends.
 The backend library (selected at CMake configuration stage) is wrapped by this project's thin
 C++ layer that could be used directly for testing and evaluations.
 However, JNI bindings are also provided for developers targeting Android™ based applications.
@@ -477,6 +475,7 @@ The Arm LLM Benchmark tool (llm-bench-cli) is a framework-agnostic, standalone e
 - `onnxruntime-genai`
 - `MNN`
 - `mediapipe`
+- `ExecuTorch`
 
 Instead of writing your own prompts or relying on framework-specific benchmarking tools, `llm-bench-cli` provides a unified benchmarking pipeline. It automatically detects the backend specified in the LLM configuration file and benchmarks it consistently. The tool repeatedly runs the LLM prompt-processing and token-generation  operations and reports timing and throughput metrics in a standardized format.
 
@@ -502,6 +501,13 @@ Instead of writing your own prompts or relying on framework-specific benchmarkin
     [ --json-output <path>            | -J <path> ] \
     [ --warmup <warmup_iterations>    | -w <warmup_iterations> ]
 ```
+
+The `--model` path must match the model layout expected by the selected backend. Use the
+exact model file for backends that load a single artifact, such as `llama.cpp` (`.gguf`)
+and ExecuTorch (`.pte`). Use the model package directory for backends that load several
+files from one folder, such as `onnxruntime-genai` and `MNN`. For ExecuTorch, place
+the tokenizer file in the same directory as the `.pte` model file. The loader searches
+for `tokenizer.model`, `tokenizer.json`, or `tokenizer.bin` in that directory.
 
 > **NOTE**: On-device execution requires that `llm-bench-cli` and its backend shared libraries reside in the same directory. Builds using `GGML_OPENMP=ON` additionally require `libomp.so` to be placed in that directory as well.
 

@@ -55,6 +55,13 @@ Example:
 ./build/bin/llm-bench-cli -m resources_downloaded/models/llama.cpp/llama-3.2-1b/Llama-3.2-1B-Instruct-Q4_0.gguf -i 128 -o 64 -c 2048 -t 1 -n 3 -w 1
 ```
 
+The `-m`/`--model` argument is backend-specific. For `llama.cpp` and ExecuTorch, pass the
+exact model artifact path, for example a `.gguf` or `.pte` file. For `onnxruntime-genai`
+and `MNN`, pass the model package directory that contains the backend's model data,
+configuration, tokenizer, and related files. For ExecuTorch, place the tokenizer file in
+the same directory as the `.pte` model file. The loader searches for `tokenizer.model`,
+`tokenizer.json`, or `tokenizer.bin` in that directory.
+
 For estimate of wall-clock time run llm-bench-cli for 3 measured iterations (with 1 warmup), benchmarking encode/decode performance for the specified model and token counts, 
  /usr/bin/time -v reports the process’s wall time and resource usage.
 

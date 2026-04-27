@@ -215,12 +215,6 @@ static std::string ConfigSummary(const LlmConfig& config)
     return oss.str();
 }
 
-// Placeholder: remove this function once the ExecuTorch text path is implemented.
-static bool IsExecuTorchScaffold()
-{
-    return LLM::GetFrameworkType() == "executorch";
-}
-
 /**
  * Ensure correct LLM implementation is selected based on supported modalities.
  */
@@ -247,10 +241,6 @@ TEST_CASE("LLM Factory: Validate supported input modalities")
 TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
 {
     LlmConfig configTest = SetupTestConfig();
-    if (IsExecuTorchScaffold()) {
-        // Placeholder: remove this skip once the ExecuTorch text path is implemented.
-        SKIP("ExecuTorch backend is scaffold-only in this ticket; runtime inference tests are deferred");
-    }
 
     LLM llm{};
     std::string question = "What is the capital of France?" ;

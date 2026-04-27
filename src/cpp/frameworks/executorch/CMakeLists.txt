@@ -47,6 +47,17 @@ set(EXECUTORCH_XNNPACK_ENABLE_KLEIDI ${USE_KLEIDIAI})
 # This integration only targets the native runtime and C++ runner libraries.
 set(EXECUTORCH_BUILD_PYBIND OFF)
 
+if (LLM_LOG_LEVEL STREQUAL "DEBUG")
+    set(EXECUTORCH_MAPPED_LOG_LEVEL Debug)
+elseif(LLM_LOG_LEVEL STREQUAL "INFO")
+    set(EXECUTORCH_MAPPED_LOG_LEVEL Info)
+else()
+    # ExecuTorch does not expose a Warn level.
+    set(EXECUTORCH_MAPPED_LOG_LEVEL Error)
+endif()
+set(EXECUTORCH_LOG_LEVEL ${EXECUTORCH_MAPPED_LOG_LEVEL}
+        CACHE STRING "ExecuTorch log level mapped from LLM_LOG_LEVEL" FORCE)
+
 execute_process(
     COMMAND "${Python3_EXECUTABLE}" -c "import yaml, torchgen"
     RESULT_VARIABLE EXECUTORCH_PYTHON_DEPS_RESULT
@@ -89,7 +100,8 @@ set(EXECUTORCH_REQUIRED_TARGETS
     executorch::backends
     executorch::extensions
     extension_llm_runner
-    extension_runner_util)
+    extension_runner_util
+    extension_threadpool)
 
 set(EXECUTORCH_RUNTIME_KERNEL_TARGETS
     quantized_ops_lib)
@@ -138,4 +150,5 @@ target_include_directories(llm-framework PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(llm-framework PUBLIC
-    ${REQUIRED_TARGETS})
+    ${REQUIRED_TARGETS}
+    ${EXECUTORCH_RUNTIME_WHOLE_ARCHIVE_TARGETS})
