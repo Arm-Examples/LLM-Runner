@@ -1,242 +1,291 @@
 {
   "models": {
-    "llama.cpp" : {
-      "phi-2" : [
+    "llama.cpp": {
+      "phi-2": [
         {
-        "name": "phi-2 model",
-        "purpose": "To enable basic testing",
-        "destination": "llama.cpp/phi-2/phi2_Q4_model.gguf",
-        "url": "https://huggingface.co/ggml-org/models/resolve/main/phi-2/ggml-model-q4_0.gguf?download=true",
-        "sha256sum": "fd506d24a4bee6997a566b02b65715af5cadb433c6a3a47a74b467badc5727ca"
+          "name": "phi-2 model",
+          "purpose": "To enable basic testing",
+          "destination": "llama.cpp/phi-2/phi2_Q4_model.gguf",
+          "repo_id": "TheBloke/phi-2-GGUF",
+          "filename": "phi-2.Q4_0.gguf",
+          "revision": "main",
+          "sha256sum": "a6f246baa29a776acbc9a1638088c33d8f7b6a044cc7dd09fb4b0374e1582ae0"
         }
       ],
-      "llama-3.2-1b" : [
-         {
+      "llama-3.2-1b": [
+        {
           "name": "Llama-3.2-1B",
           "purpose": "To enable basic testing",
           "destination": "llama.cpp/llama-3.2-1b/Llama-3.2-1B-Instruct-Q4_0.gguf",
-          "url": "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_0.gguf?download=true",
+          "repo_id": "bartowski/Llama-3.2-1B-Instruct-GGUF",
+          "filename": "Llama-3.2-1B-Instruct-Q4_0.gguf",
+          "revision": "main",
           "sha256sum": "fa0390e7c043f89ae1847bd6682d748041a99d4ef3de0e0b27d33b6af97a8be8"
         }
       ],
-      "qwen2vl-2b" : [
+      "qwen2vl-2b": [
         {
-        "name": "qwen mmproj model",
-        "purpose": "To enable basic testing",
-        "destination": "llama.cpp/qwen2vl-2b/qwen2vl-2b-F16_proj.gguf",
-        "url": "https://huggingface.co/bartowski/Qwen2-VL-2B-Instruct-GGUF/resolve/main/mmproj-Qwen2-VL-2B-Instruct-f16.gguf?download=true",
-        "sha256sum": "05cc3ae461a7b6aa4023312ccab549ecab77cf8677efee04f049fcbab55b8bc3"
+          "name": "qwen mmproj model",
+          "purpose": "To enable basic testing",
+          "destination": "llama.cpp/qwen2vl-2b/qwen2vl-2b-F16_proj.gguf",
+          "repo_id": "bartowski/Qwen2-VL-2B-Instruct-GGUF",
+          "filename": "mmproj-Qwen2-VL-2B-Instruct-f16.gguf",
+          "revision": "main",
+          "sha256sum": "05cc3ae461a7b6aa4023312ccab549ecab77cf8677efee04f049fcbab55b8bc3"
         },
         {
           "name": "qwen model",
           "purpose": "To enable basic testing",
           "destination": "llama.cpp/qwen2vl-2b/qwen2vl-2b_Q4_0.gguf",
-          "url": "https://huggingface.co/bartowski/Qwen2-VL-2B-Instruct-GGUF/resolve/main/Qwen2-VL-2B-Instruct-Q4_0.gguf?download=true",
+          "repo_id": "bartowski/Qwen2-VL-2B-Instruct-GGUF",
+          "filename": "Qwen2-VL-2B-Instruct-Q4_0.gguf",
           "sha256sum": "4154d891fd4ea54ce368c52031588a50493fa4c118faefb0ac23a9bfbc36c098"
           }
       ]
     },
     "mnn": {
-      "qwen25vl-3b" : [
+      "qwen25vl-3b": [
         {
-        "name": "config json",
-        "purpose": "Model configuration file",
-        "destination": "mnn/qwen25vl-3b/config.json",
-        "url": "https://huggingface.co/taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN/resolve/main/config.json",
-        "sha256sum": "8183da75c6c7bda69a3f637ec1254dc6b3b3e0b6bb3cb9f98b12f8a7b1298815"
+          "name": "config json",
+          "purpose": "Model configuration file",
+          "destination": "mnn/qwen25vl-3b/config.json",
+          "repo_id": "taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN",
+          "filename": "config.json",
+          "revision": "main",
+          "sha256sum": "8183da75c6c7bda69a3f637ec1254dc6b3b3e0b6bb3cb9f98b12f8a7b1298815"
         },
         {
-        "name": "embeddings",
-        "purpose": "Embeddings bin.",
-        "destination": "mnn/qwen25vl-3b/embeddings_bf16.bin",
-        "url": "https://huggingface.co/taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN/resolve/main/embeddings_bf16.bin",
-        "sha256sum": "b84907567aa829c6f24cadbdeb68c3c44d25fc0a8be8e917fd603cb64f72810d"
+          "name": "embeddings",
+          "purpose": "Embeddings bin.",
+          "destination": "mnn/qwen25vl-3b/embeddings_bf16.bin",
+          "repo_id": "taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN",
+          "filename": "embeddings_bf16.bin",
+          "revision": "main",
+          "sha256sum": "b84907567aa829c6f24cadbdeb68c3c44d25fc0a8be8e917fd603cb64f72810d"
         },
         {
-        "name": "mnn llm model",
-        "purpose": "LLM model",
-        "destination": "mnn/qwen25vl-3b/llm.mnn",
-        "url": "https://huggingface.co/taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN/resolve/main/llm.mnn",
-        "sha256sum": "860ac54071174f8d2961c3258224fe315dcf2bae78344005cdddee21e7d80aa3"
+          "name": "mnn llm model",
+          "purpose": "LLM model",
+          "destination": "mnn/qwen25vl-3b/llm.mnn",
+          "repo_id": "taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN",
+          "filename": "llm.mnn",
+          "revision": "main",
+          "sha256sum": "860ac54071174f8d2961c3258224fe315dcf2bae78344005cdddee21e7d80aa3"
         },
         {
-        "name": "mnn llm model json",
-        "purpose": "LLM model json",
-        "destination": "mnn/qwen25vl-3b/llm.mnn.json",
-        "url": "https://huggingface.co/taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN/resolve/main/llm.mnn.json",
-        "sha256sum": "04ae802933b4ff8e58c17b1246e8b64abd3267fb16c7b6642028771e87f88fcd"
+          "name": "mnn llm model json",
+          "purpose": "LLM model json",
+          "destination": "mnn/qwen25vl-3b/llm.mnn.json",
+          "repo_id": "taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN",
+          "filename": "llm.mnn.json",
+          "revision": "main",
+          "sha256sum": "04ae802933b4ff8e58c17b1246e8b64abd3267fb16c7b6642028771e87f88fcd"
         },
         {
-        "name": "mnn llm model weight",
-        "purpose": "LLM model weight",
-        "destination": "mnn/qwen25vl-3b/llm.mnn.weight",
-        "url": "https://huggingface.co/taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN/resolve/main/llm.mnn.weight",
-        "sha256sum": "7326f768b816b5af71ad3a995dc1e321e07f85db487394e1430e5f07fd9627c6"
+          "name": "mnn llm model weight",
+          "purpose": "LLM model weight",
+          "destination": "mnn/qwen25vl-3b/llm.mnn.weight",
+          "repo_id": "taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN",
+          "filename": "llm.mnn.weight",
+          "revision": "main",
+          "sha256sum": "7326f768b816b5af71ad3a995dc1e321e07f85db487394e1430e5f07fd9627c6"
         },
         {
-        "name": "llm config",
-        "purpose": "llm config json",
-        "destination": "mnn/qwen25vl-3b/llm_config.json",
-        "url": "https://huggingface.co/taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN/resolve/main/llm_config.json",
-        "sha256sum": "7326f768b816b5af71ad3a995dc1e321e07f85db487394e1430e5f07fd9627c6"
+          "name": "llm config",
+          "purpose": "llm config json",
+          "destination": "mnn/qwen25vl-3b/llm_config.json",
+          "repo_id": "taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN",
+          "filename": "llm_config.json",
+          "revision": "main",
+          "sha256sum": "00492942d0603aa638ec263341359f33feeb400e36ca96d11fe1dde1b9f79e77"
         },
         {
-        "name": "tokenizer",
-        "purpose": "tokenizer file",
-        "destination": "mnn/qwen25vl-3b/tokenizer.txt",
-        "url": "https://huggingface.co/taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN/resolve/main/tokenizer.txt",
-        "sha256sum": "b86f1298a0d6a1b2f312946c2f674f883f1d134ccabc79c42dd4c6b5beadf37b"
+          "name": "tokenizer",
+          "purpose": "tokenizer file",
+          "destination": "mnn/qwen25vl-3b/tokenizer.txt",
+          "repo_id": "taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN",
+          "filename": "tokenizer.txt",
+          "revision": "main",
+          "sha256sum": "b86f1298a0d6a1b2f312946c2f674f883f1d134ccabc79c42dd4c6b5beadf37b"
         },
         {
-        "name": "vision model file",
-        "purpose": "vision model mnn",
-        "destination": "mnn/qwen25vl-3b/visual.mnn",
-        "url": "https://huggingface.co/taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN/resolve/main/visual.mnn",
-        "sha256sum": "1caaa38f5c8e0073f7bbf29e496ccfbeda1b32df332652a031100d0ea306dd7f"
+          "name": "vision model file",
+          "purpose": "vision model mnn",
+          "destination": "mnn/qwen25vl-3b/visual.mnn",
+          "repo_id": "taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN",
+          "filename": "visual.mnn",
+          "revision": "main",
+          "sha256sum": "1caaa38f5c8e0073f7bbf29e496ccfbeda1b32df332652a031100d0ea306dd7f"
         },
         {
-        "name": "vision model weights",
-        "purpose": "vision model weights mnn",
-        "destination": "mnn/qwen25vl-3b/visual.mnn.weight",
-        "url": "https://huggingface.co/taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN/resolve/main/visual.mnn.weight",
-        "sha256sum": "1caaa38f5c8e0073f7bbf29e496ccfbeda1b32df332652a031100d0ea306dd7f"
+          "name": "vision model weights",
+          "purpose": "vision model weights mnn",
+          "destination": "mnn/qwen25vl-3b/visual.mnn.weight",
+          "repo_id": "taobao-mnn/Qwen2.5-VL-3B-Instruct-MNN",
+          "filename": "visual.mnn.weight",
+          "revision": "main",
+          "sha256sum": "617b17ee3431529b4c7f75be2b8028e7ff21da32821e83c181139e8a8af25f81"
         }
       ],
-      "llama-3.2-1b" : [
+      "llama-3.2-1b": [
         {
-        "name": "mnn config",
-        "purpose": "llm config json",
-        "destination": "mnn/llama-3.2-1b/config.json",
-        "url": "https://huggingface.co/taobao-mnn/Llama-3.2-1B-Instruct-MNN/resolve/main/config.json",
-        "sha256sum": "1caaa38f5c8e0073f7bbf29e496ccfbeda1b32df332652a031100d0ea306dd7f"
+          "name": "mnn config",
+          "purpose": "llm config json",
+          "destination": "mnn/llama-3.2-1b/config.json",
+          "repo_id": "taobao-mnn/Llama-3.2-1B-Instruct-MNN",
+          "filename": "config.json",
+          "revision": "main",
+          "sha256sum": "7636b063425bdbc0e2e429cb23af7f594b5ba145bab2045dfda852416d9285de"
         },
         {
-        "name": "embeddings",
-        "purpose": "embeddings",
-        "destination": "mnn/llama-3.2-1b/embeddings_bf16.bin",
-        "url": "https://huggingface.co/taobao-mnn/Llama-3.2-1B-Instruct-MNN/resolve/main/embeddings_bf16.bin",
-        "sha256sum": "b111063841df6851fa28395ca43f6570c81486a16d4830d0026cb62cf14a7b5d"
+          "name": "embeddings",
+          "purpose": "embeddings",
+          "destination": "mnn/llama-3.2-1b/embeddings_bf16.bin",
+          "repo_id": "taobao-mnn/Llama-3.2-1B-Instruct-MNN",
+          "filename": "embeddings_bf16.bin",
+          "revision": "main",
+          "sha256sum": "b111063841df6851fa28395ca43f6570c81486a16d4830d0026cb62cf14a7b5d"
         },
         {
-        "name": "llm mnn",
-        "purpose": "llm mnn file",
-        "destination": "mnn/llama-3.2-1b/llm.mnn",
-        "url": "https://huggingface.co/taobao-mnn/Llama-3.2-1B-Instruct-MNN/resolve/main/llm.mnn",
-        "sha256sum": "0c5dd8cf84cc7f8847ee89c3cb79994d472f18b101d878105331ef760a3f8395"
+          "name": "llm mnn",
+          "purpose": "llm mnn file",
+          "destination": "mnn/llama-3.2-1b/llm.mnn",
+          "repo_id": "taobao-mnn/Llama-3.2-1B-Instruct-MNN",
+          "filename": "llm.mnn",
+          "revision": "main",
+          "sha256sum": "0c5dd8cf84cc7f8847ee89c3cb79994d472f18b101d878105331ef760a3f8395"
         },
         {
-        "name": "llm mnn json",
-        "purpose": "llm mnn json file",
-        "destination": "mnn/llama-3.2-1b/llm.mnn.json",
-        "url": "https://huggingface.co/taobao-mnn/Llama-3.2-1B-Instruct-MNN/resolve/main/llm.mnn.json",
-        "sha256sum": "fb0b4413cbeb4ae13574feb3d80809c337b959ccde0cb5b488efc94cd8096594"
+          "name": "llm mnn json",
+          "purpose": "llm mnn json file",
+          "destination": "mnn/llama-3.2-1b/llm.mnn.json",
+          "repo_id": "taobao-mnn/Llama-3.2-1B-Instruct-MNN",
+          "filename": "llm.mnn.json",
+          "revision": "main",
+          "sha256sum": "fb0b4413cbeb4ae13574feb3d80809c337b959ccde0cb5b488efc94cd8096594"
         },
         {
-        "name": "llm mnn weight",
-        "purpose": "llm mnn weight file",
-        "destination": "mnn/llama-3.2-1b/llm.mnn.weight",
-        "url": "https://huggingface.co/taobao-mnn/Llama-3.2-1B-Instruct-MNN/resolve/main/llm.mnn.weight",
-        "sha256sum": "8707bc88361804f088151e84896430a798ae1bc322d420727924068d3e94281f"
+          "name": "llm mnn weight",
+          "purpose": "llm mnn weight file",
+          "destination": "mnn/llama-3.2-1b/llm.mnn.weight",
+          "repo_id": "taobao-mnn/Llama-3.2-1B-Instruct-MNN",
+          "filename": "llm.mnn.weight",
+          "revision": "main",
+          "sha256sum": "8707bc88361804f088151e84896430a798ae1bc322d420727924068d3e94281f"
         },
         {
-        "name": "llm config json",
-        "purpose": "llm mnn config json",
-        "destination": "mnn/llama-3.2-1b/llm_config.json",
-        "url": "https://huggingface.co/taobao-mnn/Llama-3.2-1B-Instruct-MNN/resolve/main/llm_config.json",
-        "sha256sum": "5c194a45f43b093a02863937c372ee185bd5148d4b229d23c1362761f0cefb47"
+          "name": "llm config json",
+          "purpose": "llm mnn config json",
+          "destination": "mnn/llama-3.2-1b/llm_config.json",
+          "repo_id": "taobao-mnn/Llama-3.2-1B-Instruct-MNN",
+          "filename": "llm_config.json",
+          "revision": "main",
+          "sha256sum": "5c194a45f43b093a02863937c372ee185bd5148d4b229d23c1362761f0cefb47"
         },
         {
-        "name": "tokenizer",
-        "purpose": "tokenizer",
-        "destination": "mnn/llama-3.2-1b/tokenizer.txt",
-        "url": "https://huggingface.co/taobao-mnn/Llama-3.2-1B-Instruct-MNN/resolve/main/tokenizer.txt",
-        "sha256sum": "14fb9cbd31e982e92c332ed59d3cc6c300996c796838c20311f70488b4c9b235"
+          "name": "tokenizer",
+          "purpose": "tokenizer",
+          "destination": "mnn/llama-3.2-1b/tokenizer.txt",
+          "repo_id": "taobao-mnn/Llama-3.2-1B-Instruct-MNN",
+          "filename": "tokenizer.txt",
+          "revision": "main",
+          "sha256sum": "14fb9cbd31e982e92c332ed59d3cc6c300996c796838c20311f70488b4c9b235"
         }
       ]
     },
-    "onnxruntime-genai" : {
-      "phi-4-mini" : [
+    "onnxruntime-genai": {
+      "phi-4-mini": [
         {
-        "name": "genai config file",
-        "purpose": "Model configuration file",
-        "destination": "onnxruntime-genai/phi-4-mini/genai_config.json",
-        "url": "https://huggingface.co/microsoft/Phi-4-mini-instruct-onnx/resolve/main/cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/genai_config.json",
-        "sha256sum": "0fcfa1e663f2bc867f8dc62fae65dd0924f0a4d68b43d1234df742dd19171470"
+          "name": "genai config file",
+          "purpose": "Model configuration file",
+          "destination": "onnxruntime-genai/phi-4-mini/genai_config.json",
+          "repo_id": "microsoft/Phi-4-mini-instruct-onnx",
+          "filename": "cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/genai_config.json",
+          "revision": "main",
+          "sha256sum": "0fcfa1e663f2bc867f8dc62fae65dd0924f0a4d68b43d1234df742dd19171470"
         },
         {
-        "name": "phi-4-mini-instruct-onnx (CPU/mobile)",
-        "purpose": "ONNX model for basic testing",
-        "destination": "onnxruntime-genai/phi-4-mini/model.onnx",
-        "url": "https://huggingface.co/microsoft/Phi-4-mini-instruct-onnx/resolve/main/cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/model.onnx",
-        "sha256sum": "701aa5d185b6a782bc27104a990dd5b634fa507840b7c42f7ee6f1fb812d0b83"
+          "name": "phi-4-mini-instruct-onnx (CPU/mobile)",
+          "purpose": "ONNX model for basic testing",
+          "destination": "onnxruntime-genai/phi-4-mini/model.onnx",
+          "repo_id": "microsoft/Phi-4-mini-instruct-onnx",
+          "filename": "cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/model.onnx",
+          "revision": "main",
+          "sha256sum": "701aa5d185b6a782bc27104a990dd5b634fa507840b7c42f7ee6f1fb812d0b83"
         },
         {
-        "name": "phi-4-mini-instruct-onnx.data (CPU/mobile)",
-        "purpose": "ONNX model data for basic testing",
-        "destination": "onnxruntime-genai/phi-4-mini/model.onnx.data",
-        "url": "https://huggingface.co/microsoft/Phi-4-mini-instruct-onnx/resolve/main/cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/model.onnx.data",
-        "sha256sum": "cb0267fa60befa1a4ade8c98b6d32a3d67f51abbd307c7f793f132e8d9092131"
+          "name": "phi-4-mini-instruct-onnx.data (CPU/mobile)",
+          "purpose": "ONNX model data for basic testing",
+          "destination": "onnxruntime-genai/phi-4-mini/model.onnx.data",
+          "repo_id": "microsoft/Phi-4-mini-instruct-onnx",
+          "filename": "cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/model.onnx.data",
+          "revision": "main",
+          "sha256sum": "cb0267fa60befa1a4ade8c98b6d32a3d67f51abbd307c7f793f132e8d9092131"
         },
         {
-        "name": "tokenizer file",
-        "purpose": "Tokenizer for the model",
-        "destination": "onnxruntime-genai/phi-4-mini/tokenizer.json",
-        "url": "https://huggingface.co/microsoft/Phi-4-mini-instruct-onnx/resolve/main/cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/tokenizer.json",
-        "sha256sum": "382cc235b56c725945e149cc25f191da667c836655efd0857b004320e90e91ea"
+          "name": "tokenizer file",
+          "purpose": "Tokenizer for the model",
+          "destination": "onnxruntime-genai/phi-4-mini/tokenizer.json",
+          "repo_id": "microsoft/Phi-4-mini-instruct-onnx",
+          "filename": "cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/tokenizer.json",
+          "revision": "main",
+          "sha256sum": "382cc235b56c725945e149cc25f191da667c836655efd0857b004320e90e91ea"
         },
         {
-        "name": "tokenizer config file",
-        "purpose": "Tokenizer config for the model",
-        "destination": "onnxruntime-genai/phi-4-mini/tokenizer_config.json",
-        "url": "https://huggingface.co/microsoft/Phi-4-mini-instruct-onnx/resolve/main/cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/tokenizer_config.json",
-        "sha256sum": "c565326a315fbe62cda093a59d298828c8f3f823122661325f41f3ba577a7dec"
+          "name": "tokenizer config file",
+          "purpose": "Tokenizer config for the model",
+          "destination": "onnxruntime-genai/phi-4-mini/tokenizer_config.json",
+          "repo_id": "microsoft/Phi-4-mini-instruct-onnx",
+          "filename": "cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/tokenizer_config.json",
+          "revision": "main",
+          "sha256sum": "c565326a315fbe62cda093a59d298828c8f3f823122661325f41f3ba577a7dec"
         }
       ]
     },
-    "mediapipe" : {
-      "gemma-2b" : [
+    "mediapipe": {
+      "gemma-2b": [
         {
-        "name": "Gemma-2b-it (Cpu-Int4 model)",
-        "purpose": "tflite model for basic Mediapipe testing",
-        "destination": "mediapipe/gemma-2b/gemma-2b-it-cpu-int4.tflite",
-        "url": "https://huggingface.co/google/gemma-2b-it-tflite/resolve/main/gemma-2b-it-cpu-int4.bin?download=true",
-        "sha256sum": "176452e0eef32e7cd477e5609160278f3f5cbfeeb46d2cb2d37bd631af1b0bea"
+          "name": "Gemma-2b-it (Cpu-Int4 model)",
+          "purpose": "tflite model for basic Mediapipe testing",
+          "destination": "mediapipe/gemma-2b/gemma-2b-it-cpu-int4.tflite",
+          "repo_id": "google/gemma-2b-it-tflite",
+          "filename": "gemma-2b-it-cpu-int4.bin",
+          "revision": "main",
+          "sha256sum": "176452e0eef32e7cd477e5609160278f3f5cbfeeb46d2cb2d37bd631af1b0bea"
         }
       ]
     }
   },
-  "test_utils":
-  [
+  "test_utils": [
     {
-    "name": "hamcrest",
-    "purpose": "JUnit tests for validating the Java API",
-    "destination": "hamcrest-all-1.3.jar",
-    "url": "https://repo1.maven.org/maven2/org/hamcrest/hamcrest-all/1.3/hamcrest-all-1.3.jar",
-    "sha256sum": "4877670629ab96f34f5f90ab283125fcd9acb7e683e66319a68be6eb2cca60de"
+      "name": "hamcrest",
+      "purpose": "JUnit tests for validating the Java API",
+      "destination": "hamcrest-all-1.3.jar",
+      "url": "https://repo1.maven.org/maven2/org/hamcrest/hamcrest-all/1.3/hamcrest-all-1.3.jar",
+      "sha256sum": "4877670629ab96f34f5f90ab283125fcd9acb7e683e66319a68be6eb2cca60de"
     },
     {
-    "name": "JUnit",
-    "purpose": "JUnit tests for validating the Java API",
-    "destination": "junit-4.13.2.jar",
-    "url": "https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar",
-    "sha256sum": "8e495b634469d64fb8acfa3495a065cbacc8a0fff55ce1e31007be4c16dc57d3"
+      "name": "JUnit",
+      "purpose": "JUnit tests for validating the Java API",
+      "destination": "junit-4.13.2.jar",
+      "url": "https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar",
+      "sha256sum": "8e495b634469d64fb8acfa3495a065cbacc8a0fff55ce1e31007be4c16dc57d3"
     },
     {
-     "name": "Config Json",
-     "purpose": "Loading configs in JNI tests",
-     "destination":"json-20250107.jar",
-     "url": "https://repo1.maven.org/maven2/org/json/json/20250107/json-20250107.jar",
-     "sha256sum": "85d4c1ab192d3117fd02c7fff1ec0fe63ade45cf56def7fe950ef060cf06e99f"
+      "name": "Config Json",
+      "purpose": "Loading configs in JNI tests",
+      "destination": "json-20250107.jar",
+      "url": "https://repo1.maven.org/maven2/org/json/json/20250107/json-20250107.jar",
+      "sha256sum": "85d4c1ab192d3117fd02c7fff1ec0fe63ade45cf56def7fe950ef060cf06e99f"
     }
   ],
-  "build_utils":
-  [
-      {
+  "build_utils": [
+    {
       "name": "Arm GNU Toolchain",
       "purpose": "Toolchain to compile the mediapipe for aarch64",
       "destination": "arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu.tar.xz",
       "url": "https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu.tar.xz",
       "sha256sum": "ddeaff1ea60d4135acba271b0143d9f5add02b68ab9e9be39672d1965c12e82f"
-      }
+    }
   ]
 }
