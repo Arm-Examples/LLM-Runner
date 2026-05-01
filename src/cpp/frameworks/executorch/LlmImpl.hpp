@@ -6,18 +6,13 @@
 #ifndef LLM_IMPL_HPP
 #define LLM_IMPL_HPP
 
-#include <atomic>
 #include <memory>
 #include <string>
-#include <thread>
 #include <vector>
-
-#include <executorch/extension/llm/runner/text_llm_runner.h>
 
 #include "Llm.hpp"
 #include "LlmConfig.hpp"
 #include "LlmChat.hpp"
-#include "../common/TokenQueue.hpp"
 
 class LLM;
 namespace tokenizers {
@@ -29,7 +24,7 @@ class Tokenizer;
  */
 class LLM::LLMImpl : public LlmChat {
 public:
-    LLMImpl() = default;
+    LLMImpl();
     ~LLMImpl();
 
     /**
@@ -131,14 +126,10 @@ public:
     std::string GeneratePromptWithNumTokens(size_t numPromptTokens);
 
 private:
-    using TextLLMRunner = executorch::extension::llm::TextLLMRunner;
-    using Stats = executorch::extension::llm::Stats;
+    class SynchronousTextRunner;
 
     void EnsureInitialized(const char* operation) const;
     void ConfigureThreadPool();
-    void JoinGenerationThread();
-    void RecordStats(const Stats& stats);
-    void ThrowIfGenerationFailed() const;
     void WarnIfContextSizeExceedsModelLimit(tokenizers::Tokenizer* tokenizer) const;
     std::string ResolveTokenizerPath() const;
 
@@ -156,14 +147,8 @@ private:
     bool m_initialized{false};
     std::string m_eos{LLM::endToken};
 
-    std::unique_ptr<TextLLMRunner> m_runner{nullptr};
+    std::unique_ptr<SynchronousTextRunner> m_runner{nullptr};
     std::unique_ptr<tokenizers::Tokenizer> m_promptTokenizer{nullptr};
-    // TokenQueue owns the callback-to-NextToken synchronization. Broader API
-    // concurrency is intentionally left to the common LLM layer.
-    TokenQueue m_tokenQueue{};
-    uint64_t m_generationEpoch{0};
-    std::thread m_generationThread{};
-    std::atomic<int> m_generationError{0};
 };
 
 #endif /* LLM_IMPL_HPP */
