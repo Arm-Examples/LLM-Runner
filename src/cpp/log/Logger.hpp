@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#ifndef ARM_LLM_WRAPPER_LOGGER_HPP
-#define ARM_LLM_WRAPPER_LOGGER_HPP
+#ifndef LLM_WRAPPER_LOGGER_HPP
+#define LLM_WRAPPER_LOGGER_HPP
 
 #include <string>
 #include <cstdarg>
@@ -91,4 +91,4 @@ namespace LlmLog {
         throw std::invalid_argument(LlmLog::vformat(fmt __VA_OPT__(, __VA_ARGS__))); \
     } while (0)
 
-#endif // ARM_LLM_WRAPPER_LOGGER_HPP
+#endif // LLM_WRAPPER_LOGGER_HPP

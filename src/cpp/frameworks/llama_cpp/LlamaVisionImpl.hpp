@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#ifndef ARM_LLM_WRAPPER_LLAMAVISIONIMPL_HPP
-#define ARM_LLM_WRAPPER_LLAMAVISIONIMPL_HPP
+#ifndef LLM_WRAPPER_LLAMAVISIONIMPL_HPP
+#define LLM_WRAPPER_LLAMAVISIONIMPL_HPP
 
 #include <memory>
 #include <string>
@@ -252,4 +252,4 @@ private:
     const std::string m_mediaMarker = mtmd_default_marker();
 };
 
-#endif // ARM_LLM_WRAPPER_LLAMAVISIONIMPL_HPP
+#endif // LLM_WRAPPER_LLAMAVISIONIMPL_HPP

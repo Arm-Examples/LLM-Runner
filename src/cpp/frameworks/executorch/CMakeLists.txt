@@ -9,7 +9,11 @@ project(executorch-wrapper
         LANGUAGES C CXX ASM)
 
 include(FetchContent)
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
+include(python-deps)
+llm_ensure_python_requirements(
+    "${LLM_SOURCE_DIR}/scripts/py/requirements-executorch.txt"
+    yaml
+    torchgen)
 
 # --------------------------------------------------------------------
 # ExecuTorch build
@@ -57,21 +61,6 @@ else()
 endif()
 set(EXECUTORCH_LOG_LEVEL ${EXECUTORCH_MAPPED_LOG_LEVEL}
         CACHE STRING "ExecuTorch log level mapped from LLM_LOG_LEVEL" FORCE)
-
-execute_process(
-    COMMAND "${Python3_EXECUTABLE}" -c "import yaml, torchgen"
-    RESULT_VARIABLE EXECUTORCH_PYTHON_DEPS_RESULT
-    ERROR_VARIABLE EXECUTORCH_PYTHON_DEPS_ERROR
-    OUTPUT_QUIET
-    ERROR_STRIP_TRAILING_WHITESPACE)
-if (NOT EXECUTORCH_PYTHON_DEPS_RESULT EQUAL 0)
-    message(FATAL_ERROR
-        "ExecuTorch configure requires the Python modules 'yaml' and 'torchgen'. "
-        "Create a Python environment, install "
-        "scripts/py/requirements-executorch.txt, and reconfigure with "
-        "-DPython3_EXECUTABLE=<python-from-that-env>. "
-        "Current interpreter: ${Python3_EXECUTABLE}. Python error: ${EXECUTORCH_PYTHON_DEPS_ERROR}")
-endif()
 
 # ExecuTorch's codegen modules expect both the repo root and src tree on
 # PYTHONPATH during configure-time code generation.

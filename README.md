@@ -276,31 +276,30 @@ runtime integration is needed in this phase.
 for the runtime integration work.
 
 > **NOTE**: ExecuTorch runs Python code generation during CMake configure.
-The Python interpreter used for configure must have the dependencies listed in
+The build uses the shared CMake Python dependency helper to find a supported
+Python interpreter and install missing dependencies from
 `scripts/py/requirements-executorch.txt`, including a compatible PyTorch
 installation that provides the `torchgen` module. The requirements file adds
-the PyTorch CPU wheel index so `torch==2.11.0+cpu` resolves as part of the
-same `pip install -r ...` step.
+the PyTorch CPU wheel index so `torch==2.11.0+cpu` resolves automatically on
+Linux.
 
 Recommended setup:
 
 ```sh
-python3 -m venv .venv-executorch
-source .venv-executorch/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r scripts/py/requirements-executorch.txt
-python -c "import yaml, torch, torchgen"
 cmake --preset=native -B build \
-  -DLLM_FRAMEWORK=executorch \
-  -DPython3_EXECUTABLE=$(which python)
+  -DLLM_FRAMEWORK=executorch
 ```
 
-If you already have a Python environment with those packages installed, you can
-verify it first with `python -c "import yaml, torch, torchgen"`. If that succeeds,
-skip the virtual environment creation step and pass that interpreter to CMake
-with `-DPython3_EXECUTABLE=/path/to/python`. If the import check fails, go
-back to the recommended flow above to create a virtual environment and install
+If your system Python blocks package installation, configure with
+`-DPython3_EXECUTABLE=/path/to/python` to point CMake at a writable Python
+environment. CMake will still install any missing packages from
 `scripts/py/requirements-executorch.txt`.
+
+If you already have a Python environment with the required packages installed,
+you can activate it before running CMake or pass its interpreter explicitly with
+`-DPython3_EXECUTABLE=/path/to/venv/bin/python`. CMake checks for the required
+imports first and skips the requirements install when they are already
+available.
 
 ### Shared libraries build parameter
 

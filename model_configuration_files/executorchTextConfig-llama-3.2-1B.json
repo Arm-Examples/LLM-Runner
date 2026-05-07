@@ -15,6 +15,10 @@
         "contextSize": 2048
     },
     "stopWords": [
-        "endoftext"
+        "endoftext",
+        "<|end_of_text|>",
+        "<|eom_id|>",
+        "<eos>",
+        "<|eot_id|>"
     ]
 }

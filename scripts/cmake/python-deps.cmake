@@ -56,3 +56,45 @@ macro(llm_ensure_python_dependency MODULE_NAME PIP_SPEC)
         endif()
     endif()
 endmacro()
+# -----------------------------------------------------------------------------
+# Macro: llm_ensure_python_requirements
+#
+# @brief Ensures Python modules are importable; if not, installs requirements.
+#
+# @param REQUIREMENTS_FILE  Requirements file path passed to pip install -r.
+# @param ARGN               Python import names to check before installing.
+#
+# @return                   None. Exits with a fatal error if install fails.
+# -----------------------------------------------------------------------------
+macro(llm_ensure_python_requirements REQUIREMENTS_FILE)
+    llm_find_python_interpreter()
+    if (NOT EXISTS "${REQUIREMENTS_FILE}")
+        message(FATAL_ERROR "Python requirements file not found: ${REQUIREMENTS_FILE}")
+    endif()
+
+    set(llm_missing_python_modules)
+    foreach(llm_module_name ${ARGN})
+        execute_process(
+                COMMAND "${Python3_EXECUTABLE}" -c "import ${llm_module_name}"
+                RESULT_VARIABLE llm_import_result
+                OUTPUT_QUIET
+                ERROR_QUIET)
+        if (NOT llm_import_result EQUAL 0)
+            list(APPEND llm_missing_python_modules "${llm_module_name}")
+        endif()
+    endforeach()
+
+    if (llm_missing_python_modules)
+        message(STATUS
+                "Installing Python requirements: ${REQUIREMENTS_FILE} "
+                "(missing modules: ${llm_missing_python_modules})")
+        execute_process(
+                COMMAND "${Python3_EXECUTABLE}" -m pip install -r "${REQUIREMENTS_FILE}"
+                RESULT_VARIABLE llm_pip_result)
+        if (NOT llm_pip_result EQUAL 0)
+            message(FATAL_ERROR
+                    "Failed to install Python requirements from ${REQUIREMENTS_FILE}. "
+                    "Interpreter: ${Python3_EXECUTABLE}")
+        endif()
+    endif()
+endmacro()

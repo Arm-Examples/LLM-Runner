@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#ifndef ARM_LLM_WRAPPER_BUILD_INFO_HPP
-#define ARM_LLM_WRAPPER_BUILD_INFO_HPP
+#ifndef LLM_WRAPPER_BUILD_INFO_HPP
+#define LLM_WRAPPER_BUILD_INFO_HPP
 
 #include <string>
 
@@ -58,4 +58,4 @@ void LogInitializationFailure(const std::string& frameworkName, const std::strin
 
 }  // namespace LlmLog
 
-#endif  // ARM_LLM_WRAPPER_BUILD_INFO_HPP
+#endif  // LLM_WRAPPER_BUILD_INFO_HPP
