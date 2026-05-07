@@ -82,6 +82,7 @@ Do not commit anything from `resources_downloaded/`. Avoid introducing changes t
 - Treat SPDX maintenance as part of the same change, not follow-up work.
 - Add the standard repo SPDX header to new source/doc/script files that support comments.
 - When editing an existing source/doc/script file that supports comments, ensure the SPDX header is present and the year/range is current. Edit the year only; do not change holder or license text.
+- Only update an existing file's SPDX year/range when making a substantive change to that same file. Do not modify files solely to refresh copyright years.
 - Do not inject SPDX comments into formats that would break consumers, such as JSON. Use a repo-approved sidecar or documentation approach instead.
 
 ## Notes

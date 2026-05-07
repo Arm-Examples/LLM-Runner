@@ -38,6 +38,12 @@ elseif (${LLM_FRAMEWORK} STREQUAL "mnn")
             "mnnTextConfig-llama-3.2-1B.json"
             "mnnVisionConfig-qwen2.5-3B.json"
             CACHE STRING "Path to the MNN config files")
+elseif (${LLM_FRAMEWORK} STREQUAL "executorch")
+    set(CONFIG_FILE_NAME
+            "executorchTextConfig-llama-3.2-1B.json"
+            CACHE STRING "Path to the ExecuTorch config file")
+else()
+    message(FATAL_ERROR "${LLM_FRAMEWORK} is currently not supported.")
 endif ()
 
 if (NOT DOWNLOAD_LLM_MODELS)

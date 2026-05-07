@@ -254,6 +254,24 @@
           "sha256sum": "176452e0eef32e7cd477e5609160278f3f5cbfeeb46d2cb2d37bd631af1b0bea"
         }
       ]
+    },
+    "executorch" : {
+      "llama-3.2-1b" : [
+        {
+        "name": "Llama-3.2-1B model (SpinQuant_INT4_EO8)",
+        "purpose": ".pte model for basic Executorch testing",
+        "destination": "executorch/llama-3.2-1b/Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8.pte",
+        "url": "https://huggingface.co/executorch-community/Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8-ET/resolve/main/Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8.pte?download=true",
+        "sha256sum": "8715cdba9e91f6bede00cc5f2d6b12397b95225da5630c4972a8da03001cda3b"
+        },
+        {
+        "name": "Llama-3.2-1B model tokenizer",
+        "purpose": "tokenizer file for basic Executorch testing",
+        "destination": "executorch/llama-3.2-1b/tokenizer.model",
+        "url": "https://huggingface.co/executorch-community/Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8-ET/resolve/main/tokenizer.model?download=true",
+        "sha256sum": "82e9d31979e92ab929cd544440f129d9ecd797b69e327f80f17e1c50d5551b55"
+        }
+      ]
     }
   },
   "test_utils": [

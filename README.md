@@ -19,6 +19,7 @@
   - [onnxruntime genai options](#onnxruntime-genai-options)
   - [mediapipe options](#mediapipe-options)
   - [mnn options](#mnn-options)
+  - [executorch options](#executorch-options)
 - [Shared libraries build parameter](#shared-libraries-build-parameter)
 - [Known Issue with llama.cpp](#known-issue-with-llamacpp)
 - [llama cpp model](#llama-cpp-model)
@@ -45,8 +46,9 @@ Provides a single API (Java & C++) to various LLM frameworks
 that Arm® KleidiAI™ kernels have been integrated into.
 Currently, it supports [llama.cpp](https://github.com/ggml-org/llama.cpp),
 [mediapipe](https://github.com/google-ai-edge/mediapipe),
-[onnxruntime-genai](https://github.com/microsoft/onnxruntime-genai), and
-[MNN](https://github.com/alibaba/MNN) backends.
+[onnxruntime-genai](https://github.com/microsoft/onnxruntime-genai),
+[MNN](https://github.com/alibaba/MNN), and
+[ExecuTorch](https://github.com/pytorch/executorch) text backends.
 The backend library (selected at CMake configuration stage) is wrapped by this project's thin
 C++ layer that could be used directly for testing and evaluations.
 However, JNI bindings are also provided for developers targeting Android™ based applications.
@@ -130,6 +132,7 @@ Test project /home/user/llm/build
 | **onnxruntime-genai**  | `phi4-mini-instruct`                       | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)                                                                                                                                                                  |
 | **mediapipe**          | `gemma-2B`                                 | [Gemma](https://www.kaggle.com/models/google/gemma/license/consent)                                                                                                                                                                             |
 | **mnn**                | `qwen-2.5-VL`<br/>`llama-3.2-1B`           | [apache-2.0](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
+| **executorch**         | `llama-3.2-1B`                             | [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)|
 
 
 ## Supported Platforms
@@ -171,7 +174,7 @@ Details of configurable build options are given below:
 
 Flag name | Default | Values                                                           | Description                                                                                                                           |
 |---|---|------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
-| LLM_FRAMEWORK | llama.cpp | llama.cpp / mediapipe / onnxruntime-genai / mnn                  | Specifies the backend framework to be used.                                                                                           |
+| LLM_FRAMEWORK | llama.cpp | llama.cpp / mediapipe / onnxruntime-genai / mnn / executorch                 | Specifies the backend framework to be used.                                                                                           |
 | BUILD_DEBUG | OFF | ON/OFF                                                           | If set to ON a debug build is configured.                                                                                             |
 | ENABLE_STREAMLINE | OFF | ON/OFF                                                           | Enables Arm Streamline timeline annotations for analyzing LLM initialization, encode, decode, and control-path performance.           |
 | BUILD_LLM_TESTING | ON | ON/OFF                                                           | Builds the project's functional tests when ON.                                                                                        |
@@ -251,6 +254,53 @@ For customising MNN framework , following parameters can be used:
 > **KleidiAI™ NOTE**: :
 Although MNN can be built with USE_KLEIDIAI defined, the current MNN implementation does not fully enable KleidiAI™ optimizations at runtime.
 This limitation is due to the current MNN runtime initialization logic and will be resolved once full support is implemented upstream in MNN.
+
+#### executorch options
+
+The `executorch` backend now pulls in the upstream ExecuTorch runtime as part
+of the project build and links the wrapper against the upstream runtime,
+backend, extension, and kernel targets.
+
+- `EXECUTORCH_SRC_DIR`: Source directory path that will be populated by CMake.
+- `EXECUTORCH_GIT_URL`: Git URL to clone the sources from.
+- `EXECUTORCH_GIT_TAG`: Git tag / commit SHA for checkout.
+- `EXECUTORCH_BUILD_PRESET_FILE`: Upstream preset file used to enable
+  LLM-oriented runtime features. Defaults to the upstream `llm.cmake` preset.
+
+The backend config explicitly enables the upstream XNNPACK backend together
+with the LLM/data-loader/module/tensor/runner utility extensions required for
+text-path bring-up, and it explicitly disables `pybind` because only the C++
+runtime integration is needed in this phase.
+
+> **NOTE**: This repository is currently pinned to ExecuTorch `v1.2.0`
+for the runtime integration work.
+
+> **NOTE**: ExecuTorch runs Python code generation during CMake configure.
+The Python interpreter used for configure must have the dependencies listed in
+`scripts/py/requirements-executorch.txt`, including a compatible PyTorch
+installation that provides the `torchgen` module. The requirements file adds
+the PyTorch CPU wheel index so `torch==2.11.0+cpu` resolves as part of the
+same `pip install -r ...` step.
+
+Recommended setup:
+
+```sh
+python3 -m venv .venv-executorch
+source .venv-executorch/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r scripts/py/requirements-executorch.txt
+python -c "import yaml, torch, torchgen"
+cmake --preset=native -B build \
+  -DLLM_FRAMEWORK=executorch \
+  -DPython3_EXECUTABLE=$(which python)
+```
+
+If you already have a Python environment with those packages installed, you can
+verify it first with `python -c "import yaml, torch, torchgen"`. If that succeeds,
+skip the virtual environment creation step and pass that interpreter to CMake
+with `-DPython3_EXECUTABLE=/path/to/python`. If the import check fails, go
+back to the recommended flow above to create a virtual environment and install
+`scripts/py/requirements-executorch.txt`.
 
 ### Shared libraries build parameter
 
@@ -422,6 +472,7 @@ The Arm LLM Benchmark tool (llm-bench-cli) is a framework-agnostic, standalone e
 - `onnxruntime-genai`
 - `MNN`
 - `mediapipe`
+- `ExecuTorch`
 
 Instead of writing your own prompts or relying on framework-specific benchmarking tools, `llm-bench-cli` provides a unified benchmarking pipeline. It automatically detects the backend specified in the LLM configuration file and benchmarks it consistently. The tool repeatedly runs the LLM prompt-processing and token-generation  operations and reports timing and throughput metrics in a standardized format.
 
@@ -447,6 +498,13 @@ Instead of writing your own prompts or relying on framework-specific benchmarkin
     [ --json-output <path>            | -J <path> ] \
     [ --warmup <warmup_iterations>    | -w <warmup_iterations> ]
 ```
+
+The `--model` path must match the model layout expected by the selected backend. Use the
+exact model file for backends that load a single artifact, such as `llama.cpp` (`.gguf`)
+and ExecuTorch (`.pte`). Use the model package directory for backends that load several
+files from one folder, such as `onnxruntime-genai` and `MNN`. For ExecuTorch, place
+the tokenizer file in the same directory as the `.pte` model file. The loader searches
+for `tokenizer.model`, `tokenizer.json`, or `tokenizer.bin` in that directory.
 
 > **NOTE**: On-device execution requires that `llm-bench-cli` and its backend shared libraries reside in the same directory. Builds using `GGML_OPENMP=ON` additionally require `libomp.so` to be placed in that directory as well.
 

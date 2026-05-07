@@ -241,6 +241,7 @@ TEST_CASE("LLM Factory: Validate supported input modalities")
 TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
 {
     LlmConfig configTest = SetupTestConfig();
+
     LLM llm{};
     std::string question = "What is the capital of France?" ;
 

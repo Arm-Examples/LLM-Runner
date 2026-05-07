@@ -614,7 +614,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--llm-framework",
         help="LLM framework from which the model will be downloaded.",
-        choices=["llama.cpp", "mediapipe", "onnxruntime-genai", "mnn"],
+        choices=["llama.cpp", "mediapipe", "onnxruntime-genai", "mnn", "executorch"],
         default=None)
     parser.add_argument(
         "--download-models",

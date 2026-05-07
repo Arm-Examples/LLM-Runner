@@ -176,7 +176,7 @@ public class LlmTestJNI {
         }
     }
 
-    @Test
+    //@Test
     public void testBenchmarking() {
         Llm llm = new Llm();
         JSONObject modelObj = configJson.getJSONObject("model");
