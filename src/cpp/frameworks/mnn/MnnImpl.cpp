@@ -54,7 +54,7 @@ void LLM::LLMImpl::SetConfig() {
         << "\"top_k\": 1,"
         << "\"top_p\": 1.0,"
         << "\"temperature\": 0.0,"
-        << "\"max_all_tokens\": " << m_nCtx
+        << "\"max_new_tokens\": " << m_nCtx
         << "}";
 
     m_llm->set_config(cfg.str());
@@ -88,9 +88,10 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload) {
     // Initialize generation context
     m_llm->generate_init(nullptr, nullptr);
     // Tokenize the input prompt into model-specific token IDs
+
     auto token_ids = m_llm->tokenizer_encode(payload.textPrompt);
     if (this->m_ctx->all_seq_len + token_ids.size() >= this->m_nCtx) {
-        THROW_ERROR("LLM encoding failed ,context is full");
+        THROW_ERROR("LLM encoding failed, context is full");
     }
     // Run the model once to encode the context; max_tokens=0 to skip decoding
     this->m_llm->generate(/*input_ids=*/token_ids, /*max_tokens=*/0);

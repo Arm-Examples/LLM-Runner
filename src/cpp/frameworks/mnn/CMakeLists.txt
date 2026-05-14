@@ -26,7 +26,7 @@ set(MNN_SRC_DIR "${CMAKE_BINARY_DIR}/mnn"
 set(MNN_GIT_URL "https://github.com/alibaba/MNN.git"
         CACHE STRING "Git URL for mnn repo")
 
-set(MNN_GIT_TAG "3.3.0"
+set(MNN_GIT_TAG "3.6.0"
         CACHE STRING "Git tag / commit SHA for MNN repo")
 
 # --------------------------------------------------------------------
@@ -48,6 +48,7 @@ if(DEFINED MNN_KLEIDIAI)
 else()
     set_kleidiai_flag()
     set(MNN_KLEIDIAI ${USE_KLEIDIAI})
+    set(MNN_KLEIDIAI_DEFAULT_ON ${USE_KLEIDIAI})
 endif()
 
 FetchContent_Declare(mnn

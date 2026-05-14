@@ -26,7 +26,10 @@
     "user:",
     "[end of text]",
     "<|endoftext|>",
+    "<|end_of_text|>",
     "<eos>",
+    "<|eot_id|>",
+    "</s>",
     "model:",
     "Question:",
     "Consider the following scenario:\\n"
