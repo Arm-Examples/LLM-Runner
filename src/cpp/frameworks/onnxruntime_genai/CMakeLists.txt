@@ -179,11 +179,7 @@ target_include_directories(llm-framework PUBLIC
 # List all libraries that we need to depend on here:
 target_link_libraries(llm-framework PUBLIC
     onnxruntime-genai
-    onnxruntime
-    llm-config
-    llm-chat
-    llm-interface
-    llm-log)
+    onnxruntime)
 
 if(BUILD_BENCHMARK)
     target_include_directories(model_benchmark PRIVATE

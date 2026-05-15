@@ -9,6 +9,32 @@
 This directory contains small utilities that are useful to more than one
 framework backend but are not part of the public LLM API.
 
+## ImageUtils
+
+`ImageUtils.hpp` provides shared image helpers for multimodal backends. The
+helpers are used by the wrapper to normalize image inputs before backend-specific
+prompt formatting or encoding.
+
+Available operations:
+
+- `ReadImageSize(path)` reads image width and height without decoding the full
+  image into backend-specific structures.
+- `ComputeResizedImageSize(size, maxInputDimension)` preserves aspect ratio and
+  scales only when the longest side is larger than `maxInputDimension`.
+- `ResizeImageToFile(inputPath, outputPath, maxInputDimension)` decodes the
+  source image, resizes it with the same aspect-ratio rule, and writes a PNG to
+  `outputPath`.
+
+The top-level wrapper applies `model.maxInputDimension` during `Encode()` when
+an image path is present. If an image already fits within the configured
+dimension, the original path is kept. Otherwise, a resized PNG is saved next to
+the source image and the payload image path is updated to point at that resized
+file.
+
+Backends should treat the payload image path as the image to load. MNN also
+uses `ReadImageSize()` during query formatting to populate its
+`<hw>height, width</hw>` image prompt tag.
+
 ## TokenQueue
 
 `TokenQueue.hpp` provides a thread-safe blocking queue for streamed token text.

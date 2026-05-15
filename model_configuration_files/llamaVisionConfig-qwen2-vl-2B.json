@@ -8,7 +8,8 @@
   "model" : {
     "llmModelName": "llama.cpp/qwen2vl-2b/qwen2vl-2b_Q4_0.gguf",
     "projModelName": "llama.cpp/qwen2vl-2b/qwen2vl-2b-F16_proj.gguf",
-    "isVision" : true
+    "isVision" : true,
+    "maxInputDimension" : 128
   },
   "runtime" : {
     "batchSize"    : 256,

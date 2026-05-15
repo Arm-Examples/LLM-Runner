@@ -74,7 +74,8 @@ elseif (NOT TARGET llm-interface)
 endif()
 
 add_library(llm-framework STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/MnnImpl.cpp LlmFactory.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/MnnImpl.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/LlmFactory.cpp)
 
 target_include_directories(llm-framework PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR})
@@ -87,7 +88,4 @@ target_include_directories(llm-framework
 
 # List all libraries that we need to depend on here:
 target_link_libraries(llm-framework PUBLIC
-    MNN
-    llm-config
-    llm-chat
-    llm-interface)
+    MNN)

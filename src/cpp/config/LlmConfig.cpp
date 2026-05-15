@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2024-2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2024-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -22,6 +22,7 @@ static inline const char* to_string(LlmConfig::ConfigParam key) {
     case LlmConfig::ConfigParam::NumThreads:              return "NumThreads";
     case LlmConfig::ConfigParam::BatchSize:               return "BatchSize";
     case LlmConfig::ConfigParam::ContextSize:             return "ContextSize";
+    case LlmConfig::ConfigParam::MaxInputDimension:       return "MaxInputDimension";
   }
   return "Unknown";
 }
@@ -57,6 +58,8 @@ LlmConfig::LlmConfig(const std::string& jsonStr)
         THROW_INVALID_ARGUMENT("config.runtime.batchSize must be positive");
     if (m_runtime.contextSize <= 0)
         THROW_INVALID_ARGUMENT("config.runtime.contextSize must be positive");
+    if (m_model.maxInputDimension <= 0)
+        THROW_INVALID_ARGUMENT("config.model.maxInputDimension must be positive");
 
     // stopWords: must exist, array, non-empty, all non-empty strings
     const json& sw = cfg.at("stopWords");
@@ -112,6 +115,11 @@ void LlmConfig::SetConfigInt(ConfigParam key, int value) {
                 THROW_INVALID_ARGUMENT("ContextSize must be > 0");
             }
             m_runtime.contextSize = value; return;
+        case ConfigParam::MaxInputDimension:
+            if (value <= 0) {
+                THROW_INVALID_ARGUMENT("MaxInputDimension must be > 0");
+            }
+            m_model.maxInputDimension = value; return;
         default: THROW_INVALID_ARGUMENT("Unknown int key: %s", to_string(key));
     }
 }
@@ -140,6 +148,7 @@ void LlmConfig::SetConfigInt(ConfigParam key, int value) {
         case ConfigParam::NumThreads:  return m_runtime.numThreads;
         case ConfigParam::BatchSize:   return m_runtime.batchSize;
         case ConfigParam::ContextSize: return m_runtime.contextSize;
+        case ConfigParam::MaxInputDimension: return m_model.maxInputDimension;
         default: THROW_INVALID_ARGUMENT("Unknown int key: %s", to_string(key));
     }
 }

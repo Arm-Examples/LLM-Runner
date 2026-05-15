@@ -107,8 +107,4 @@ target_include_directories(llm-framework PUBLIC
 target_link_libraries(llm-framework PUBLIC
     mtmd
     llama
-    common
-    llm-chat
-    llm-config
-    llm-interface
-    llm-log )
+    common)

@@ -8,3 +8,4 @@ build*/
 build_coverage/
 __pycache__/
 *.pyc
+*-resized*.png

@@ -6,9 +6,12 @@
 
 #include "LlmImpl.hpp"
 #include "LlmFactory.hpp"
+#include "ImageUtils.hpp"
 #include <stdexcept>
 #include <algorithm>
+#include <atomic>
 #include <chrono>
+#include <filesystem>
 #include "Logger.hpp"
 #include "BuildInfo.hpp"
 #include "LlmBridge.hpp"
@@ -17,6 +20,36 @@
 #include <thread>
 #include <chrono>
 #endif
+
+namespace {
+
+void PrepareImagePayload(LlmChat::Payload& payload, const LlmConfig& config)
+{
+    if (payload.imagePath.empty()) {
+        return;
+    }
+
+    const auto maxInputDimension = config.GetConfigInt(LlmConfig::ConfigParam::MaxInputDimension);
+    const auto imageSize = ImageUtils::ReadImageSize(payload.imagePath);
+    const auto resizedImageSize = ImageUtils::ComputeResizedImageSize(imageSize, maxInputDimension);
+    if (imageSize.width == resizedImageSize.width && imageSize.height == resizedImageSize.height) {
+        return;
+    }
+
+    static std::atomic<uint64_t> imageCounter{0};
+    const std::filesystem::path inputPath{payload.imagePath};
+    const auto imageId = imageCounter.fetch_add(1, std::memory_order_relaxed);
+    const auto outputPath = inputPath.parent_path() /
+                            (inputPath.stem().string() + "-resized-" +
+                             std::to_string(imageId) + ".png");
+
+    payload.imagePath = ImageUtils::ResizeImageToFile(
+        payload.imagePath,
+        outputPath.string(),
+        maxInputDimension).path;
+}
+
+} // namespace
 
 LLM::LLM()
 {
@@ -159,6 +192,7 @@ void LLM::Encode(LlmChat::Payload& payload) {
         if(!supportsVision) {
             THROW_ERROR("Error. Attempting to Encode an unsupported Image payload");
         }
+        PrepareImagePayload(payload, m_config);
     }
     this->m_impl->QueryBuilder(payload);
     this->m_impl->Encode(payload);

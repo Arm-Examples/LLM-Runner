@@ -7,7 +7,8 @@
   },
   "model" : {
     "llmModelName" : "mnn/qwen25vl-3b/",
-    "isVision" : true
+    "isVision" : true,
+    "maxInputDimension" : 128
   },
   "runtime" : {
     "batchSize"    : 1,

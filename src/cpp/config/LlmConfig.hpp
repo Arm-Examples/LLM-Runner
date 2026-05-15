@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -54,10 +54,11 @@ struct ModelParams {
     std::string llmModelName;               ///< Name or path of the LLM model file to load.
     bool        isVision;                   ///< Indicates if the model supports multimodal (vision) inputs.
     std::string projModelName = "";         ///< Optional projection model name or path (if used).
+    int         maxInputDimension = 128;    ///< Maximum width or height used when resizing image inputs.
 };
 
 /// Enables JSON serialization and deserialization for ModelParams.
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ModelParams, llmModelName, isVision, projModelName)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ModelParams, llmModelName, isVision, projModelName, maxInputDimension)
 
 /**
  * @class LlmConfig
@@ -104,6 +105,7 @@ public:
         NumThreads = 7,               ///< Number of CPU threads used for inference
         BatchSize = 8,                ///< Number of tokens per batch
         ContextSize = 9,              ///< Context window (max token limit)
+        MaxInputDimension = 10,       ///< Maximum width or height used when resizing image inputs
     };
 
      /**

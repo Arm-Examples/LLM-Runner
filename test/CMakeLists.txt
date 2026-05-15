@@ -62,11 +62,17 @@ include(find-catch)
 enable_testing()
 
 set(TEST_TARGET llm-cpp-tests)
-add_executable(${TEST_TARGET}
+set(TEST_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmTest.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmConfigTest.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmLogTest.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/cpp/BenchRunnerTest.cpp)
+
+if (${LLM_FRAMEWORK} STREQUAL "mnn" OR ${LLM_FRAMEWORK} STREQUAL "llama.cpp")
+    list(APPEND TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/cpp/ImageUtilsTest.cpp)
+endif()
+
+add_executable(${TEST_TARGET} ${TEST_SOURCES})
 
 target_compile_definitions(${TEST_TARGET}
         PUBLIC

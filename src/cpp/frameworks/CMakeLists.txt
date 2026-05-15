@@ -14,17 +14,19 @@ else()
 endif()
 message (STATUS "BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}")
 
+add_subdirectory(common)
+
 # Pull in LLM framework library
 if (${LLM_FRAMEWORK} STREQUAL "llama.cpp")
     add_subdirectory(llama_cpp)
-    set(LLM_BUILD_FRAMEWORK_DEPENDENCY_VERSIONS "llama.cpp=${LLAMA_GIT_SHA}" PARENT_SCOPE)
+    set(LLM_BUILD_FRAMEWORK_DEPENDENCY_VERSIONS "llama.cpp=${LLAMA_GIT_SHA}, stb=${STB_GIT_TAG}" PARENT_SCOPE)
 elseif(${LLM_FRAMEWORK} STREQUAL "onnxruntime-genai")
     add_subdirectory(onnxruntime_genai)
     set(LLM_BUILD_FRAMEWORK_DEPENDENCY_VERSIONS
         "onnxruntime=${ONNXRUNTIME_GIT_TAG}, onnxruntime-genai=${ONNXRT_GENAI_GIT_TAG}" PARENT_SCOPE)
 elseif(${LLM_FRAMEWORK} STREQUAL "mnn")
     add_subdirectory(mnn)
-    set(LLM_BUILD_FRAMEWORK_DEPENDENCY_VERSIONS "mnn=${MNN_GIT_TAG}" PARENT_SCOPE)
+    set(LLM_BUILD_FRAMEWORK_DEPENDENCY_VERSIONS "mnn=${MNN_GIT_TAG}, stb=${STB_GIT_TAG}" PARENT_SCOPE)
 elseif(${LLM_FRAMEWORK} STREQUAL "mediapipe")
     add_subdirectory(mediapipe)
     set(LLM_BUILD_FRAMEWORK_DEPENDENCY_VERSIONS "mediapipe=${MEDIAPIPE_GIT_SHA}" PARENT_SCOPE)
@@ -35,3 +37,10 @@ elseif(${LLM_FRAMEWORK} STREQUAL "executorch")
 else()
     message(FATAL_ERROR "${LLM_FRAMEWORK} is currently not supported :(")
 endif()
+
+target_link_libraries(llm-framework PUBLIC
+    llm-framework-common
+    llm-config
+    llm-chat
+    llm-interface
+    llm-log)

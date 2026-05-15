@@ -286,8 +286,8 @@ TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
                 LlmChat::Payload payload{prompt, std::string{TEST_RESOURCE_DIR} + "/" + c.file, isFirstMessage};
 
                 CAPTURE(prompt);
-                CAPTURE(payload.imagePath);
                 llm.Encode(payload);
+                CAPTURE(payload.imagePath);
                 std::string response = DecodeTokens(llm, 1);
                 CAPTURE(c.file);
                 INFO("Response: " << response);
@@ -318,8 +318,8 @@ TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
             LlmChat::Payload payload{prompt, std::string{TEST_RESOURCE_DIR} + "/kimono.bmp", true};
 
             CAPTURE(prompt);
-            CAPTURE(payload.imagePath);
             llm.Encode(payload);
+            CAPTURE(payload.imagePath);
             std::string response1 = DecodeTokens(llm, 2);
             INFO("Response: " << response1);
             DebugPrint("Prompt: ", prompt);
@@ -353,8 +353,8 @@ TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
             };
 
             CAPTURE(payload.textPrompt);
-            CAPTURE(payload.imagePath);
             llm.Encode(payload);
+            CAPTURE(payload.imagePath);
             std::string response = DecodeTokens(llm, 4);
             INFO("Response: " << response);
             DebugPrint("Prompt: ", payload.textPrompt);

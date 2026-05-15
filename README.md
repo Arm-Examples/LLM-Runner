@@ -445,6 +445,8 @@ The `MNN` backend **also supports multimodal (image + text)** inference in this 
 
 > **NOTE**: The MNN backend determines whether multimodal mode is active from the `is_visual` field inside the model’s `llm_config.json`.
 
+Set `model.maxInputDimension` in the wrapper configuration to cap image inputs. During `Encode()`, the wrapper preserves the original image aspect ratio, scales the longest side down to this value when needed, saves the resized image next to the source image, and updates the payload to use the resized image path. For MNN, the prompt also includes the prepared image height and width in the `<hw>height, width</hw>` tag. If this field is omitted, it defaults to `128`.
+
 You can find an example multimodal configuration in [mnnVisionConfig-qwen2.5-3B.json](model_configuration_files/mnnVisionConfig-qwen2.5-3B.json)
 
 ## To build an executable benchmark binary

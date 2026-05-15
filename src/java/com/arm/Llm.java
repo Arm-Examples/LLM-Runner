@@ -349,6 +349,7 @@ public class Llm {
 
     /**
      * Set image location for the next message.
+     * Image inputs are prepared during encoding when resizing is required.
      * @param imagePath Path to image file.
      */
     public void setImageLocation(String imagePath) {

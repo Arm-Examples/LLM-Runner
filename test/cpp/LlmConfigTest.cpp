@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -51,6 +51,33 @@ TEST_CASE("Configuration paramaters test")
         int newNumThreads = 8;
         config.SetConfigInt(LlmConfig::ConfigParam::NumThreads, newNumThreads);
         CHECK(newNumThreads == config.GetConfigInt(LlmConfig::ConfigParam::NumThreads));
+    }
+
+    SECTION("Model max input dimension defaults to current MNN image prompt size") {
+        LlmConfig config(validConfig);
+        CHECK(config.GetConfigInt(LlmConfig::ConfigParam::MaxInputDimension) == 128);
+    }
+
+    SECTION("Model max input dimension can be configured") {
+        const std::string configuredDimension = buildVariant(validConfig, [](json& j) {
+            j["model"]["maxInputDimension"] = 256;
+        });
+
+        LlmConfig config(configuredDimension);
+        CHECK(config.GetConfigInt(LlmConfig::ConfigParam::MaxInputDimension) == 256);
+    }
+
+    SECTION("Model max input dimension must be positive") {
+        try {
+            const std::string invalidDimension = buildVariant(validConfig, [](json& j) {
+                j["model"]["maxInputDimension"] = 0;
+            });
+
+            LlmConfig config(invalidDimension);
+            CHECK(false);
+        } catch (const std::invalid_argument& e) {
+            CHECK(std::string(e.what()).find("config.model.maxInputDimension must be positive") != std::string::npos);
+        }
     }
 
     SECTION("Bad chat parameters") {

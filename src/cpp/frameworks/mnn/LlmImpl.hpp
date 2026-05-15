@@ -10,7 +10,7 @@
 #include "Llm.hpp"
 #include "LlmConfig.hpp"
 #include "LlmChat.hpp"
-
+#include "ImageUtils.hpp"
 #include "llm/llm.hpp"
 #include <MNN/AutoTime.hpp>
 #include <MNN/expr/ExecutorScope.hpp>
@@ -116,9 +116,10 @@ public:
      */
     void QueryBuilder(LlmChat::Payload& payload) override {
         if(payload.imagePath != "") {
+            const auto imageSize = ImageUtils::ReadImageSize(payload.imagePath);
             payload.textPrompt = "<img><hw>" +
-                                std::to_string(IMG_HEIGHT) + ", " +
-                                std::to_string(IMG_WIDTH) + "</hw>" +
+                                std::to_string(imageSize.height) + ", " +
+                                std::to_string(imageSize.width) + "</hw>" +
                                 payload.imagePath + "</img>" +
                                 payload.textPrompt;
         }
@@ -142,10 +143,6 @@ public:
     std::string GeneratePromptWithNumTokens(size_t numPromptTokens);
 
 private:
-    // Max image width
-    const int IMG_WIDTH = 128;
-    // Max image height
-    const int IMG_HEIGHT = 128;
     // Model pointer
     std::unique_ptr<MNN::Transformer::Llm> m_llm = nullptr;
     // Context pointer

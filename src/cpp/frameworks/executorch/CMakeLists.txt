@@ -104,16 +104,9 @@ if (TARGET custom_ops)
     list(APPEND EXECUTORCH_RUNTIME_WHOLE_ARCHIVE_TARGETS "$<LINK_LIBRARY:WHOLE_ARCHIVE,custom_ops>")
 endif()
 
-set(LLM_FRAMEWORK_REQUIRED_TARGETS
-    llm-config
-    llm-chat
-    llm-interface
-    llm-log)
-
 set(REQUIRED_TARGETS
     ${EXECUTORCH_REQUIRED_TARGETS}
-    ${EXECUTORCH_RUNTIME_KERNEL_TARGETS}
-    ${LLM_FRAMEWORK_REQUIRED_TARGETS})
+    ${EXECUTORCH_RUNTIME_KERNEL_TARGETS})
 
 foreach(required_target IN LISTS REQUIRED_TARGETS)
     if (NOT TARGET ${required_target})
