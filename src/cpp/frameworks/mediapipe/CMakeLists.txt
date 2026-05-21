@@ -5,7 +5,11 @@
 #
 cmake_minimum_required(VERSION 3.27)
 project(mediapipe-cpp
-        DESCRIPTION "Mediapipe wrapper interface implementation")
+        DESCRIPTION "MediaPipe wrapper interface implementation")
+
+message(DEPRECATION
+        "MediaPipe wrapper is deprecated and will be removed in a future release."
+)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -13,17 +17,17 @@ include(FetchContent)
 
 set(MEDIAPIPE_SRC_DIR "${CMAKE_BINARY_DIR}/mediapipe"
         CACHE PATH
-        "Path where mediapipe repo should be cloned into")
+        "Path where MediaPipe repo should be cloned into")
 
 set(MEDIAPIPE_GIT_URL "https://github.com/google-ai-edge/mediapipe.git"
         CACHE STRING
-        "Git URL for mediapipe repo")
+        "Git URL for MediaPipe repo")
 
 set(MEDIAPIPE_GIT_SHA "v0.10.26"
         CACHE STRING
-        "Git commit SHA for mediapipe repo")
+        "Git commit SHA for MediaPipe repo")
 
-set(BASE_PATH "" CACHE STRING "Optional base-path of toolchain to build mediapipe for AARCH64")
+set(BASE_PATH "" CACHE STRING "Optional base-path of toolchain to build MediaPipe for AARCH64")
 
 set(MEDIAPIPE_BUILD_NUMBER 1)
 # Clone the repository first

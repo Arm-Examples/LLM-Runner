@@ -45,18 +45,13 @@ enabled LLM library using CMake build system.
 Provides a single API (Java & C++) to various LLM frameworks
 that Arm® KleidiAI™ kernels have been integrated into.
 Currently, it supports [llama.cpp](https://github.com/ggml-org/llama.cpp),
-[mediapipe](https://github.com/google-ai-edge/mediapipe),
+[mediapipe](https://github.com/google-ai-edge/mediapipe) (deprecated),
 [onnxruntime-genai](https://github.com/microsoft/onnxruntime-genai),
 [MNN](https://github.com/alibaba/MNN), and
 [ExecuTorch](https://github.com/pytorch/executorch) text backends.
 The backend library (selected at CMake configuration stage) is wrapped by this project's thin
 C++ layer that could be used directly for testing and evaluations.
 However, JNI bindings are also provided for developers targeting Android™ based applications.
-
-# Quick start
-
-This guide covers the recommended build and run flows for supported platforms. For configuration options and model details, see `docs/build_and_config_guide.md`.
-
 ## Prerequisites
 
 * A Linux®-based operating system is recommended (this repo is tested on Ubuntu® 22.04.4 LTS)
@@ -68,11 +63,13 @@ This guide covers the recommended build and run flows for supported platforms. F
   from [here](https://developer.android.com/ndk/downloads).
 * Building on macOS requires Xcode Command Line Tools, Android Studio installed and configured (NDK, CMake as above) and Clang (tested with 16.0.0)
 * Bazelisk or Bazel 7.4.1 to build mediapipe backend
-* Aarch64 GNU toolchain (version 14.1 or later) if cross-compiling from a Linux® based system which can be downloaded from [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads)
+* AArch64 GNU toolchain (version 14.1 or later) if cross-compiling from a Linux® based system which can be downloaded from [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads)
 * Java Development Kit required for building JNI wrapper library necessary to utilise this module in an Android/Java application.
 * Create a [Hugging Face](https://huggingface.co) account and obtain a Hugging Face access token.
 
 ## Quick start
+
+This guide covers the recommended build and run flows for supported platforms. For configuration options and model details, see `docs/build_and_config_guide.md`.
 
 The project can be built and LLM tests exercised by simply running the following commands on supported platforms:
 
@@ -85,7 +82,7 @@ ctest --test-dir ./build
 The commands above will use the default LLM framework (llama.cpp) and download a small number of LLM models. The tests exercise both vision and text queries. See [`LlmTest.cpp`](test/cpp/LlmTest.cpp) & [`LlmTestJNI.java`](test/java/com/arm/LlmTestJNI.java) for details.
 
 
-**ctest --test-dir ./build** command above should produce results similar to those give below (timings may vary):
+**ctest --test-dir ./build** command above should produce results similar to those given below (timings may vary):
 
 ```shell
 Internal ctest changing into directory: /home/user/llm/build
@@ -101,15 +98,15 @@ Test project /home/user/llm/build
 
 ## Documentation
 
-| Document                                             | Purpose |
-|------------------------------------------------------| --- |
-| [`docs/README.md`](docs/README.md)                   | Documentation index and update guidance. |
-| [`docs/build_and_config_guide.md`](docs/build_and_config_guide.md)           | Build/run steps, platform matrix, and common build commands. |
-| [`docs/architecture.md`](docs/architecture.md)       | Architecture overview, components, and execution flow. |
-| [`docs/benchmarking.md`](docs/benchmarking.md)         | Benchmarking and profiling guidance. |
-| [`docs/integration.md`](docs/integration.md)             | Configuration options and integration notes. |
-| [`docs/troubleshooting.md`](docs/troubleshooting.md) | Common errors and fixes. |
-| [`docs/contributing.md`](docs/contributing.md)       | Contribution process and SPDX guidance. |
+| Document                                                           | Purpose                                                      |
+|--------------------------------------------------------------------|--------------------------------------------------------------|
+| [`docs/README.md`](docs/README.md)                                 | Documentation index and update guidance.                     |
+| [`docs/build_and_config_guide.md`](docs/build_and_config_guide.md) | Build/run steps, platform matrix, and common build commands. |
+| [`docs/architecture.md`](docs/architecture.md)                     | Architecture overview, components, and execution flow.       |
+| [`docs/benchmarking.md`](docs/benchmarking.md)                     | Benchmarking and profiling guidance.                         |
+| [`docs/integration.md`](docs/integration.md)                       | Configuration options and integration notes.                 |
+| [`docs/troubleshooting.md`](docs/troubleshooting.md)               | Common errors and fixes.                                     |
+| [`docs/contributing.md`](docs/contributing.md)                     | Contribution process and SPDX guidance.                      |
 
 ## Repository Layout
 
@@ -126,13 +123,13 @@ Test project /home/user/llm/build
 
 ## Supported Models
 
-| Framework / Backend    | Supported Models                           | Licenses                                                                                                                                                                                                                                       |
-|------------------------|--------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **llama.cpp**          | `phi-2`<br/>`qwen-2-VL`<br/>`llama-3.2-1B` | [mit](https://huggingface.co/microsoft/phi-2/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
-| **onnxruntime-genai**  | `phi4-mini-instruct`                       | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)                                                                                                                                                                  |
-| **mediapipe**          | `gemma-2B`                                 | [Gemma](https://www.kaggle.com/models/google/gemma/license/consent)                                                                                                                                                                             |
-| **mnn**                | `qwen-2.5-VL`<br/>`llama-3.2-1B`           | [apache-2.0](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
-| **executorch**         | `llama-3.2-1B`                             | [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)|
+| Framework / Backend        | Supported Models                           | Licenses                                                                                                                                                                                                                                        |
+|----------------------------|--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **llama.cpp**              | `phi-2`<br/>`qwen-2-VL`<br/>`llama-3.2-1B` | [mit](https://huggingface.co/microsoft/phi-2/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
+| **onnxruntime-genai**      | `phi4-mini-instruct`                       | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)                                                                                                                                                                   |
+| **mediapipe (deprecated)** | `gemma-2B`                                 | [Gemma](https://www.kaggle.com/models/google/gemma/license/consent)                                                                                                                                                                             |
+| **mnn**                    | `qwen-2.5-VL`<br/>`llama-3.2-1B`           | [apache-2.0](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)                                                                    |
+| **executorch**             | `llama-3.2-1B`                             | [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)                                                                                                                                                            |
 
 
 ## Supported Platforms
@@ -141,14 +138,14 @@ The supported build platforms and cmake presets matrix is given below.
 The cmake presets (aka build target) are given in the first column and build platform are given in the first row.
 So for example native builds have been tested on Linux-x86_64, Linux-aarch64 & macOS-aarch64. While x-android-aarch64 (targets Android™ devices running on aarch64) builds are only tested on Linux-x86_64 & macOS-aarch64.
 
-|  cmake-preset / Host Platform  | Linux-x86_64 | Linux-aarch64                      | macOS-aarch64 | Android™ |
-|--------------------------------------|--------------|------------------------------------|---------------|---------|
-| native                               | ✅            | ✅ *                              | ✅            | -      |
-| x-android-aarch64                    | ✅            | -                                 | ✅            | -      |
-| x-linux-aarch64                      | ✅ *          | ✅ †                              | -            | -      |
+| cmake-preset / Host Platform | Linux-x86_64 | Linux-aarch64 | macOS-aarch64 | Android™ |
+|------------------------------|--------------|---------------|---------------|----------|
+| native                       | ✅            | ✅ *           | ✅             | -        |
+| x-android-aarch64            | ✅            | -             | ✅             | -        |
+| x-linux-aarch64              | ✅ *          | ✅ †           | -             | -        |
 
 
-\* When targeting the Linux-aarch64 platform and the llama.cpp backend (using either native or x-linux-aarch64 presets) CPU_ARCH build flag must be specified. See the [CPU_ARCH table](#cpu-arch-table) for supported configuration.
+\* When targeting the Linux-aarch64 platform and the llama.cpp backend (using either native or x-linux-aarch64 presets) CPU_ARCH build flag must be specified. See the [CPU_ARCH table](#cpu_arch-table) for supported configuration.
 † Use 'native' preset
 
 Configuration option can be used with cmake presets.
@@ -172,20 +169,21 @@ ctest --test-dir ./build
 
 Details of configurable build options are given below:
 
-Flag name | Default | Values                                                           | Description                                                                                                                           |
-|---|---|------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
-| LLM_FRAMEWORK | llama.cpp | llama.cpp / mediapipe / onnxruntime-genai / mnn / executorch                 | Specifies the backend framework to be used.                                                                                           |
-| BUILD_DEBUG | OFF | ON/OFF                                                           | If set to ON a debug build is configured.                                                                                             |
-| ENABLE_STREAMLINE | OFF | ON/OFF                                                           | Enables Arm Streamline timeline annotations for analyzing LLM initialization, encode, decode, and control-path performance.           |
-| BUILD_LLM_TESTING | ON | ON/OFF                                                           | Builds the project's functional tests when ON.                                                                                        |
-| BUILD_BENCHMARK | OFF | ON/OFF                                                           | Builds the framework's benchmark binaries and arm-llm-bench-cli for the project when ON.                                              |
-| BUILD_JNI_LIB| ON | ON/OFF                                                           | Builds the JNI bindings for the project.                                                                                              |
-| LOG_LEVEL | INFO/DEBUG | DEBUG, INFO, WARN &  ERROR                                       | For BUILD_DEBUG=OFF the default value is INFO. For BUILD_DEBUG=ON, the default value is DEBUG.                                        |
-| USE_KLEIDIAI | ON | ON/OFF                                                           | Build the project with KLEIDIAI CPU optimizations; if set to OFF, optimizations are turned off.                                       |
-| CPU_ARCH | Not defined | Armv8.2_1, Armv8.2_2, Armv8.2_3, Armv8.2_4, Armv8.6_1, Armv9.2_1 | Sets the target ISA architecture (AArch64). Choose a nosve preset to keep SVE disabled when LLM_FRAMEWORK=llama.cpp (issue affects aarch64 only). |
-| GGML_METAL | OFF         | ON/OFF                                                           | macOS specific. Enables Apple Metal backend in ggml for GPU acceleration (Apple Silicon only).                                        |
-| GGML_BLAS  | OFF         | ON/OFF                                                           | macOS specific. Enables Accelerate/BLAS backend in ggml for CPU-optimized linear algebra kernels.                                     |
-| DOWNLOAD_LLM_MODELS | ON | ON/OFF                                                                                                   | Download LLM models for the selected `LLM_FRAMEWORK` during configuration.
+| Flag name           | Default     | Values                                                           | Description                                                                                                                                       |
+|---------------------|-------------|------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| LLM_FRAMEWORK       | llama.cpp   | llama.cpp / mediapipe / onnxruntime-genai / mnn / executorch     | Specifies the backend framework to be used.                                                                                                       |
+| BUILD_DEBUG         | OFF         | ON/OFF                                                           | If set to ON a debug build is configured.                                                                                                         |
+| ENABLE_STREAMLINE   | OFF         | ON/OFF                                                           | Enables Arm Streamline timeline annotations for analyzing LLM initialization, encode, decode, and control-path performance.                       |
+| BUILD_LLM_TESTING   | ON          | ON/OFF                                                           | Builds the project's functional tests when ON.                                                                                                    |
+| BUILD_BENCHMARK     | OFF         | ON/OFF                                                           | Builds the framework's benchmark binaries and arm-llm-bench-cli for the project when ON.                                                          |
+| BUILD_JNI_LIB       | ON          | ON/OFF                                                           | Builds the JNI bindings for the project.                                                                                                          |
+| LOG_LEVEL           | INFO/DEBUG  | DEBUG, INFO, WARN &  ERROR                                       | For BUILD_DEBUG=OFF the default value is INFO. For BUILD_DEBUG=ON, the default value is DEBUG.                                                    |
+| USE_KLEIDIAI        | ON          | ON/OFF                                                           | Build the project with KLEIDIAI CPU optimizations; if set to OFF, optimizations are turned off.                                                   |
+| CPU_ARCH            | Not defined | Armv8.2_1, Armv8.2_2, Armv8.2_3, Armv8.2_4, Armv8.6_1, Armv9.2_1 | Sets the target ISA architecture (AArch64). Choose a nosve preset to keep SVE disabled when LLM_FRAMEWORK=llama.cpp (issue affects aarch64 only). |
+| GGML_METAL          | OFF         | ON/OFF                                                           | macOS specific. Enables Apple Metal backend in ggml for GPU acceleration (Apple Silicon only).                                                    |
+| GGML_BLAS           | OFF         | ON/OFF                                                           | macOS specific. Enables Accelerate/BLAS backend in ggml for CPU-optimized linear algebra kernels.                                                 |
+| DOWNLOAD_LLM_MODELS | ON          | ON/OFF                                                           | Download LLM models for the selected `LLM_FRAMEWORK` during configuration.                                                                        |
+
 - `DOWNLOADS_LOCK_TIMEOUT`: A timeout value in seconds indicating how much time a lock should be tried for
   when downloading resources. This is a one-time download that CMake configuration will initiate unless it
   has been run by the user directly or another prior CMake configuration. The lock prevents multiple CMake
@@ -234,6 +232,8 @@ For customising mediapipe framework , following parameters can be used:
   configuration.
 - `MEDIAPIPE_GIT_URL`: Git URL to clone the sources from.
 - `MEDIAPIPE_GIT_TAG`: Git SHA for checkout
+
+> **NOTE**: The mediapipe backend is deprecated and will be removed in a future release.
 
 Building mediapipe for aarch64 in x86_64 linux based requires downloading Aarch64 GNU toolchain from [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads), following configuration flags need to provided for building
 - `BASE_PATH`: Provides the top level directory of aarch64 GNU toolchain, if not provided the build script will download the latest ARM GNU toolchain for cross-compilation.
@@ -307,22 +307,20 @@ When targeting the llama.cpp LLM backend and Android (--preset=x-android-aarch64
 
 ## Known Issue with llama.cpp
 
-Currently there are issues with a specific architecture (SVE) integration in the llama.cpp backend on aarch64. To ensure this feature is not enabled, we enforce use of one of our provided `CPU_ARCH` flag presets that ensure compiler flags do not enable SVE at build time.
+Currently, there are issues with a specific architecture (SVE) integration in the llama.cpp backend on aarch64. To ensure this feature is not enabled, we enforce use of one of our provided `CPU_ARCH` flag presets that ensure compiler flags do not enable SVE at build time.
 See [llama.cpp issues on GitHub](https://github.com/ggml-org/llama.cpp/issues/21548) for more information.
 The table below gives the mapping of our preset `CPU_ARCH` flags to some common CPU feature flag sets. Other permutations are also supported and can be tailored accordingly. If you intend to use specific features, you must ensure your specific CPU implements them; for example, `i8mm` was optional in Armv8.2. Compilers also need to support any chosen features.
 
+### CPU_ARCH table
 
-
-<a id="cpu-arch-table"></a>
-
-| CPU_ARCH  | C/C++ compiler flags                          |
-|-----------|-----------------------------------------------|
-| Armv8.2_1 | -march=armv8.2-a+dotprod                      |
-| Armv8.2_2 | -march=armv8.2-a+dotprod+fp16                 |
-| Armv8.2_3 | -march=armv8.2-a+dotprod+fp16+i8mm+sme        |
-| Armv8.2_4 | -march=armv8.2-a+dotprod+i8mm                 |
-| Armv8.6_1 | -march=armv8.6-a+dotprod+fp16+i8mm            |
-| Armv9.2_1* | -march=armv9.2-a+dotprod+fp16++i8mm+nosve+sme |
+| CPU_ARCH   | C/C++ compiler flags                         |
+|------------|----------------------------------------------|
+| Armv8.2_1  | -march=armv8.2-a+dotprod                     |
+| Armv8.2_2  | -march=armv8.2-a+dotprod+fp16                |
+| Armv8.2_3  | -march=armv8.2-a+dotprod+fp16+i8mm+sme       |
+| Armv8.2_4  | -march=armv8.2-a+dotprod+i8mm                |
+| Armv8.6_1  | -march=armv8.6-a+dotprod+fp16+i8mm           |
+| Armv9.2_1* | -march=armv9.2-a+dotprod+fp16+i8mm+nosve+sme |
 
 
 * Armv9.2_1 is edited from ggml armv9.2 preset to keep SVE disabled.
@@ -365,7 +363,7 @@ Use these fields in your configuration file:
 
 - `llmModelName` — text model (GGUF)
 - `llmMmProjModelName` — vision projection (GGUF) for multimodal
-- `isvision` — set `"true"` to enable multimodal
+- `isVision` — set `"true"` to enable multimodal
 
 If `"isVision"` is `true`, a valid `llmMmProjModelName` is required; omitting `"image"` runs the backend in **text-only** mode.
 
@@ -394,6 +392,8 @@ These files are essential for loading and running ONNX models effectively.
 > **NOTE**: Currently only int4 and block size 32 models are accelerated by Arm® KleidiAI™ kernels in `onnxruntime-genai`.
 
 ### mediapipe model
+
+> **NOTE**: The mediapipe backend is deprecated and will be removed in a future release.
 
 To use the **Gemma 2B** model, add your [Hugging Face](https://huggingface.co) access token to the build environment after accepting the [*Gemma license*](https://www.kaggle.com/models/google/gemma/license/consent) .
 ```shell
@@ -454,7 +454,8 @@ You can find an example multimodal configuration in [mnnVisionConfig-qwen2.5-3B.
 To build a standalone benchmark binary add the configuration option `-DBUILD_BENCHMARK=ON`
 to any of the build commands above. For example:
 
-On Aarch-64
+On Aarch64
+
 ```shell
 cmake -B build --preset=native -DCPU_ARCH=Armv8.2_4 -DBUILD_BENCHMARK=ON
 cmake --build ./build

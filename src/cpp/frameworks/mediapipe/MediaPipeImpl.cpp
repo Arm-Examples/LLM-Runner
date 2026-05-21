@@ -419,4 +419,3 @@ std::string LLM::LLMImpl::GeneratePromptWithNumTokens(size_t numPromptTokens)
         }
     }
 }
-

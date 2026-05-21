@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -13,7 +13,6 @@
 #include <mutex>
 #include <deque>
 #include <condition_variable>
-
 
 /**
  * @class TokenQueue
@@ -142,7 +141,7 @@ private:
 /**
  * @brief Mediapipe Implementation of our LLM API
  */
-class LLM::LLMImpl : public LlmChat {
+class [[deprecated("This class is deprecated and will be removed in a future release.")]] LLM::LLMImpl : public LlmChat {
 
 public:
     LLMImpl();

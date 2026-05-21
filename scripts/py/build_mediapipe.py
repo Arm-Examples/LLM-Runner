@@ -6,11 +6,12 @@
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tarfile
-import re
+import warnings
 from argparse import ArgumentParser
 from enum import Enum
 from pathlib import Path
@@ -246,6 +247,11 @@ def build_target(mediapipe_dir: Path, bazel_build_flags: list[str]):
         sys.exit(e.returncode)
 
 def main():
+    warnings.warn(
+        "Mediapipe build is deprecated.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     parser = ArgumentParser()
     parser.add_argument(
         "--mediapipe-dir",

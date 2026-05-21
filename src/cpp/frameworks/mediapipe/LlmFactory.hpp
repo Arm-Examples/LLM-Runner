@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -11,7 +11,7 @@
 /**
  * @brief Factory function for creating LLMImpl
  */
-class LLMFactory {
+class [[deprecated("This class is deprecated and will be removed in a future release.")]] LLMFactory {
 public:
     LLMFactory() = default;
     ~LLMFactory() = default;
