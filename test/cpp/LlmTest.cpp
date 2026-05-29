@@ -13,7 +13,6 @@
 #include <fstream>
 #include <array>
 #include <string>
-#include <cstdlib>
 #include <cctype>
 
 #include "catch2/catch_test_macros.hpp"
@@ -24,11 +23,12 @@
 #endif /* defined(DEPRECATED) */
 
 
-std::string s_configFilePath{""};
-std::string s_modelRootDir{""};
-std::string s_backendSharedLibraryDir{""};
+std::string s_configFilePath;
+std::string s_modelRootDir;
+std::string s_resourceRootDir;
+std::string s_backendSharedLibraryDir;
 bool s_debugResponses{false};
-std::string s_transcriptPath{""};
+std::string s_transcriptPath;
 
 static int maxTokenRetrievalAttempts = 10000;
 static int testCtxLength = 73;       // Arbitrary truncated value to emulate faster end  of context.
@@ -42,33 +42,29 @@ int main(int argc, char* argv[])
 {
     Catch::Session session;
 
-    std::string configFilePath;
-    std::string modelsRootDir;
-    std::string backendSharedLibraryDir;
-    bool debugResponses = false;
-    std::string transcriptPath;
-
     if (const char* env = std::getenv("LLM_TEST_DEBUG_RESPONSES")) {
         std::string v(env);
         for (auto& c : v) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
         if (v == "1" || v == "true" || v == "yes" || v == "on") {
-            debugResponses = true;
+            s_debugResponses = true;
         }
     }
     if (const char* env = std::getenv("LLM_TEST_TRANSCRIPT_PATH")) {
-        transcriptPath = env;
+        s_transcriptPath = env;
     }
 
     auto cli = session.cli() |
-        Opt(configFilePath, "configFile")["--config"]
+        Opt(s_configFilePath, "configFile")["--config"]
             ("Path to LLM runtime configuration JSON file") |
-        Opt(modelsRootDir, "modelRootDir")["--model-root"]
+        Opt(s_modelRootDir, "modelRootDir")["--model-root"]
             ("Directory containing LLM model files") |
-        Opt(backendSharedLibraryDir, "sharedLibraryDir")["--backend-shared-lib-dir"]
+        Opt(s_resourceRootDir, "resourceRootDir")["--resource-root"]
+            ("Directory containing LLM test resource files") |
+        Opt(s_backendSharedLibraryDir, "sharedLibraryDir")["--backend-shared-lib-dir"]
             ("Directory containing backend shared libraries") |
-        Opt(debugResponses)["--debug-responses"]
+        Opt(s_debugResponses)["--debug-responses"]
             ("Print prompts/responses and config summary to stdout (also supports env: LLM_TEST_DEBUG_RESPONSES=1)") |
-        Opt(transcriptPath, "path")["--transcript"]
+        Opt(s_transcriptPath, "path")["--transcript"]
             ("Append prompts/responses to a transcript file (also supports env: LLM_TEST_TRANSCRIPT_PATH)");
 
     session.cli(cli);
@@ -77,21 +73,18 @@ int main(int argc, char* argv[])
         LOG_ERROR("Failed to parse command-line options");
     }
 
-    std::cout << "Config file: " << configFilePath << std::endl;
-    std::cout << "Model root directory: " << modelsRootDir << std::endl;
-    std::cout << "Backend shared library directory: " << backendSharedLibraryDir << std::endl;
-
-    s_configFilePath = configFilePath;
-    s_modelRootDir = modelsRootDir;
-    s_backendSharedLibraryDir = backendSharedLibraryDir;
-    s_debugResponses = debugResponses;
-    s_transcriptPath = transcriptPath;
+    std::cout << "Config file: " << s_configFilePath << std::endl;
+    std::cout << "Model root directory: " << s_modelRootDir << std::endl;
+    std::cout << "Test resources directory: " << s_resourceRootDir << std::endl;
+    std::cout << "Backend shared library directory: " << s_backendSharedLibraryDir << std::endl;
+    std::cout << "Debug responses: " << s_debugResponses << std::endl;
 
     return session.run();
 }
 
 static void DebugPrint(const std::string& label, const std::string& value)
 {
+
     if (s_debugResponses) {
         std::cout << label << value << std::endl;
     }
@@ -250,6 +243,7 @@ TEST_CASE("LLM Factory: Validate supported input modalities")
     llm.FreeLlm();
 }
 
+
 /**
  * Query/response and multimodal execution tests.
  */
@@ -262,12 +256,14 @@ TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
 
     INFO("Config file: " << s_configFilePath);
     INFO("Model root directory: " << s_modelRootDir);
+    INFO("Test resources root directory: " << s_resourceRootDir);
     INFO("Backend shared library directory: " << s_backendSharedLibraryDir);
     INFO("Config summary: " << ConfigSummary(configTest));
 
     TranscriptSeparator();
     DebugPrint("Config file: ", s_configFilePath);
     DebugPrint("Model root directory: ", s_modelRootDir);
+    DebugPrint("Test resources root directory: ", s_resourceRootDir);
     DebugPrint("Backend shared library directory: ", s_backendSharedLibraryDir);
     DebugPrint("Config summary: ", ConfigSummary(configTest));
 
@@ -280,6 +276,9 @@ TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
     //
     if (configTest.GetConfigBool(LlmConfig::ConfigParam::IsVision))
     {
+
+        REQUIRE(!s_resourceRootDir.empty());
+
         SECTION("Vision: Describe objects in images")
         {
             llm.LlmInit(configTest, s_backendSharedLibraryDir);
@@ -298,7 +297,7 @@ TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
 
             for (const auto& c : cases) {
                 std::string prompt = "Can you describe this image briefly?";
-                LlmChat::Payload payload{prompt, std::string{TEST_RESOURCE_DIR} + "/" + c.file, isFirstMessage};
+                LlmChat::Payload payload{prompt, std::string{s_resourceRootDir} + "/" + c.file, isFirstMessage};
 
                 CAPTURE(prompt);
                 llm.Encode(payload);
@@ -330,7 +329,7 @@ TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
             llm.LlmInit(configTest, s_backendSharedLibraryDir);
 
             std::string prompt = "What type of dress can you see in this image?";
-            LlmChat::Payload payload{prompt, std::string{TEST_RESOURCE_DIR} + "/kimono.bmp", true};
+            LlmChat::Payload payload{prompt, std::string{s_resourceRootDir} + "/kimono.bmp", true};
 
             CAPTURE(prompt);
             llm.Encode(payload);
@@ -363,7 +362,7 @@ TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
 
             LlmChat::Payload payload{
                 "Can you describe this image?",
-                std::string{TEST_RESOURCE_DIR} + "/tiger.bmp",
+                std::string{s_resourceRootDir} + "/tiger.bmp",
                 true
             };
 
@@ -403,7 +402,7 @@ TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
 
             LlmChat::Payload payload{
                 "What type of dress can you see in this image?",
-                std::string{TEST_RESOURCE_DIR} + "/kimono.bmp",
+                std::string{s_resourceRootDir} + "/kimono.bmp",
                 true
             };
 

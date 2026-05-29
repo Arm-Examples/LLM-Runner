@@ -12,6 +12,8 @@
 
 #include "catch2/catch_test_macros.hpp"
 
+extern std::string s_resourceRootDir;
+
 TEST_CASE("ImageUtils computes aspect-ratio preserving resize dimensions")
 {
     SECTION("Landscape image scales longest side to max dimension") {
@@ -39,7 +41,8 @@ TEST_CASE("ImageUtils computes aspect-ratio preserving resize dimensions")
 
 TEST_CASE("ImageUtils reads image dimensions")
 {
-    const std::string imagePath = std::string{TEST_RESOURCE_DIR} + "/cat.bmp";
+    REQUIRE(!s_resourceRootDir.empty());
+    const std::string imagePath = s_resourceRootDir + "/cat.bmp";
     const auto size = ImageUtils::ReadImageSize(imagePath);
 
     CHECK(size.width > 0);
@@ -48,7 +51,8 @@ TEST_CASE("ImageUtils reads image dimensions")
 
 TEST_CASE("ImageUtils saves resized image")
 {
-    const std::string imagePath = std::string{TEST_RESOURCE_DIR} + "/cat.bmp";
+    REQUIRE(!s_resourceRootDir.empty());
+    const std::string imagePath = s_resourceRootDir + "/cat.bmp";
     const auto outputPath = std::filesystem::temp_directory_path() / "llm-wrapper-image-utils-test.png";
 
     std::filesystem::remove(outputPath);

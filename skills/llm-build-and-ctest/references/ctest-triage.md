@@ -9,7 +9,7 @@
 ## First-pass checklist
 
 - Confirm preset and cache:
-  - Read `build/CMakeCache.txt` for `LLM_FRAMEWORK`, `BUILD_JNI_LIB`, `USE_KLEIDIAI`, `CPU_ARCH`.
+  - Read `build/CMakeCache.txt` for `LLM_FRAMEWORK`, `BUILD_JNI_LIB`, `USE_KLEIDIAI`.
 - Confirm tool versions:
   - `cmake --version`
   - `python3 --version`

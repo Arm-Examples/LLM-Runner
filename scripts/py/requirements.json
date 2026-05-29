@@ -5,7 +5,7 @@
         {
           "name": "phi-2 model",
           "purpose": "To enable basic testing",
-          "destination": "llama.cpp/phi-2/phi2_Q4_model.gguf",
+          "destination": "llama.cpp/phi-2/phi-2.Q4_0.gguf",
           "repo_id": "TheBloke/phi-2-GGUF",
           "filename": "phi-2.Q4_0.gguf",
           "revision": "main",
@@ -27,16 +27,16 @@
         {
           "name": "qwen mmproj model",
           "purpose": "To enable basic testing",
-          "destination": "llama.cpp/qwen2vl-2b/qwen2vl-2b-F16_proj.gguf",
-          "repo_id": "bartowski/Qwen2-VL-2B-Instruct-GGUF",
-          "filename": "mmproj-Qwen2-VL-2B-Instruct-f16.gguf",
+          "destination": "llama.cpp/qwen2vl-2b/mmproj-Qwen2-VL-2B-Instruct-Q8_0.gguf",
+          "repo_id": "ggml-org/Qwen2-VL-2B-Instruct-GGUF",
+          "filename": "mmproj-Qwen2-VL-2B-Instruct-Q8_0.gguf",
           "revision": "main",
-          "sha256sum": "05cc3ae461a7b6aa4023312ccab549ecab77cf8677efee04f049fcbab55b8bc3"
+          "sha256sum": "a0ad91f00a7a80dcf84d719a61b00ee2e07b71794f4ee2dfa81a254621a8c418"
         },
         {
           "name": "qwen model",
           "purpose": "To enable basic testing",
-          "destination": "llama.cpp/qwen2vl-2b/qwen2vl-2b_Q4_0.gguf",
+          "destination": "llama.cpp/qwen2vl-2b/Qwen2-VL-2B-Instruct-Q4_0.gguf",
           "repo_id": "bartowski/Qwen2-VL-2B-Instruct-GGUF",
           "filename": "Qwen2-VL-2B-Instruct-Q4_0.gguf",
           "sha256sum": "4154d891fd4ea54ce368c52031588a50493fa4c118faefb0ac23a9bfbc36c098"

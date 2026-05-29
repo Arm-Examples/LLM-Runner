@@ -26,6 +26,7 @@ if (${LLM_FRAMEWORK} STREQUAL "llama.cpp")
         # Build ALL ARCH variants by default
         set(GGML_BACKEND_DL ON)
         set(GGML_CPU_ALL_VARIANTS ON)
+        set(GGML_OPENMP OFF)
     else()
         if(BUILD_SHARED_LIBS)
             # If the user specified BUILD_SHARED_LIBS build all arch variants by default
@@ -48,7 +49,7 @@ set(LLAMA_GIT_URL "https://github.com/ggerganov/llama.cpp.git"
         CACHE STRING
         "Git URL for llama.cpp repo")
 
-set(LLAMA_GIT_SHA "b7870"
+set(LLAMA_GIT_SHA "b10342"
         CACHE STRING
         "Git commit SHA for llama.cpp repo")
 
@@ -107,4 +108,4 @@ target_include_directories(llm-framework PUBLIC
 target_link_libraries(llm-framework PUBLIC
     mtmd
     llama
-    common)
+    llama-common)
