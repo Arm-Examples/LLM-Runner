@@ -28,6 +28,7 @@
 - [mediapipe model](#mediapipe-model)
 - [mnn model](#mnn-model)
   - [mnn multimodal](#mnn-multimodal)
+- [executorch model](#executorch-model)
 - [To build an executable benchmark binary](#to-build-an-executable-benchmark-binary)
 - [llm benchmark](#llm-benchmark)
 - [Troubleshooting](#troubleshooting)
@@ -448,6 +449,24 @@ The `MNN` backend **also supports multimodal (image + text)** inference in this 
 Set `model.maxInputDimension` in the wrapper configuration to cap image inputs. During `Encode()`, the wrapper preserves the original image aspect ratio, scales the longest side down to this value when needed, saves the resized image next to the source image, and updates the payload to use the resized image path. For MNN, the prompt also includes the prepared image height and width in the `<hw>height, width</hw>` tag. If this field is omitted, it defaults to `128`.
 
 You can find an example multimodal configuration in [mnnVisionConfig-qwen2.5-3B.json](model_configuration_files/mnnVisionConfig-qwen2.5-3B.json)
+
+### executorch model
+
+This project uses the **Llama 3.2 1B Instruct SpinQuant INT4** model as its default network for the ExecuTorch framework.
+The model is distributed as an ExecuTorch `.pte` program with SpinQuant INT4 quantization, which is recommended for efficient text generation on Arm® CPUs.
+
+- You can access the model from [Hugging Face](https://huggingface.co/executorch-community/Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8-ET)
+- The model configuration is declared in the [`requirements.json`](scripts/py/requirements.json)
+
+However, any compatible text model exported for the ExecuTorch LLM runtime can be used.
+
+To use an ExecuTorch model with this framework, the following files are required:
+- `model_name.pte`: ExecuTorch model program
+- `tokenizer.model`, `tokenizer.json`, or `tokenizer.bin`: Tokenizer file placed in the same directory as the `.pte` model
+
+The default wrapper configuration is available in [`executorchTextConfig-llama-3.2-1B.json`](model_configuration_files/executorchTextConfig-llama-3.2-1B.json).
+
+> **NOTE**: The ExecuTorch backend currently supports text models only. If `runtime.contextSize` exceeds the context length exported into the `.pte` model, the backend cannot increase it at runtime; re-export the model with a larger context length.
 
 ## To build an executable benchmark binary
 
