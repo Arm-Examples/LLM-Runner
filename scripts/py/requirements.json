@@ -194,6 +194,53 @@
       ]
     },
     "onnxruntime-genai": {
+      "llama-3.2-1b" : [
+        {
+        "name": "genai config file",
+        "purpose": "Model configuration file",
+        "destination": "onnxruntime-genai/llama-3.2-1b/genai_config.json",
+        "repo_id": "onnx-community/Llama-3.2-1B-Instruct-GENAI-ONNX",
+        "filename" : "cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/genai_config.json",
+        "revision": "main",
+        "sha256sum": "090cd874fc4766ed464f480c6fc8c31511d47b9bddf7fba5ade5b715f087d4bb"
+        },
+        {
+        "name": " model.onnx (CPU/mobile)",
+        "purpose": "ONNX model for basic testing",
+        "destination": "onnxruntime-genai/llama-3.2-1b/model.onnx",
+        "repo_id": "onnx-community/Llama-3.2-1B-Instruct-GENAI-ONNX",
+        "filename" : "cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/model.onnx",
+        "revision": "main",
+        "sha256sum": "8a03b513f3301e53d32a0812e84dba7b5c7320c212831893710d8c5b1c11641a"
+        },
+        {
+        "name": "model.onnx.data (CPU/mobile)",
+        "purpose": "ONNX model data for basic testing",
+        "destination": "onnxruntime-genai/llama-3.2-1b/model.onnx.data",
+        "repo_id": "onnx-community/Llama-3.2-1B-Instruct-GENAI-ONNX",
+        "filename" : "cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/model.onnx.data",
+        "revision": "main",
+        "sha256sum": "052ba08266d8504aa9f0fc087278ecb51e66ee890be868b13a314157ebf287e3"
+        },
+        {
+        "name": "tokenizer file",
+        "purpose": "Tokenizer for the model",
+        "destination": "onnxruntime-genai/llama-3.2-1b/tokenizer.json",
+        "repo_id": "onnx-community/Llama-3.2-1B-Instruct-GENAI-ONNX",
+        "filename" : "cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/tokenizer.json",
+        "revision": "main",
+        "sha256sum": "79e3e522635f3171300913bb421464a87de6222182a0570b9b2ccba2a964b2b4"
+        },
+        {
+        "name": "tokenizer config file",
+        "purpose": "Tokenizer config for the model",
+        "destination": "onnxruntime-genai/llama-3.2-1b/tokenizer_config.json",
+        "repo_id": "onnx-community/Llama-3.2-1B-Instruct-GENAI-ONNX",
+        "filename" : "cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4/tokenizer_config.json",
+        "revision": "main",
+        "sha256sum": "9823dcfdc1121869029da45192238e85cf44f0b232a6d9dc20e4fe6f4242a14e"
+        }
+      ],
       "phi-4-mini": [
         {
           "name": "genai config file",
