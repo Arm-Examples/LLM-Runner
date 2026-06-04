@@ -216,14 +216,11 @@ TEST_CASE("LlmBench: BuildIterationResult computes throughput rules")
     const BenchEncodeStepResult encode{2.0};
     const BenchDecodeStepResult decode{10, 5.0, 100.0};
 
-    const auto generic = LlmBench::BuildIterationResult(encode, decode, 200, "mnn");
+    const auto generic = LlmBench::BuildIterationResult(encode, decode, 200);
     CHECK(generic.timeToFirstTokenMs == Catch::Approx(2100.0));
     CHECK(generic.totalTimeMs == Catch::Approx(7000.0));
     CHECK(generic.encodeTokensPerSec == Catch::Approx(100.0));
     CHECK(generic.decodeTokensPerSec == Catch::Approx(2.0));
-
-    const auto mediapipe = LlmBench::BuildIterationResult(encode, decode, 200, "mediapipe");
-    CHECK(mediapipe.encodeTokensPerSec == Catch::Approx(95.238).epsilon(0.001));
 }
 
 TEST_CASE("LlmBench: BuildIterationResult handles zero durations")
@@ -231,7 +228,7 @@ TEST_CASE("LlmBench: BuildIterationResult handles zero durations")
     const BenchEncodeStepResult encode{0.0};
     const BenchDecodeStepResult decode{0, 0.0, 0.0};
 
-    const auto out = LlmBench::BuildIterationResult(encode, decode, 128, "mnn");
+    const auto out = LlmBench::BuildIterationResult(encode, decode, 128);
 
     CHECK(out.encodeTokensPerSec == Catch::Approx(0.0));
     CHECK(out.decodeTokensPerSec == Catch::Approx(0.0));

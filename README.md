@@ -17,7 +17,6 @@
 - [Framework specific configuration options](#framework-specific-configuration-options)
   - [llama cpp options](#llama-cpp-options)
   - [onnxruntime genai options](#onnxruntime-genai-options)
-  - [mediapipe options](#mediapipe-options)
   - [mnn options](#mnn-options)
   - [executorch options](#executorch-options)
 - [Shared libraries build parameter](#shared-libraries-build-parameter)
@@ -25,7 +24,6 @@
 - [llama cpp model](#llama-cpp-model)
   - [llama cpp multimodal](#llama-cpp-multimodal)
 - [onnxruntime genai model](#onnxruntime-genai-model)
-- [mediapipe model](#mediapipe-model)
 - [mnn model](#mnn-model)
   - [mnn multimodal](#mnn-multimodal)
 - [executorch model](#executorch-model)
@@ -46,10 +44,9 @@ enabled LLM library using CMake build system.
 Provides a single API (Java & C++) to various LLM frameworks
 that Arm® KleidiAI™ kernels have been integrated into.
 Currently, it supports [llama.cpp](https://github.com/ggml-org/llama.cpp),
-[mediapipe](https://github.com/google-ai-edge/mediapipe) (deprecated),
 [onnxruntime-genai](https://github.com/microsoft/onnxruntime-genai),
 [MNN](https://github.com/alibaba/MNN), and
-[ExecuTorch](https://github.com/pytorch/executorch) text backends.
+[ExecuTorch](https://github.com/pytorch/executorch).
 The backend library (selected at CMake configuration stage) is wrapped by this project's thin
 C++ layer that could be used directly for testing and evaluations.
 However, JNI bindings are also provided for developers targeting Android™ based applications.
@@ -63,7 +60,6 @@ However, JNI bindings are also provided for developers targeting Android™ base
 * Android™ NDK (if building for Android™). Minimum version: 29.0.14206865 is recommended and can be downloaded
   from [here](https://developer.android.com/ndk/downloads).
 * Building on macOS requires Xcode Command Line Tools, Android Studio installed and configured (NDK, CMake as above) and Clang (tested with 16.0.0)
-* Bazelisk or Bazel 7.4.1 to build mediapipe backend
 * AArch64 GNU toolchain (version 14.1 or later) if cross-compiling from a Linux® based system which can be downloaded from [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads)
 * Java Development Kit required for building JNI wrapper library necessary to utilise this module in an Android/Java application.
 * Create a [Hugging Face](https://huggingface.co) account and obtain a Hugging Face access token.
@@ -128,7 +124,6 @@ Test project /home/user/llm/build
 |----------------------------|--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **llama.cpp**              | `phi-2`<br/>`qwen-2-VL`<br/>`llama-3.2-1B` | [mit](https://huggingface.co/microsoft/phi-2/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
 | **onnxruntime-genai**      | `phi4-mini-instruct`<br/>`llama-3.2-1B`    | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
-| **mediapipe (deprecated)** | `gemma-2B`                                 | [Gemma](https://www.kaggle.com/models/google/gemma/license/consent)                                                                                                                                                                             |
 | **mnn**                    | `qwen-2.5-VL`<br/>`llama-3.2-1B`           | [apache-2.0](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)                                                                    |
 | **executorch**             | `llama-3.2-1B`                             | [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)                                                                                                                                                            |
 
@@ -172,7 +167,7 @@ Details of configurable build options are given below:
 
 | Flag name           | Default     | Values                                                           | Description                                                                                                                                       |
 |---------------------|-------------|------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| LLM_FRAMEWORK       | llama.cpp   | llama.cpp / mediapipe / onnxruntime-genai / mnn / executorch     | Specifies the backend framework to be used.                                                                                                       |
+| LLM_FRAMEWORK       | llama.cpp   | llama.cpp / onnxruntime-genai / mnn / executorch                 | Specifies the backend framework to be used.                                                                                                       |
 | BUILD_DEBUG         | OFF         | ON/OFF                                                           | If set to ON a debug build is configured.                                                                                                         |
 | ENABLE_STREAMLINE   | OFF         | ON/OFF                                                           | Enables Arm Streamline timeline annotations for analyzing LLM initialization, encode, decode, and control-path performance.                       |
 | BUILD_LLM_TESTING   | ON          | ON/OFF                                                           | Builds the project's functional tests when ON.                                                                                                    |
@@ -224,22 +219,6 @@ onnxruntime-genai:
 
 > **NOTE**: This repository has been tested with `onnxruntime` version `v1.24.2` and
 `onnxruntime-genai` version `v0.12.0`.
-
-#### mediapipe options
-
-For customising mediapipe framework , following parameters can be used:
-
-- `MEDIAPIPE_SRC_DIR`: Source directory path that will be populated by CMake
-  configuration.
-- `MEDIAPIPE_GIT_URL`: Git URL to clone the sources from.
-- `MEDIAPIPE_GIT_TAG`: Git SHA for checkout
-
-> **NOTE**: The mediapipe backend is deprecated and will be removed in a future release.
-
-Building mediapipe for aarch64 in x86_64 linux based requires downloading Aarch64 GNU toolchain from [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads), following configuration flags need to provided for building
-- `BASE_PATH`: Provides the top level directory of aarch64 GNU toolchain, if not provided the build script will download the latest ARM GNU toolchain for cross-compilation.
-> **NOTE**: Support for mediapipe is experimental and current focus is to support Android™ platform. Please note that latest ARM GNU Toolchain version(14.3) may depend on libraries present in Ubuntu® 24.04.4 LTS when cross-compiled.\
-> Support for macOS® and Windows is not added in this release.
 
 #### mnn options
 
@@ -392,27 +371,6 @@ These files are essential for loading and running ONNX models effectively.
 
 > **NOTE**: Currently only int4 and block size 32 models are accelerated by Arm® KleidiAI™ kernels in `onnxruntime-genai`.
 
-### mediapipe model
-
-> **NOTE**: The mediapipe backend is deprecated and will be removed in a future release.
-
-To use the **Gemma 2B** model, add your [Hugging Face](https://huggingface.co) access token to the build environment after accepting the [*Gemma license*](https://www.kaggle.com/models/google/gemma/license/consent) .
-```shell
-export HF_TOKEN=<your hugging-face access token>
-```
-
-or
-
-Append the following lines to your ~/.netrc file:
-```text
-machine huggingface.co
-  login <your-username-or-email>
-  password <your-huggingface-access-token>
-```
-Ensure the .netrc file is secured with the correct permissions.
-Alternatively, you can quantize other models listed in [conversion colab](https://colab.research.google.com/github/googlesamples/mediapipe/blob/main/examples/llm_inference/conversion/llm_conversion.ipynb) from [Hugging Face](https://huggingface.co) to TensorFlow Lite™ (.tflite) format. Copy the resulting 4-bit models to `resources_downloaded/models/mediapipe`.
-It is recommended to use *mediapipe python package version 0.10.15* for stable conversion to 4-bit models.
-
 ### mnn model
 
 This project uses the **Llama 3.2 1B model** as its default network for the MNN framework.
@@ -492,7 +450,6 @@ The Arm LLM Benchmark tool (llm-bench-cli) is a framework-agnostic, standalone e
 - `llama.cpp`
 - `onnxruntime-genai`
 - `MNN`
-- `mediapipe`
 - `ExecuTorch`
 
 Instead of writing your own prompts or relying on framework-specific benchmarking tools, `llm-bench-cli` provides a unified benchmarking pipeline. It automatically detects the backend specified in the LLM configuration file and benchmarks it consistently. The tool repeatedly runs the LLM prompt-processing and token-generation  operations and reports timing and throughput metrics in a standardized format.

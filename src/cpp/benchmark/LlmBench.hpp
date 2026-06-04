@@ -108,13 +108,11 @@ public:
      * @param encodeResult Encode step timings.
      * @param decodeResult Decode-step aggregate timings.
      * @param numInputTokens Number of input tokens used to compute encode throughput.
-     * @param frameworkType Framework/backend label available to downstream formatting or logging.
      * @return Iteration metrics including TTFT, total time, and throughput.
      */
     static BenchIterationResult BuildIterationResult(const BenchEncodeStepResult& encodeResult,
                                                      const BenchDecodeStepResult& decodeResult,
-                                                     int numInputTokens,
-                                                     const std::string& frameworkType);
+                                                     int numInputTokens);
     /**
      * @brief Request generation stop on the wrapped LLM.
      */

@@ -17,13 +17,12 @@
 - Models are often directory-based bundles; ensure config points at the right folder structure.
 - If you change model inputs/outputs, keep benchmark and tests in sync.
 
-## `mediapipe` (experimental)
-
-- Treat as Android-focused and experimental; document any constraints explicitly.
-- Models may have stricter asset/layout expectations; keep paths deterministic.
-
 ## `mnn`
 
 - Models are often referenced by `config.json` within a model directory.
 - KleidiAI may not fully enable at runtime; avoid claiming optimizations unless verified.
 
+## `executorch`
+
+- Models are typically exported `.pte` programs plus tokenizer assets.
+- Keep runtime expectations aligned with the exported bundle; context length cannot be expanded at runtime.

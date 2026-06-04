@@ -34,8 +34,6 @@ elseif (${LLM_FRAMEWORK} STREQUAL "onnxruntime-genai")
             "onnxrtTextConfig-phi-4.json"
             "onnxrtTextConfig-llama-3.2-1B.json"
             CACHE STRING "Path to the ONNX Runtime GenAI config files")
-elseif (${LLM_FRAMEWORK} STREQUAL "mediapipe")
-    set(CONFIG_FILE_NAME "mediapipeTextConfig-gemma-2B.json" CACHE STRING "Path to the mediapipe config file")
 elseif (${LLM_FRAMEWORK} STREQUAL "mnn")
     set(CONFIG_FILE_NAME
             "mnnTextConfig-llama-3.2-1B.json"

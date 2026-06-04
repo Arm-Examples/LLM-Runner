@@ -80,9 +80,9 @@ def main() -> int:
             {"MNN_GIT_URL", "MNN_GIT_TAG"},
         ),
         (
-            "mediapipe",
-            repo_root / "src" / "cpp" / "frameworks" / "mediapipe" / "CMakeLists.txt",
-            {"MEDIAPIPE_GIT_URL", "MEDIAPIPE_GIT_SHA"},
+            "executorch",
+            repo_root / "src" / "cpp" / "frameworks" / "executorch" / "CMakeLists.txt",
+            {"EXECUTORCH_GIT_URL", "EXECUTORCH_GIT_TAG"},
         ),
     ]
 

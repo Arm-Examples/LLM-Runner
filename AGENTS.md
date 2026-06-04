@@ -1,6 +1,6 @@
 # Agent guide
 
-This repository builds an Arm KleidiAI-enabled LLM wrapper library with a thin, backend-agnostic C++ API and optional JNI bindings. Supported backends are selected at CMake configure time: `llama.cpp`, `onnxruntime-genai`, `mediapipe`, and `mnn`.
+This repository builds an Arm KleidiAI-enabled LLM wrapper library with a thin, backend-agnostic C++ API and optional JNI bindings. Supported backends are selected at CMake configure time: `llama.cpp`, `onnxruntime-genai`, `mnn`, and `executorch`.
 
 ## High-signal paths
 

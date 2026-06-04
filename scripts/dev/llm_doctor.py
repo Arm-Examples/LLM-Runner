@@ -109,7 +109,7 @@ def main() -> int:
         "--llm-framework",
         type=str,
         default=None,
-        choices=["llama.cpp", "onnxruntime-genai", "mediapipe", "mnn"],
+        choices=["llama.cpp", "onnxruntime-genai", "mnn", "executorch"],
         help="Override framework when inspecting test config wiring.",
     )
     parser.add_argument(
