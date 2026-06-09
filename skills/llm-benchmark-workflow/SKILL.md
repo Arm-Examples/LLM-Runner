@@ -27,8 +27,8 @@ Select a backend as needed:
 ```sh
 cmake --preset=native -B build -DBUILD_BENCHMARK=ON -DLLM_FRAMEWORK=llama.cpp
 cmake --preset=native -B build -DBUILD_BENCHMARK=ON -DLLM_FRAMEWORK=onnxruntime-genai
-cmake --preset=native -B build -DBUILD_BENCHMARK=ON -DLLM_FRAMEWORK=mediapipe
 cmake --preset=native -B build -DBUILD_BENCHMARK=ON -DLLM_FRAMEWORK=mnn
+cmake --preset=native -B build -DBUILD_BENCHMARK=ON -DLLM_FRAMEWORK=executorch
 ```
 
 If you want to avoid Java/JNI setup during benchmark iteration:

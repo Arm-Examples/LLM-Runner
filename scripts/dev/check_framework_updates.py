@@ -131,7 +131,11 @@ def _read_framework_pins(repo_root: Path, build_dir: Path) -> list[FrameworkPin]
     if mnn_url and mnn_tag:
         pins.append(FrameworkPin("mnn", mnn_url, "tag", mnn_tag))
 
-    # Mediapipe intentionally ignored for now (user request).
+    executorch_url = _get("EXECUTORCH_GIT_URL")
+    executorch_tag = _get("EXECUTORCH_GIT_TAG")
+    if executorch_url and executorch_tag:
+        pins.append(FrameworkPin("executorch", executorch_url, "tag", executorch_tag))
+
     return pins
 
 
@@ -227,4 +231,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

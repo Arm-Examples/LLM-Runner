@@ -7,8 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 This guide explains how to integrate the **LLM-Runner library** into your own applications or products.
 
-The LLM-Runner library provides a lightweight C++ abstraction layer over the selected backend (`llama.cpp`, `onnxruntime-genai`, `mediapipe`, or `MNN`) and optionally enables Arm® KleidiAI™ acceleration. The library can be embedded into native applications or accessed from Android via JNI.
-> **NOTE**: The `mediapipe` backend is deprecated and will be removed in a future release.
+The LLM-Runner library provides a lightweight C++ abstraction layer over the selected backend (`llama.cpp`, `onnxruntime-genai`, `mnn`, or `executorch`) and optionally enables Arm® KleidiAI™ acceleration. The library can be embedded into native applications or accessed from Android via JNI.
 
 ---
 

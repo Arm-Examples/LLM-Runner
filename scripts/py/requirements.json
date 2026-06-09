@@ -289,19 +289,6 @@
         }
       ]
     },
-    "mediapipe": {
-      "gemma-2b": [
-        {
-          "name": "Gemma-2b-it (Cpu-Int4 model)",
-          "purpose": "tflite model for basic Mediapipe testing",
-          "destination": "mediapipe/gemma-2b/gemma-2b-it-cpu-int4.tflite",
-          "repo_id": "google/gemma-2b-it-tflite",
-          "filename": "gemma-2b-it-cpu-int4.bin",
-          "revision": "main",
-          "sha256sum": "176452e0eef32e7cd477e5609160278f3f5cbfeeb46d2cb2d37bd631af1b0bea"
-        }
-      ]
-    },
     "executorch" : {
       "llama-3.2-1b" : [
         {
@@ -344,13 +331,5 @@
       "sha256sum": "85d4c1ab192d3117fd02c7fff1ec0fe63ade45cf56def7fe950ef060cf06e99f"
     }
   ],
-  "build_utils": [
-    {
-      "name": "Arm GNU Toolchain",
-      "purpose": "Toolchain to compile the mediapipe for aarch64",
-      "destination": "arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu.tar.xz",
-      "url": "https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu.tar.xz",
-      "sha256sum": "ddeaff1ea60d4135acba271b0143d9f5add02b68ab9e9be39672d1965c12e82f"
-    }
-  ]
+  "build_utils": []
 }

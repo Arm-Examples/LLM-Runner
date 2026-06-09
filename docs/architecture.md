@@ -19,7 +19,7 @@ graph TD
     Prompt["Input Prompt (text or text+image)"]
     App["Application (C++ API or JNI)"]
     LLMRunner["LLM-Runner API"]
-    Backend["Selected Backend llama.cpp | onnxruntime-genai | Mediapipe | MNN"]
+    Backend["Selected Backend llama.cpp | onnxruntime-genai | mnn | executorch"]
     Inference["Inference with model + config"]
     KleidiAI["Arm® KleidiAI™ Acceleration - default on Arm"]
     Output["Generated tokens / text"]

@@ -1,6 +1,6 @@
 ---
 name: llm-session-start
-description: Run fast “session start / doctor” checks for this repository (toolchain + wiring sanity, framework version report, optional upstream update check), optionally generate a debug bundle, and when needed bump pinned backend framework versions with build+ctest verification. Use at session start or when upgrading llama.cpp/onnxruntime-genai/mediapipe/mnn pins.
+description: Run fast “session start / doctor” checks for this repository (toolchain + wiring sanity, framework version report, optional upstream update check), optionally generate a debug bundle, and when needed bump pinned backend framework versions with build+ctest verification. Use at session start or when upgrading llama.cpp/onnxruntime-genai/mnn/executorch pins.
 ---
 
 # Session start checks
@@ -81,13 +81,14 @@ git ls-remote --tags https://github.com/ggerganov/llama.cpp.git | tail
 git ls-remote --tags https://github.com/microsoft/onnxruntime.git | tail
 git ls-remote --tags https://github.com/microsoft/onnxruntime-genai.git | tail
 git ls-remote --tags https://github.com/alibaba/MNN.git | tail
+git ls-remote --tags https://github.com/pytorch/executorch.git | tail
 ```
 
 4) Update the pinned default (repo change):
 - `src/cpp/frameworks/llama_cpp/CMakeLists.txt`: `LLAMA_GIT_SHA`
 - `src/cpp/frameworks/onnxruntime_genai/CMakeLists.txt`: `ONNXRUNTIME_GIT_TAG`, `ONNXRT_GENAI_GIT_TAG`
 - `src/cpp/frameworks/mnn/CMakeLists.txt`: `MNN_GIT_TAG`
-- `src/cpp/frameworks/mediapipe/CMakeLists.txt`: `MEDIAPIPE_GIT_SHA`
+- `src/cpp/frameworks/executorch/CMakeLists.txt`: `EXECUTORCH_GIT_TAG`
 
 5) Reconfigure + rebuild + run tests:
 

@@ -9,7 +9,7 @@
 ## Build flags
 
 - Enable benchmark targets: `-DBUILD_BENCHMARK=ON`
-- Select backend: `-DLLM_FRAMEWORK=<llama.cpp|onnxruntime-genai|mediapipe|mnn>`
+- Select backend: `-DLLM_FRAMEWORK=<llama.cpp|onnxruntime-genai|mnn|executorch>`
 - Disable JNI during iteration: `-DBUILD_JNI_LIB=OFF`
 
 ## Running `llm-bench-cli`

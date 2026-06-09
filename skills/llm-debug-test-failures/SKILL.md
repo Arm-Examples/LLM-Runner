@@ -1,6 +1,6 @@
 ---
 name: llm-debug-test-failures
-description: Debug failing LLM integration tests caused by model output drift, incorrect context/runtime parameters (contextSize, batchSize, threads), prompt/template mismatches, or backend/framework regressions. Use when tests fail and you need to see the model response, reproduce a single failing CTest, or trace issues into src/cpp/frameworks (llama.cpp, onnxruntime-genai, mediapipe, mnn).
+description: Debug failing LLM integration tests caused by model output drift, incorrect context/runtime parameters (contextSize, batchSize, threads), prompt/template mismatches, or backend/framework regressions. Use when tests fail and you need to see the model response, reproduce a single failing CTest, or trace issues into src/cpp/frameworks (llama.cpp, onnxruntime-genai, mnn, executorch).
 ---
 
 # Debug failing model/tests
@@ -67,8 +67,8 @@ Reference: `skills/llm-add-model-support/references/output-validation.md`.
 Most backend-specific issues live under:
 - `src/cpp/frameworks/llama_cpp/`
 - `src/cpp/frameworks/onnxruntime_genai/`
-- `src/cpp/frameworks/mediapipe/`
 - `src/cpp/frameworks/mnn/`
+- `src/cpp/frameworks/executorch/`
 
 Look for:
 - prompt/template construction differences
@@ -86,14 +86,14 @@ If the wrapper code looks correct but behavior/crashes originate in the underlyi
      - llama.cpp: `src/cpp/frameworks/llama_cpp/CMakeLists.txt` (`LLAMA_GIT_SHA`, `LLAMA_SRC_DIR`)
      - MNN: `src/cpp/frameworks/mnn/CMakeLists.txt` (`MNN_GIT_TAG`, `MNN_SRC_DIR`)
      - ONNX: `src/cpp/frameworks/onnxruntime_genai/CMakeLists.txt` (`ONNXRUNTIME_GIT_TAG`, `ONNXRT_GENAI_GIT_TAG`, `*_SRC_DIR`)
-     - MediaPipe: `src/cpp/frameworks/mediapipe/CMakeLists.txt` (`MEDIAPIPE_GIT_SHA`, `MEDIAPIPE_SRC_DIR`)
+     - ExecuTorch: `src/cpp/frameworks/executorch/CMakeLists.txt` (`EXECUTORCH_GIT_TAG`, `EXECUTORCH_SRC_DIR`)
 
 2) Open the fetched upstream code under your build directory (default locations):
    - llama.cpp: `build/llama.cpp/`
    - MNN: `build/mnn/`
    - onnxruntime: `build/onnxruntime/`
    - onnxruntime-genai: `build/onnxruntime-genai/`
-   - mediapipe: `build/mediapipe/`
+   - executorch: `build/_deps/executorch/`
 
 3) Connect the dots from wrapper → upstream:
    - Start at the wrapper implementation (e.g. `src/cpp/frameworks/mnn/MnnImpl.cpp`) and follow the calls into upstream headers/sources (includes typically reference the fetched `*_SRC_DIR`).
@@ -139,4 +139,4 @@ Backend “where to look first”:
 - `llama.cpp`: wrapper chat template/tokenization glue in `src/cpp/frameworks/llama_cpp/`, fetched sources in `build/llama.cpp/`
 - `mnn`: model artifact layout + file IO in `src/cpp/frameworks/mnn/`, fetched sources in `build/mnn/`
 - `onnxruntime-genai`: session/init + provider config in `src/cpp/frameworks/onnxruntime_genai/`, fetched sources in `build/onnxruntime*/`
-- `mediapipe`: bazel-built engine wiring in `src/cpp/frameworks/mediapipe/`, fetched sources in `build/mediapipe/`
+- `executorch`: runtime/session integration in `src/cpp/frameworks/executorch/`, fetched sources in `build/_deps/executorch/`

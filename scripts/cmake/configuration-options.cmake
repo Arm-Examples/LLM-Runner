@@ -10,12 +10,18 @@ set(LLM_FRAMEWORK "llama.cpp" CACHE STRING
     "Dependency name to configure the project for")
 
 # Available options:
-set(CACHE LLM_FRAMEWORK PROPERTY STRINGS
+set(LLM_FRAMEWORK_VALUES
     "llama.cpp"
     "onnxruntime-genai"
-    "mediapipe"
     "mnn"
     "executorch")
+set(CACHE LLM_FRAMEWORK PROPERTY STRINGS ${LLM_FRAMEWORK_VALUES})
+
+list(FIND LLM_FRAMEWORK_VALUES "${LLM_FRAMEWORK}" LLM_FRAMEWORK_INDEX)
+if(LLM_FRAMEWORK_INDEX EQUAL -1)
+    message(FATAL_ERROR
+        "Unsupported LLM_FRAMEWORK='${LLM_FRAMEWORK}'. Supported values: ${LLM_FRAMEWORK_VALUES}")
+endif()
 
 set(DOWNLOADS_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/resources_downloaded
     CACHE STRING

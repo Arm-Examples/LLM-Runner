@@ -158,8 +158,7 @@ BenchDecodeStepResult LlmBench::DecodeStep()
 
 BenchIterationResult LlmBench::BuildIterationResult(const BenchEncodeStepResult& encodeResult,
                                                     const BenchDecodeStepResult& decodeResult,
-                                                    int numInputTokens,
-                                                    const std::string& frameworkType)
+                                                    int numInputTokens)
 {
     BenchIterationResult out{};
     out.encodeTimeSec = encodeResult.encodeTimeSec;
@@ -169,11 +168,7 @@ BenchIterationResult LlmBench::BuildIterationResult(const BenchEncodeStepResult&
     out.totalTimeMs = (encodeResult.encodeTimeSec + decodeResult.decodeTimeSec) * 1000.0;
 
     if (out.encodeTimeSec > 0.0) {
-        if (frameworkType == "mediapipe") {
-            out.encodeTokensPerSec = 1000.0 * (static_cast<double>(numInputTokens) / out.timeToFirstTokenMs);
-        } else {
-            out.encodeTokensPerSec = static_cast<double>(numInputTokens) / out.encodeTimeSec;
-        }
+        out.encodeTokensPerSec = static_cast<double>(numInputTokens) / out.encodeTimeSec;
     }
 
     if (out.decodeTimeSec > 0.0 && out.tokensGenerated > 0) {
@@ -186,7 +181,7 @@ BenchIterationResult LlmBench::BuildIterationResult(const BenchEncodeStepResult&
 BenchIterationResult LlmBench::BuildIterationResult(const BenchEncodeStepResult& encodeResult,
                                                     const BenchDecodeStepResult& decodeResult) const
 {
-    return BuildIterationResult(encodeResult, decodeResult, m_numInputTokens, m_frameworkType);
+    return BuildIterationResult(encodeResult, decodeResult, m_numInputTokens);
 }
 
 void LlmBench::StopGeneration()
