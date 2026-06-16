@@ -7,13 +7,13 @@
 #include "LlmImpl.hpp"
 #include "Logger.hpp"
 
-LLM::LLMImpl::LLMImpl() {}
+MnnImpl::MnnImpl() {}
 
-LLM::LLMImpl::~LLMImpl() {
+MnnImpl::~MnnImpl() {
     this->FreeLlm();
 }
 
-void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPath = "") {
+void MnnImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPath = "") {
     this->m_config            = config;
     this->m_numOfThreads      = config.GetConfigInt(LlmConfig::ConfigParam::NumThreads);
     this->m_nCtx              = config.GetConfigInt(LlmConfig::ConfigParam::ContextSize);
@@ -41,7 +41,7 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPat
     }
 }
 
-void LLM::LLMImpl::SetConfig() {
+void MnnImpl::SetConfig() {
      if (!this->m_llm) {
         THROW_ERROR("SetConfig called before LLM instance was created.");
     }
@@ -60,31 +60,31 @@ void LLM::LLMImpl::SetConfig() {
     m_llm->set_config(cfg.str());
 }
 
-void LLM::LLMImpl::FreeLlm() {
+void MnnImpl::FreeLlm() {
     if(this->m_llm) {
         this->m_llm->reset();
         this->m_llm.reset();
     }
 }
 
-float LLM::LLMImpl::GetEncodeTimings(){
+float MnnImpl::GetEncodeTimings(){
     return (m_ctx->prefill_us > 0) ? (m_ctx->prompt_len * 1e6f / m_ctx->prefill_us) : 0.0f;
 }
 
-float LLM::LLMImpl::GetDecodeTimings(){
+float MnnImpl::GetDecodeTimings(){
     return (m_ctx->decode_us > 0) ? (m_ctx->gen_seq_len * 1e6f / m_ctx->decode_us) : 0.0f;
 }
 
-void LLM::LLMImpl::ResetTimings() {}
+void MnnImpl::ResetTimings() {}
 
-std::string LLM::LLMImpl::SystemInfo() {return "";}
+std::string MnnImpl::SystemInfo() {return "";}
 
-void LLM::LLMImpl::ResetContext() {
+void MnnImpl::ResetContext() {
     m_llm->reset();
     this->m_isConversationStart = true;
 }
 
-void LLM::LLMImpl::Encode(LlmChat::Payload& payload) {
+void MnnImpl::Encode(LlmChat::Payload& payload) {
     // Initialize generation context
     m_llm->generate_init(nullptr, nullptr);
     // Tokenize the input prompt into model-specific token IDs
@@ -96,7 +96,7 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload) {
     this->m_llm->generate(/*input_ids=*/token_ids, /*max_tokens=*/0);
 }
 
-std::string LLM::LLMImpl::NextToken() {
+std::string MnnImpl::NextToken() {
     // Generate the next token
     m_llm->generate(/*max_token=*/1);
     // Retrieve the most recent token ID from the output buffer
@@ -109,15 +109,15 @@ std::string LLM::LLMImpl::NextToken() {
     return m_llm->tokenizer_decode(token_id);
 }
 
-void LLM::LLMImpl::Cancel() {
+void MnnImpl::Cancel() {
     LOG_INF("Cancelling current operation");
 }
 
-size_t LLM::LLMImpl::GetChatProgress() {
+size_t MnnImpl::GetChatProgress() const {
     return 100 * m_ctx->all_seq_len / this->m_nCtx;
 }
 
-bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
+bool MnnImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
 {
     if(!this->m_llm) {
         THROW_ERROR("Failed to apply Chat Template, LLM not found.");
@@ -140,7 +140,7 @@ bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
     }
 }
 
-std::vector<std::string> LLM::LLMImpl::SupportedInputModalities() const {
+std::vector<std::string> MnnImpl::SupportedInputModalities() const {
     std::vector<std::string> modalities = {"text"};
     if (m_llm) {
         auto config = nlohmann::json::parse(m_llm->dump_config());
@@ -153,7 +153,7 @@ std::vector<std::string> LLM::LLMImpl::SupportedInputModalities() const {
     return modalities;
 }
 
-std::string LLM::LLMImpl::GeneratePromptWithNumTokens(size_t numPromptTokens)
+std::string MnnImpl::GeneratePromptWithNumTokens(size_t numPromptTokens)
 {
     if (numPromptTokens == 0) {
         return std::string{};
@@ -185,4 +185,4 @@ std::string LLM::LLMImpl::GeneratePromptWithNumTokens(size_t numPromptTokens)
     }
 }
 
-void LLM::LLMImpl::StopGeneration() {}
+void MnnImpl::StopGeneration() {}

@@ -9,6 +9,7 @@
 #include "LlmChat.hpp"
 #include <cstdint>
 #include <memory>
+#include <unordered_map>
 #include <string>
 #include <vector>
 
@@ -112,7 +113,14 @@ public:
     [[nodiscard]] std::size_t GetChatProgress() const;
 
     /** @return Framework type string (e.g., backend name). */
-    [[nodiscard]] static std::string GetFrameworkType();
+    [[nodiscard]] std::string GetFrameworkType() const;
+
+    /**
+     * Register a backend configuration under a key for easy switching.
+     * @param key Identifier for the backend config (e.g. "llama", "onnx").
+     * @param llmConfig Model and user parameters (including backend selection).
+     */
+    void RegisterBackendConfig(const std::string& key, const LlmConfig &llmConfig);
 
     /**
      * @return Vector of supported input modalities for the active implementation.
@@ -143,6 +151,7 @@ private:
     [[nodiscard]] bool isStopToken(std::string token);
 
     LlmConfig m_config{};
+    std::unordered_map<std::string, LlmConfig> m_backendConfigs{};
     bool SupportsModality(const std::vector<std::string> &inptMods, std::string modality) const;
 
 };

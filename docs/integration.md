@@ -54,13 +54,13 @@ The default models can be downloaded using:
 python scripts/py/download_resources.py
 ```
 
-Default model configuration files are stored in `model_configuration_files/`, and the download list is defined in `scripts/py/requirements.json`.
+Default model configuration files are stored in `config_files/model_configuration_files/`, and the download list is defined in `scripts/py/requirements.json`.
 
 ---
 
 ## 3) Embed in your application
 
-The public C++ API lives under `src/cpp/interface/`. The JNI surface is under `src/java/`. Use the configuration JSONs under `model_configuration_files/` to select the model and runtime settings appropriate for your integration.
+The public C++ API lives under `src/cpp/interface/`. The JNI surface is under `src/java/`. Use the configuration JSONs under `config_files/model_configuration_files/` to select the model and runtime settings appropriate for your integration.
 
 Minimal integration checklist:
 
@@ -69,7 +69,7 @@ Minimal integration checklist:
 - Initialize the backend before submitting prompt.
 - Log and handle errors during backend initialization and inference.
 
-Example uses default llama.cpp backend but can be adapted to other frameworks. 
+Example uses the llama.cpp backend but can be adapted to other frameworks. 
 See: [`src/cpp/benchmark/main.cpp`](../src/cpp/benchmark/main.cpp)
 
 Example embedding (CMake + C++):
@@ -168,15 +168,24 @@ target_compile_features(my_app PRIVATE cxx_std_17)
 
 ### 3) Configure + Build
 
-Note: Framework selection is compile-time and you will need to rebuild for other supported frameworks and adjust models and config files accordingly.
+Note: Framework selection is compile-time via the LLM_ENABLE_* options and you will need to rebuild for other supported frameworks and adjust models and config files accordingly.
 
 ```bash
 cmake -S my_app -B my_app/build \
-  -DLLM_FRAMEWORK=llama.cpp \
   -DBUILD_LLM_TESTING=OFF \
   -DBUILD_BENCHMARK=OFF \
   -DBUILD_JNI_LIB=OFF
 cmake --build my_app/build
+```
+Configure to build with specific backends(MNN and ONNX Runtime in this case):
+```
+cmake -S my_app -B my_app/build \
+-DLLM_ENABLE_LLAMA_CPP=OFF \
+-DLLM_ENABLE_ONNXRUNTIME_GENAI=ON \
+-DLLM_ENABLE_MNN=ON \
+-DBUILD_LLM_TESTING=OFF \
+-DBUILD_BENCHMARK=OFF \
+-DBUILD_JNI_LIB=OFF
 ```
 
 ### 4) Run
@@ -185,7 +194,7 @@ cmake --build my_app/build
 ./my_app/build/my_app \
   --prompt "What is the capital of France?" \
   --model resources_downloaded/models/llama.cpp/llama32_1B_Q4_KM_model.gguf \
-  --config model_configuration_files/llamaTextConfig-llama-3.2-1B.json
+  --config config_files/model_configuration_files/llamaTextConfig-llama-3.2-1B.json
 ```
 
 Expected output:
@@ -194,7 +203,7 @@ Expected output:
 large-language-models$ ./my_app/build/my_app \
 >   --prompt "What is the capital of France?" \
 >   --model resources_downloaded/models/llama.cpp/llama32_1B_Q4_KM_model.gguf \
->   --config model_configuration_files/llamaTextConfig-llama-3.2-1B.json
+>   --config config_files/model_configuration_files/llamaTextConfig-llama-3.2-1B.json
 INFO : my_app version=0.0.1 git_sha=e5704f9eb88d build_timestamp_utc=2026-03-26T14:17:45Z framework=llama.cpp framework_revisions=[llama.cpp=b7870]
 INFO : Initializing LLM with framework='llama.cpp'
 WARN : llama_context: n_ctx_seq (2048) < n_ctx_train (131072) -- the full capacity of the model will not be utilized

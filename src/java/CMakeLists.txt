@@ -15,6 +15,7 @@ project(llm-java-prj
 # targets.
 
 add_library(llm-java INTERFACE)
-target_sources(llm-java INTERFACE com/arm/Llm.java)
+target_sources(llm-java INTERFACE
+    com/arm/Llm.java)
 
 add_dependencies(llm-java llm-jni)

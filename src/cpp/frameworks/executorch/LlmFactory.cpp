@@ -13,5 +13,5 @@ std::unique_ptr<LLM::LLMImpl> LLMFactory::CreateLLMImpl(const LlmConfig& config)
         THROW_ERROR("ExecuTorch backend only supports text models");
     }
 
-    return std::make_unique<LLM::LLMImpl>();
+    return std::make_unique<ExecuTorchImpl>();
 }

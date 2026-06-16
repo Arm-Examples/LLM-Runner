@@ -8,7 +8,6 @@
       "cacheVariables": {
         "BUILD_DEBUG": "OFF",
         "BUILD_JNI_LIB": "ON",
-        "LLM_FRAMEWORK": "llama.cpp",
         "BUILD_LLM_TESTING": "ON",
         "BUILD_BENCHMARK": "OFF"
       }
@@ -16,7 +15,8 @@
     {
       "name": "native",
       "inherits": "base",
-      "toolchainFile": "${sourceDir}/scripts/cmake/toolchains/native-dispatch.cmake"
+      "toolchainFile": "${sourceDir}/scripts/cmake/toolchains/native-dispatch.cmake",
+      "cacheVariables": {}
     },
     {
       "name": "x-android-aarch64",

@@ -191,7 +191,16 @@ static std::string Truncate(std::string s, size_t maxLen)
 static std::string ConfigSummary(const LlmConfig& config)
 {
     std::ostringstream oss;
-    oss << "framework=" << LLM::GetFrameworkType();
+    std::string framework = config.GetFramework();
+#if defined(LLM_DEFAULT_BACKEND)
+    if (framework.empty()) {
+        framework = LLM_DEFAULT_BACKEND;
+    }
+#endif
+    if (framework.empty()) {
+        framework = "unknown";
+    }
+    oss << "framework=" << framework;
     oss << ", model=" << config.GetConfigString(LlmConfig::ConfigParam::LlmModelName);
 
     const std::string proj = config.GetConfigString(LlmConfig::ConfigParam::ProjModelName);

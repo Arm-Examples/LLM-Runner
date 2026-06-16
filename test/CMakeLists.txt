@@ -23,37 +23,39 @@ endif()
 
 message(STATUS "Adding C++ tests")
 
-if (${LLM_FRAMEWORK} STREQUAL "llama.cpp")
-    set(CONFIG_FILE_NAME
-            "llamaTextConfig-phi-2.json"
-            "llamaVisionConfig-qwen2-vl-2B.json"
-            "llamaTextConfig-llama-3.2-1B.json"
-            CACHE STRING "Path to the llama.cpp config files")
-elseif (${LLM_FRAMEWORK} STREQUAL "onnxruntime-genai")
-    set(CONFIG_FILE_NAME
-            "onnxrtTextConfig-phi-4.json"
-            "onnxrtTextConfig-llama-3.2-1B.json"
-            CACHE STRING "Path to the ONNX Runtime GenAI config files")
-elseif (${LLM_FRAMEWORK} STREQUAL "mnn")
-    set(CONFIG_FILE_NAME
-            "mnnTextConfig-llama-3.2-1B.json"
-            "mnnVisionConfig-qwen2.5-3B.json"
-            CACHE STRING "Path to the MNN config files")
-elseif (${LLM_FRAMEWORK} STREQUAL "executorch")
-    set(CONFIG_FILE_NAME
-            "executorchTextConfig-llama-3.2-1B.json"
-            CACHE STRING "Path to the ExecuTorch config file")
-else()
-    message(FATAL_ERROR "${LLM_FRAMEWORK} is currently not supported.")
-endif ()
+set(CONFIG_FILE_NAME "")
+if (LLM_ENABLE_LLAMA_CPP)
+    list(APPEND CONFIG_FILE_NAME
+        "llamaTextConfig-phi-2.json"
+        "llamaVisionConfig-qwen2-vl-2B.json"
+        "llamaTextConfig-llama-3.2-1B.json")
+endif()
+if (LLM_ENABLE_ONNXRUNTIME_GENAI)
+    list(APPEND CONFIG_FILE_NAME "onnxrtTextConfig-phi-4.json")
+endif()
+if (LLM_ENABLE_MNN)
+    list(APPEND CONFIG_FILE_NAME
+        "mnnTextConfig-llama-3.2-1B.json"
+        "mnnVisionConfig-qwen2.5-3B.json")
+endif()
+if (LLM_ENABLE_EXECUTORCH)
+    list(APPEND CONFIG_FILE_NAME "executorchTextConfig-llama-3.2-1B.json")
+endif()
+
+list(LENGTH CONFIG_FILE_NAME _llm_config_count)
+if (_llm_config_count EQUAL 0)
+    message(FATAL_ERROR "No test configs selected; check LLM_ENABLE_* options.")
+endif()
 
 if (NOT DOWNLOAD_LLM_MODELS)
-    if (NOT EXISTS "${TEST_MODELS_DIR}/${LLM_FRAMEWORK}")
-        message(FATAL_ERROR
-            "Model downloads are disabled (DOWNLOAD_LLM_MODELS=OFF) but no models were found under "
-            "${TEST_MODELS_DIR}/${LLM_FRAMEWORK}. Reconfigure without -DDOWNLOAD_LLM_MODELS=OFF or "
-            "disable BUILD_LLM_TESTING.")
-    endif()
+    foreach(_backend ${LLM_ENABLED_BACKENDS})
+        if (NOT EXISTS "${TEST_MODELS_DIR}/${_backend}")
+            message(FATAL_ERROR
+                "Model downloads are disabled (DOWNLOAD_LLM_MODELS=OFF) but no models were found under "
+                "${TEST_MODELS_DIR}/${_backend}. Reconfigure without -DDOWNLOAD_LLM_MODELS=OFF or "
+                "disable BUILD_LLM_TESTING.")
+        endif()
+    endforeach()
 endif()
 
 # Download Catch and add to the build.
@@ -67,9 +69,10 @@ set(TEST_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmTest.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmConfigTest.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmLogTest.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/cpp/BenchRunnerTest.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/cpp/BenchRunnerTest.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/cpp/LlmSwitchEndToEndTest.cpp)
 
-if (${LLM_FRAMEWORK} STREQUAL "mnn" OR ${LLM_FRAMEWORK} STREQUAL "llama.cpp")
+if (LLM_ENABLE_MNN OR LLM_ENABLE_LLAMA_CPP)
     list(APPEND TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/cpp/ImageUtilsTest.cpp)
 endif()
 
@@ -78,7 +81,13 @@ add_executable(${TEST_TARGET} ${TEST_SOURCES})
 target_compile_definitions(${TEST_TARGET}
         PUBLIC
         TEST_MODELS_DIR="${TEST_MODELS_DIR}"
-        TEST_RESOURCE_DIR="${TEST_RESOURCE_DIR}")
+        TEST_RESOURCE_DIR="${TEST_RESOURCE_DIR}"
+        MODEL_CONFIG_DIR="${CMAKE_SOURCE_DIR}/config_files/model_configuration_files"
+        ACTIVE_LOG_LEVEL=LOG_LEVEL_WARN)
+
+target_include_directories(${TEST_TARGET} PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/cpp
+        ${CMAKE_SOURCE_DIR}/src/cpp/frameworks)
 
 target_include_directories(${TEST_TARGET} PRIVATE
         ${CMAKE_SOURCE_DIR}/src/cpp/benchmark)
@@ -92,6 +101,10 @@ endif()
 # Assert dependency on the actual C++ interface or library.
 target_link_libraries(${TEST_TARGET} PUBLIC llm-cpp llm-bench Catch2::Catch2)
 
+if (CMAKE_SYSTEM_NAME STREQUAL "Android")
+    target_link_libraries(${TEST_TARGET} PRIVATE log)
+endif()
+
 foreach(CFG_FILE ${CONFIG_FILE_NAME})
 
     message(STATUS "Adding cpp test for ${CFG_FILE}")
@@ -101,7 +114,7 @@ foreach(CFG_FILE ${CONFIG_FILE_NAME})
     string(TOLOWER "${CFG_FILE}" CFG_FILE_EXT)
     string(MAKE_C_IDENTIFIER "${CFG_FILE_EXT}" CFG_FILE_EXT)
 
-    set(CONFIG_FILE_SOURCE "${CMAKE_SOURCE_DIR}/model_configuration_files/${CFG_FILE}")
+    set(CONFIG_FILE_SOURCE "${CMAKE_SOURCE_DIR}/config_files/model_configuration_files/${CFG_FILE}")
 
     if(NOT EXISTS ${CONFIG_FILE_SOURCE})
         message(FATAL_ERROR "Configuration file not found: ${CONFIG_FILE_SOURCE}")
@@ -156,7 +169,7 @@ if(TARGET llm-jni)
         string(TOLOWER "${CFG_FILE}" CFG_FILE_EXT)
         string(MAKE_C_IDENTIFIER "${CFG_FILE_EXT}" CFG_FILE_EXT)
 
-        set(CONFIG_FILE_SOURCE "${CMAKE_SOURCE_DIR}/model_configuration_files/${CFG_FILE}")
+        set(CONFIG_FILE_SOURCE "${CMAKE_SOURCE_DIR}/config_files/model_configuration_files/${CFG_FILE}")
         set(CONFIG_FILE_DEST "${CMAKE_BINARY_DIR}/${CFG_FILE}")
 
         add_test(
@@ -172,5 +185,7 @@ if(TARGET llm-jni)
             -cp ${_jarDependenciesTests}:${_jarFile}
             org.junit.runner.JUnitCore
             com.arm.LlmTestJNI)
+        set_tests_properties(llm-jni-ctest-${CFG_FILE_EXT} PROPERTIES
+            ENVIRONMENT "LLM_CONFIG_DIR=${CMAKE_SOURCE_DIR}/config_files")
     endforeach()
 endif()

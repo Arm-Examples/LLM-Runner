@@ -53,6 +53,6 @@ Typical Flow:
 | `src/java/`                  | Java/JNI bindings.                                                                              |
 | `scripts/py/`                | Python utilities for downloading models, test resources, and performing data preparation tasks. |
 | `scripts/cmake/`             | Toolchains and CMake helper scripts for cross-compilation and platform configuration.           |
-| `model_configuration_files/` | Model configuration files used by the build system and runtime.                                 |
+| `config_files/model_configuration_files/` | Model configuration files used by the build system and runtime.                                 |
 | `resources_downloaded/`      | Default directory where models and example assets are downloaded.                               |
 | `test/`                      | C++/Java unit tests  and supporting test resources.                                             |

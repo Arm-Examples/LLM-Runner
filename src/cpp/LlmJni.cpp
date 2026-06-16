@@ -7,13 +7,18 @@
 #include <jni.h>
 
 #include "LlmConfig.hpp"
-#include "LlmImpl.hpp"
 #include "Logger.hpp"
 #include "BuildInfo.hpp"
 #include "LlmBridge.hpp"
 #include "LlmCache.hpp"
 #include "LlmBench.hpp"
 #include "BenchRunner.hpp"
+#include <algorithm>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <nlohmann/json.hpp>
+#include <sstream>
 
 /**
  * @struct BenchmarkSession
@@ -36,6 +41,69 @@ struct BenchmarkSession {
 };
 
 static std::unique_ptr<BenchmarkSession> g_benchmark;
+
+static std::string ReadFileToString(const std::filesystem::path& path) {
+    std::ifstream in(path);
+    if (!in.is_open()) {
+        throw std::runtime_error("Failed to open config file: " + path.string());
+    }
+    std::stringstream buffer;
+    buffer << in.rdbuf();
+    return buffer.str();
+}
+
+static LlmConfig LoadDefaultConfigFromRunner()
+{
+    const char* configDirEnv = std::getenv("LLM_CONFIG_DIR");
+    const std::filesystem::path configDir = configDirEnv ? configDirEnv : "config_files";
+    const std::filesystem::path runnerPath = configDir / "llmrunner.json";
+    nlohmann::json runnerConfig;
+    {
+        std::ifstream in(runnerPath);
+        if (!in.is_open()) {
+            throw std::runtime_error("Failed to open config file: " + runnerPath.string());
+        }
+        in >> runnerConfig;
+    }
+
+    if (!runnerConfig.contains("framework") || !runnerConfig.at("framework").is_string()) {
+        throw std::runtime_error("llmrunner.json must define framework as a string");
+    }
+    std::string frameworkKey = runnerConfig.at("framework").get<std::string>();
+    if (frameworkKey.empty()) {
+        throw std::runtime_error("llmrunner.json must define a non-empty framework");
+    }
+    std::transform(frameworkKey.begin(), frameworkKey.end(), frameworkKey.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+    if (!runnerConfig.contains("frameworkConfigs") || !runnerConfig.at("frameworkConfigs").is_object()) {
+        throw std::runtime_error("llmrunner.json must define frameworkConfigs as an object");
+    }
+    const auto& frameworkConfigs = runnerConfig.at("frameworkConfigs");
+    if (!frameworkConfigs.contains(frameworkKey) || !frameworkConfigs.at(frameworkKey).is_object()) {
+        throw std::runtime_error("Framework config key '" + frameworkKey + "' not registered in llmrunner.json");
+    }
+    const auto& entry = frameworkConfigs.at(frameworkKey);
+    if (!entry.contains("configFile") || !entry.at("configFile").is_string()) {
+        throw std::runtime_error("frameworkConfigs." + frameworkKey + ".configFile must be a string");
+    }
+    if (!entry.contains("framework") || !entry.at("framework").is_string()) {
+        throw std::runtime_error("frameworkConfigs." + frameworkKey + ".framework must be a string");
+    }
+    const std::string configFile = entry.at("configFile").get<std::string>();
+    const std::string framework = entry.at("framework").get<std::string>();
+    if (framework.empty()) {
+        throw std::runtime_error("frameworkConfigs." + frameworkKey + ".framework must be non-empty");
+    }
+    const std::filesystem::path modelConfigDir = configDir / "model_configuration_files";
+    const std::filesystem::path modelConfigPath = std::filesystem::path(configFile).is_absolute()
+        ? std::filesystem::path(configFile)
+        : (modelConfigDir / configFile);
+
+    LlmConfig config(ReadFileToString(modelConfigPath));
+    config.SetConfigString(LlmConfig::ConfigParam::Framework, framework);
+    return config;
+}
 
 /**
 * @brief inline method to throw error in java
@@ -131,17 +199,6 @@ JNIEXPORT jlong JNICALL Java_com_arm_Llm_llmInitJNI(JNIEnv* env,
                         jstring sharedLibraryPath) {
     try {
         LlmLog::LogBuildMetadataOnce();
-        if (jsonConfig == nullptr) {
-                LOG_ERROR("Failed to initialize LLM module: config json string is null");
-                ThrowJavaException(env, "Failed to initialize LLM module, error in config json string ");
-                return 0;
-        }
-        auto modelCStr = GetUtfChars(env, jsonConfig);
-        if (modelCStr.get() == nullptr) {
-            LOG_ERROR("Failed to initialize LLM module: jstring to utf conversion failed for config json");
-            ThrowJavaException(env, "Failed to initialize LLM module, jstring to utf conversion failed for config json");
-            return 0;
-        }
         if (sharedLibraryPath == nullptr) {
             LOG_ERROR("Failed to initialize LLM module: shared-library-path is null");
             ThrowJavaException(env, "Failed to initialize LLM module, jstring shared-library-path is null");
@@ -155,7 +212,17 @@ JNIEXPORT jlong JNICALL Java_com_arm_Llm_llmInitJNI(JNIEnv* env,
         }
 
         try {
-            LlmConfig config(modelCStr.get());
+            LlmConfig config = LoadDefaultConfigFromRunner();
+            if (jsonConfig != nullptr) {
+                auto modelCStr = GetUtfChars(env, jsonConfig);
+                if (modelCStr.get() == nullptr) {
+                    ThrowJavaException(env, "Failed to initialize LLM module: jstring to utf conversion failed for config json");
+                    return 0;
+                }
+                if (modelCStr.get()[0] != '\0') {
+                    config = LlmConfig(modelCStr.get());
+                }
+            }
             auto llm = std::make_unique<LLM>();
             llm->LlmInit(config, sharedLibraryPathNative.get());
             return LLMCache::Instance().Add(std::move(llm));
@@ -173,6 +240,46 @@ JNIEXPORT jlong JNICALL Java_com_arm_Llm_llmInitJNI(JNIEnv* env,
     }
     return 0;
 }
+
+/**
+ * @brief JNI entry point to register a backend configuration under a key.
+ * @param env JNI environment variable passed from JVM layer
+ * @param key java string identifier for the backend config
+ * @param jsonConfig java string containing the LLM config JSON
+ * @param llmHandle native handle returned by llmInitJNI
+ */
+JNIEXPORT void JNICALL Java_com_arm_Llm_registerBackendConfigJNI(JNIEnv* env,
+                        jobject /* this */,
+                        jstring key,
+                        jstring jsonConfig,
+                        jlong llmHandle) {
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env, ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return;
+    }
+
+    if (key == nullptr || jsonConfig == nullptr) {
+        ThrowJavaException(env, "Failed to register backend config: key or config is null");
+        return;
+    }
+
+    auto keyNative = GetUtfChars(env, key);
+    auto modelCStr = GetUtfChars(env, jsonConfig);
+    if (keyNative.get() == nullptr || modelCStr.get() == nullptr) {
+        ThrowJavaException(env, "Failed to register backend config: jstring to utf conversion failed");
+        return;
+    }
+
+    try {
+        LlmConfig config(modelCStr.get());
+        llm->RegisterBackendConfig(keyNative.get(), config);
+    } catch (const std::exception& e) {
+        std::string msg = std::string("Failed to register backend config : ") + e.what();
+        ThrowJavaException(env, msg.c_str());
+    }
+}
+
 
 /**
  * @brief JNI entry point to free an LLM instance referenced by a handle.
@@ -377,18 +484,18 @@ JNIEXPORT void JNICALL Java_com_arm_Llm_resetContextJNI(JNIEnv* env, jobject, jl
 /**
  * @brief This function returns the LLM Type 
  *
- * We can't lookup the llm from the handle in this function because the llm Instance
- * may not have been created yet.
+ * Uses the existing LLM instance referenced by the handle.
  *
- * To work around this problem we create an empty LLM Instance that is automatically 
- * deleted by C++ when this function returns. Because this llm object is deleted 
- * calling this function can't be used in lieu of calling initLlm.
- * 
+ * This call requires a valid handle returned by llmInitJNI.
+ *
 */
-JNIEXPORT jstring JNICALL Java_com_arm_Llm_getFrameworkTypeJNI(JNIEnv* env, jobject, jlong)
+JNIEXPORT jstring JNICALL Java_com_arm_Llm_getFrameworkTypeJNI(JNIEnv* env, jobject, jlong llmHandle)
 {
-
-    auto llm = std::make_unique<LLM>();
+    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    if (!llm) {
+        ThrowJavaException(env, ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        return env->NewStringUTF("");
+    }
 
     std::string frameworkType = llm->GetFrameworkType();
     return env->NewStringUTF(frameworkType.c_str());

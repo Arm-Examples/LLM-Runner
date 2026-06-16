@@ -1,0 +1,37 @@
+{
+  "chat": {
+    "systemPrompt": "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of four sentences.",
+    "applyDefaultChatTemplate": false,
+    "systemTemplate": "<|im_start|>system\n%s<|im_end|>\n",
+    "userTemplate": "<|im_start|>user\n%s<|im_end|>\n<|im_start|>assistant\n"
+  },
+  "model": {
+    "llmModelName": "llama.cpp/qwen2vl-2b/qwen2vl-2b_Q4_0.gguf",
+    "projModelName": "llama.cpp/qwen2vl-2b/qwen2vl-2b-F16_proj.gguf",
+    "isVision": true,
+    "maxInputDimension": 128
+  },
+  "runtime": {
+    "batchSize": 256,
+    "numThreads": 5,
+    "contextSize": 2048
+  },
+  "stopWords": [
+    "Orbita:",
+    "User:",
+    "AI:",
+    "<|user|>",
+    "Assistant:",
+    "user:",
+    "[end of text]",
+    "<|endoftext|>",
+    "<end_of_utterance>",
+    "model:",
+    "Question:",
+    "<|end|>",
+    "<|im_end|>",
+    "\n\n",
+    "Consider the following scenario:\n"
+  ],
+  "framework": "llama.cpp"
+}

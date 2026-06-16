@@ -47,6 +47,8 @@ else()
     message(STATUS "LLM model downloads are disabled (DOWNLOAD_LLM_MODELS=OFF).")
 endif()
 
+string(JOIN "," _llm_frameworks_csv ${LLM_ENABLED_BACKENDS})
+
 execute_process(
     COMMAND ${CMAKE_COMMAND}  -E env "HF_TOKEN=${HF_TOKEN}" ${Python3_EXECUTABLE}
         ${CMAKE_CURRENT_SOURCE_DIR}/scripts/py/download_resources.py
@@ -54,8 +56,8 @@ execute_process(
         ${CMAKE_CURRENT_LIST_DIR}/../py/requirements.json
         --download-dir
         ${DOWNLOADS_DIR}
-        --llm-framework
-        ${LLM_FRAMEWORK}
+        --llm-frameworks
+        ${_llm_frameworks_csv}
         --download-models
         ${DOWNLOAD_LLM_MODELS}
     RESULT_VARIABLE return_code)

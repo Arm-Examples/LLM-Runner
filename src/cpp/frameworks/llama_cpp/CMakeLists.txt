@@ -12,7 +12,7 @@ project(llama-cpp-wrapper
 include(FetchContent)
 include(check-flag)
 
-if (${LLM_FRAMEWORK} STREQUAL "llama.cpp")
+if (LLM_ENABLE_LLAMA_CPP)
     # For Android we build the variant arch backend shared libraries
     if(DEFINED ANDROID_ABI)
         # The following block of code ensures that BUILD_SHARED_LIBS defaults to ON for android builds.
@@ -82,29 +82,28 @@ if(BUILD_BENCHMARK)
 endif()
 
 # For Android we build the variant arch backend shared libraries
-if (${LLM_FRAMEWORK} STREQUAL "llama.cpp" AND DEFINED ANDROID_ABI)
+if (LLM_ENABLE_LLAMA_CPP AND DEFINED ANDROID_ABI)
     include(llama-cpp-workaround)
 endif()
 
 # Check internally defined dependency targets are visible
-if (NOT TARGET llm-config)
-    message(FATAL_ERROR "llm-config target not defined")
-elseif (NOT TARGET llm-chat)
-    message(FATAL_ERROR "llm-chat target not defined")
-elseif (NOT TARGET llm-interface)
-    message(FATAL_ERROR "llm-interface target not defined")
+if (NOT TARGET llm-framework-deps)
+    message(FATAL_ERROR "llm-framework-deps target not defined")
 elseif (NOT TARGET llm-log)
     message(FATAL_ERROR "llm-log target not defined")
 endif()
 
-add_library(llm-framework STATIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/LlamaTextImpl.cpp LlamaVisionImpl.cpp LlmFactory.cpp)
+add_library(arm-llm-framework-llama STATIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/LlamaTextImpl.cpp LlamaVisionImpl.cpp)
 
-target_include_directories(llm-framework PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(arm-llm-framework-llama PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 
 # List all libraries that we need to depend on here:
-target_link_libraries(llm-framework PUBLIC
+target_link_libraries(arm-llm-framework-llama PUBLIC
     mtmd
     llama
-    common)
+    common
+    llm-framework-deps
+    llm-log)

@@ -67,17 +67,25 @@ set(CMAKE_CROSSCOMPILING ON)
 
 include("${CMAKE_CURRENT_LIST_DIR}/base.cmake")
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -llog" CACHE STRING "Android shared linker flags" FORCE)
+endif()
+
 if(NOT DEFINED USE_KLEIDIAI OR USE_KLEIDIAI STREQUAL "")
    set(USE_KLEIDIAI ON)
 endif()
 
 message(STATUS "USE_KLEIDIAI=${USE_KLEIDIAI}")
 
-# We default to share libs ON for llama.cpp on android.
-if ("${LLM_FRAMEWORK}" STREQUAL "llama.cpp")
+# We default to shared libs ON for llama.cpp on android.
+set(_llm_android_llama_shared OFF)
+if (DEFINED LLM_ENABLE_LLAMA_CPP AND LLM_ENABLE_LLAMA_CPP)
+    set(_llm_android_llama_shared ON)
+endif()
+
+if (_llm_android_llama_shared)
     option(BUILD_SHARED_LIBS "BUILD_SHARED_LIBS" ON)
 else()
     option(BUILD_SHARED_LIBS "BUILD_SHARED_LIBS" OFF)
 endif()
 message(STATUS "BUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}")
-

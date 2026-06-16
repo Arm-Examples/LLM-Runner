@@ -11,7 +11,12 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstdlib>
+#include <cctype>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <nlohmann/json.hpp>
 #include "Logger.hpp"
 #include "BuildInfo.hpp"
 #include "LlmBridge.hpp"
@@ -77,15 +82,25 @@ void LLM::LlmInit(const LlmConfig &llmConfig, std::string sharedLibraryPath)
     LLMFactory factory;
     LlmLog::LogBuildMetadataOnce();
 
+    LlmConfig resolvedConfig = llmConfig;
+    std::string framework = resolvedConfig.GetFramework();
+    if (!framework.empty()) {
+        std::transform(framework.begin(), framework.end(), framework.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        resolvedConfig.SetConfigString(LlmConfig::ConfigParam::Framework, framework);
+    } else {
+        THROW_INVALID_ARGUMENT("config.framework is required");
+    }
+
     std::string frameworkType = LlmLog::GetBuildMetadata().frameworkName;
     try {
-        this->m_impl = factory.CreateLLMImpl(llmConfig);
+        this->m_impl = factory.CreateLLMImpl(resolvedConfig);
         if (!this->m_impl) {
             throw std::runtime_error("Failed to create LLM implementation");
         }
 
         frameworkType = this->m_impl->GetFrameworkType();
-        this->m_config = llmConfig;
+        this->m_config = resolvedConfig;
         this->m_impl->InitChatParams(this->m_config.GetChat());
 
         LOG_BUILD_INFO("Initializing LLM with framework='%s'", frameworkType.c_str());
@@ -99,6 +114,101 @@ void LLM::LlmInit(const LlmConfig &llmConfig, std::string sharedLibraryPath)
 #if defined(ENABLE_STREAMLINE)
     sl::marker(ANNOTATE_BLUE, "Init complete");
 #endif
+}
+
+static LlmConfig LoadDefaultConfigByName(const std::string& key)
+{
+    const char* configDirEnv = std::getenv("LLM_CONFIG_DIR");
+    const std::string configDir = configDirEnv ? configDirEnv : "config_files";
+    const std::string configPath = configDir + "/llmrunner.json";
+    std::ifstream in(configPath);
+    if (!in.is_open()) {
+        THROW_INVALID_ARGUMENT("Failed to open config file: %s", configPath.c_str());
+    }
+
+    nlohmann::json runnerConfig;
+    try {
+        in >> runnerConfig;
+    } catch (const std::exception& e) {
+        THROW_INVALID_ARGUMENT("Failed to parse config file '%s': %s", configPath.c_str(), e.what());
+    }
+
+    if (!runnerConfig.contains("frameworkConfigs") || !runnerConfig.at("frameworkConfigs").is_object()) {
+        THROW_INVALID_ARGUMENT("config file '%s' must define frameworkConfigs as an object", configPath.c_str());
+    }
+
+    std::string normalizedKey = key;
+    std::transform(normalizedKey.begin(), normalizedKey.end(), normalizedKey.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+    const auto& frameworkConfigs = runnerConfig.at("frameworkConfigs");
+    if (!frameworkConfigs.contains(normalizedKey) || !frameworkConfigs.at(normalizedKey).is_object()) {
+        THROW_INVALID_ARGUMENT("Framework config key '%s' not registered in '%s'",
+                               normalizedKey.c_str(), configPath.c_str());
+    }
+
+    const auto& entry = frameworkConfigs.at(normalizedKey);
+    if (!entry.contains("configFile") || !entry.at("configFile").is_string()) {
+        THROW_INVALID_ARGUMENT("backendConfigs.%s.configFile must be a string", normalizedKey.c_str());
+    }
+    if (!entry.contains("framework") || !entry.at("framework").is_string()) {
+        THROW_INVALID_ARGUMENT("backendConfigs.%s.framework must be a string", normalizedKey.c_str());
+    }
+
+    const std::string configFile = entry.at("configFile").get<std::string>();
+    const std::string framework = entry.at("framework").get<std::string>();
+    const std::filesystem::path modelConfigDir = "config_files/model_configuration_files";
+    const std::filesystem::path modelConfigPath = std::filesystem::path(configFile).is_absolute()
+        ? std::filesystem::path(configFile)
+        : (modelConfigDir / configFile);
+
+    std::ifstream configStream(modelConfigPath);
+    if (!configStream.is_open()) {
+        THROW_INVALID_ARGUMENT("Failed to open framework config file: %s", modelConfigPath.string().c_str());
+    }
+    std::stringstream buffer;
+    buffer << configStream.rdbuf();
+    LlmConfig config(buffer.str());
+    if (!framework.empty()) {
+        config.SetConfigString(LlmConfig::ConfigParam::Framework, framework);
+    }
+    return config;
+}
+
+static std::string LoadDefaultFrameworkFromRunnerConfig()
+{
+    const char* configDirEnv = std::getenv("LLM_CONFIG_DIR");
+    const std::string configDir = configDirEnv ? configDirEnv : "config_files";
+    const std::string configPath = configDir + "/llmrunner.json";
+    std::ifstream in(configPath);
+    if (!in.is_open()) {
+        THROW_INVALID_ARGUMENT("Failed to open config file: %s", configPath.c_str());
+    }
+
+    nlohmann::json runnerConfig;
+    try {
+        in >> runnerConfig;
+    } catch (const std::exception& e) {
+        THROW_INVALID_ARGUMENT("Failed to parse config file '%s': %s", configPath.c_str(), e.what());
+    }
+
+    if (!runnerConfig.contains("framework") || !runnerConfig.at("framework").is_string()) {
+        THROW_INVALID_ARGUMENT("config file '%s' must define framework as a string", configPath.c_str());
+    }
+
+    std::string framework = runnerConfig.at("framework").get<std::string>();
+    if (framework.empty()) {
+        THROW_INVALID_ARGUMENT("config file '%s' must define a non-empty framework", configPath.c_str());
+    }
+    return framework;
+}
+
+void LLM::RegisterBackendConfig(const std::string& key, const LlmConfig &llmConfig)
+{
+    if (key.empty()) {
+        THROW_INVALID_ARGUMENT("Backend config key must be non-empty");
+    }
+    this->m_backendConfigs[key] = llmConfig;
 }
 
 void LLM::FreeLlm()
@@ -127,6 +237,9 @@ float LLM::GetEncodeTimings() const
 #if defined(ENABLE_STREAMLINE)
     sl::Scope scope(sl::CH_CONTROL, ANNOTATE_DKGRAY, "LLM::GetEncodeTimings");
 #endif
+    if (!m_impl) {
+        THROW_ERROR("LLM not initialized");
+    }
     return this->m_impl->GetEncodeTimings();
 }
 
@@ -135,6 +248,9 @@ float LLM::GetDecodeTimings() const
 #if defined(ENABLE_STREAMLINE)
     sl::Scope scope(sl::CH_CONTROL, ANNOTATE_DKGRAY, "LLM::GetDecodeTimings");
 #endif
+    if (!m_impl) {
+        THROW_ERROR("LLM not initialized");
+    }
     return this->m_impl->GetDecodeTimings();
 }
 
@@ -143,6 +259,9 @@ void LLM::ResetTimings()
 #if defined(ENABLE_STREAMLINE)
     sl::Scope scope(sl::CH_CONTROL, ANNOTATE_DKGRAY, "LLM::ResetTimings");
 #endif
+    if (!m_impl) {
+        THROW_ERROR("LLM not initialized");
+    }
     this->m_impl->ResetTimings();
 }
 
@@ -151,6 +270,9 @@ std::string LLM::SystemInfo() const
 #if defined(ENABLE_STREAMLINE)
     sl::Scope scope(sl::CH_CONTROL, ANNOTATE_DKGRAY, "LLM::SystemInfo");
 #endif
+    if (!m_impl) {
+        THROW_ERROR("LLM not initialized");
+    }
     return this->m_impl->SystemInfo();
 }
 
@@ -159,6 +281,9 @@ void LLM::ResetContext()
 #if defined(ENABLE_STREAMLINE)
     sl::Scope scope(sl::CH_CONTROL, ANNOTATE_DKGRAY, "LLM::ResetContext");
 #endif
+    if (!m_impl) {
+        THROW_ERROR("LLM not initialized");
+    }
     this->m_impl->ResetContext();
 }
 
@@ -222,6 +347,9 @@ std::string LLM::NextToken()
     sl::Scope scope(sl::CH_DECODE, ANNOTATE_PURPLE, "LLM::NextToken");
 #endif
 
+    if (!m_impl) {
+        THROW_ERROR("LLM not initialized");
+    }
     auto token = this->m_impl->NextToken();
 
     if (this->isStopToken(token)) {
@@ -274,6 +402,9 @@ void LLM::Cancel(long operationId)
     sl::marker(ANNOTATE_RED, "Cancel requested");
 #endif
 
+    if (!m_impl) {
+        THROW_ERROR("LLM not initialized");
+    }
     auto state = findWork(operationId);
     if (!state) {
         return;
@@ -286,16 +417,25 @@ void LLM::Cancel(long operationId)
 
 size_t LLM::GetChatProgress() const
 {
+    if (!m_impl) {
+        THROW_ERROR("LLM not initialized");
+    }
     return this->m_impl->GetChatProgress();
 }
 
-std::string LLM::GetFrameworkType()
+std::string LLM::GetFrameworkType() const
 {
-    return LLM::LLMImpl::GetFrameworkType();
+    if (!m_impl) {
+        return "";
+    }
+    return m_impl->GetFrameworkType();
 }
 
 std::vector<std::string> LLM::SupportedInputModalities() const
 {
+    if (!m_impl) {
+        THROW_ERROR("LLM not initialized");
+    }
     return this->m_impl->SupportedInputModalities();
 }
 
@@ -315,6 +455,9 @@ std::string LLM::GeneratePromptWithNumTokens(size_t numPromptTokens)
 #if defined(ENABLE_STREAMLINE)
     sl::Scope scope(sl::CH_ENCODE, ANNOTATE_GREEN, "LLM::GeneratePromptWithNumTokens");
 #endif
+    if (!m_impl) {
+        THROW_ERROR("LLM not initialized");
+    }
     return this->m_impl->GeneratePromptWithNumTokens(numPromptTokens);
 }
 
@@ -324,5 +467,8 @@ void LLM::StopGeneration()
     sl::Scope scope(sl::CH_CONTROL, ANNOTATE_RED, "LLM::StopGeneration");
     sl::marker(ANNOTATE_RED, "StopGeneration requested");
 #endif
+    if (!m_impl) {
+        THROW_ERROR("LLM not initialized");
+    }
     this->m_impl->StopGeneration();
 }

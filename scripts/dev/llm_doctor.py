@@ -48,36 +48,14 @@ def _read_cmake_cache(cache_path: Path) -> dict[str, str]:
     return cache
 
 
-def _extract_test_config_filenames(test_cmakelists: Path, llm_framework: str | None) -> list[str]:
+def _extract_test_config_filenames(test_cmakelists: Path) -> list[str]:
     text = test_cmakelists.read_text(encoding="utf-8", errors="replace")
 
-    if llm_framework:
-        # Match the branch for the selected framework; capture the set(CONFIG_FILE_NAME ...) block.
-        # This is a pragmatic regex; it assumes the current layout in test/CMakeLists.txt.
-        pattern = (
-            r'elseif\s*\(\s*\$\{LLM_FRAMEWORK\}\s+STREQUAL\s+"'
-            + re.escape(llm_framework)
-            + r'"\s*\)\s*'
-            + r"(?:.|\n)*?"
-            + r"set\s*\(\s*CONFIG_FILE_NAME(?P<body>(?:.|\n)*?)CACHE\s+STRING"
-        )
-        if llm_framework == "llama.cpp":
-            pattern = (
-                r'if\s*\(\s*\$\{LLM_FRAMEWORK\}\s+STREQUAL\s+"llama\.cpp"\s*\)\s*'
-                + r"(?:.|\n)*?"
-                + r"set\s*\(\s*CONFIG_FILE_NAME(?P<body>(?:.|\n)*?)CACHE\s+STRING"
-            )
-        m = re.search(pattern, text, flags=re.MULTILINE)
-        if not m:
-            return []
-        body = m.group("body")
-    else:
-        # Extract all config filenames from any CONFIG_FILE_NAME set(...) block.
-        bodies = re.findall(
-            r"set\s*\(\s*CONFIG_FILE_NAME(?P<body>(?:.|\n)*?)CACHE\s+STRING", text, flags=re.MULTILINE
-        )
-        body = "\n".join(bodies)
-
+    # Extract all config filenames from any CONFIG_FILE_NAME set(...) block.
+    bodies = re.findall(
+        r"set\s*\(\s*CONFIG_FILE_NAME(?P<body>(?:.|\n)*?)CACHE\s+STRING", text, flags=re.MULTILINE
+    )
+    body = "\n".join(bodies)
     return re.findall(r"\"([^\"]+\.json)\"", body)
 
 
@@ -105,13 +83,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Environment and repo consistency checks for this LLM project.")
     parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help="Path to repo root (default: cwd).")
     parser.add_argument("--build-dir", type=Path, default=Path("build"), help="CMake build dir to inspect.")
-    parser.add_argument(
-        "--llm-framework",
-        type=str,
-        default=None,
-        choices=["llama.cpp", "onnxruntime-genai", "mnn", "executorch"],
-        help="Override framework when inspecting test config wiring.",
-    )
     parser.add_argument(
         "--json",
         action="store_true",
@@ -159,15 +130,13 @@ def main() -> int:
     cache: dict[str, str] = {}
     if cache_path.exists():
         cache = _read_cmake_cache(cache_path)
-        llm_framework = args.llm_framework or cache.get("LLM_FRAMEWORK")
         build_results.append(CheckResult(True, "CMakeCache", str(cache_path)))
-        if llm_framework:
-            build_results.append(CheckResult(True, "LLM_FRAMEWORK", llm_framework))
+        if cache.get("LLM_ENABLED_BACKENDS"):
+            build_results.append(CheckResult(True, "LLM_ENABLED_BACKENDS", cache.get("LLM_ENABLED_BACKENDS", "")))
         for k in ["BUILD_JNI_LIB", "BUILD_BENCHMARK", "BUILD_LLM_TESTING", "USE_KLEIDIAI", "CMAKE_BUILD_TYPE"]:
             if k in cache:
                 build_results.append(CheckResult(True, k, cache[k]))
     else:
-        llm_framework = args.llm_framework
         build_results.append(CheckResult(False, "CMakeCache", f"missing: {cache_path}"))
 
     # These logs are not guaranteed to exist for successful configurations; treat absence as informational.
@@ -188,8 +157,7 @@ def main() -> int:
 
     report["build"] = {
         "cache_present": cache_path.exists(),
-        "llm_framework": llm_framework,
-        "cache": {k: cache.get(k) for k in ["LLM_FRAMEWORK", "BUILD_JNI_LIB", "BUILD_BENCHMARK", "BUILD_LLM_TESTING", "USE_KLEIDIAI", "CMAKE_BUILD_TYPE"] if k in cache},
+        "cache": {k: cache.get(k) for k in ["LLM_ENABLED_BACKENDS", "BUILD_JNI_LIB", "BUILD_BENCHMARK", "BUILD_LLM_TESTING", "USE_KLEIDIAI", "CMAKE_BUILD_TYPE"] if k in cache},
     }
 
     ok_build = _print_results("Build Dir", build_results)
@@ -212,14 +180,11 @@ def main() -> int:
     # Test config wiring consistency
     wiring_results: list[CheckResult] = []
     test_cmakelists = repo_root / "test" / "CMakeLists.txt"
-    model_cfg_dir = repo_root / "model_configuration_files"
+    model_cfg_dir = repo_root / "config_files/model_configuration_files"
     if test_cmakelists.exists():
         wiring_results.append(CheckResult(True, "test/CMakeLists.txt", str(test_cmakelists)))
-        cfg_names = _extract_test_config_filenames(test_cmakelists, llm_framework)
-        if llm_framework and not cfg_names:
-            wiring_results.append(CheckResult(False, "CONFIG_FILE_NAME", f"could not locate config list for {llm_framework}"))
-        else:
-            wiring_results.append(CheckResult(True, "Config files referenced", str(len(cfg_names))))
+        cfg_names = _extract_test_config_filenames(test_cmakelists)
+        wiring_results.append(CheckResult(True, "Config files referenced", str(len(cfg_names))))
         missing_cfg = []
         invalid_json = []
         for cfg in cfg_names:
@@ -234,7 +199,6 @@ def main() -> int:
         wiring_results.append(CheckResult(not missing_cfg, "Config files exist", ", ".join(missing_cfg) if missing_cfg else ""))
         wiring_results.append(CheckResult(not invalid_json, "Config JSON valid", ", ".join(invalid_json) if invalid_json else ""))
         report["test_wiring"] = {
-            "llm_framework": llm_framework,
             "config_files": cfg_names,
             "missing": missing_cfg,
             "invalid_json": invalid_json,

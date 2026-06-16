@@ -1,0 +1,29 @@
+{
+  "framework": "@LLM_DEFAULT_BACKEND@",
+  "frameworkConfigs": {
+    "llama.cpp": {
+      "framework": "llama.cpp",
+      "configFile": "llamaTextConfig-phi-2.json"
+    },
+    "llama": {
+      "framework": "llama.cpp",
+      "configFile": "llamaTextConfig-phi-2.json"
+    },
+    "onnxruntime-genai": {
+      "framework": "onnxruntime-genai",
+      "configFile": "onnxrtTextConfig-phi-4.json"
+    },
+    "onnxrt": {
+      "framework": "onnxruntime-genai",
+      "configFile": "onnxrtTextConfig-phi-4.json"
+    },
+    "mnn": {
+      "framework": "mnn",
+      "configFile": "mnnTextConfig-llama-3.2-1B.json"
+    },
+    "executorch": {
+      "framework": "executorch",
+      "configFile": "executorchTextConfig-llama-3.2-1B.json"
+    }
+  }
+}

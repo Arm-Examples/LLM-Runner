@@ -71,13 +71,14 @@ This guide covers the recommended build and run flows for supported platforms. F
 The project can be built and LLM tests exercised by simply running the following commands on supported platforms:
 
 ```shell
-cmake --preset=native -B build 
+cmake --preset=native -B build
 cmake --build ./build
 ctest --test-dir ./build
 ```
 
-The commands above will use the default LLM framework (llama.cpp) and download a small number of LLM models. The tests exercise both vision and text queries. See [`LlmTest.cpp`](test/cpp/LlmTest.cpp) & [`LlmTestJNI.java`](test/java/com/arm/LlmTestJNI.java) for details.
-
+The commands above will use the enabled LLM framework(s) (by default, **llama.cpp**) and download a small number
+of LLM models. The tests exercise both vision and text queries.
+See [`LlmTest.cpp`](test/cpp/LlmTest.cpp) & [`LlmTestJNI.java`] for details.
 
 **ctest --test-dir ./build** command above should produce results similar to those given below (timings may vary):
 
@@ -113,7 +114,7 @@ Test project /home/user/llm/build
 | `src/java/`                  | Java/JNI bindings.                                                                              |
 | `scripts/py/`                | Python utilities for downloading models, test resources, and performing data preparation tasks. |
 | `scripts/cmake/`             | Toolchains and CMake helper scripts for cross-compilation and platform configuration.           |
-| `model_configuration_files/` | Model configuration files used by the build system and runtime.                                 |
+| `config_files/model_configuration_files/` | Model configuration files used by the build system and runtime.                                 |
 | `resources_downloaded/`      | Default directory where models and example assets are downloaded.                               |
 | `test/`                      | C++/Java unit tests  and supporting test resources.                                             |
 
@@ -155,31 +156,69 @@ cmake --build ./build
 ctest --test-dir ./build
 ```
 
-LLM_FRAMEWORK can be used to select the LLM framework, e.g.
+Enable/disable backends with the LLM_ENABLE_* options. If no LLM_ENABLE_* option
+is set, llama.cpp is enabled and used as the generated runner default. If you
+enable a different single backend and do not set LLM_ENABLE_LLAMA_CPP, llama.cpp
+defaults to OFF and the enabled backend becomes the generated runner default.
+
+To build more than one backend in a single library (runtime switching), enable multiple backends:
 
 ```shell
-cmake --preset=native -B build -DLLM_FRAMEWORK=onnxruntime-genai
+cmake --preset=native -B build -DLLM_ENABLE_LLAMA_CPP=ON -DLLM_ENABLE_MNN=ON
 cmake --build ./build
-ctest --test-dir ./build
 ```
+
+Each model configuration JSON can declare the framework it is for with
+`framework`. When the configuration is passed directly to the C++ API,
+`LLM::LlmInit` uses this value to map the configuration to the concrete framework
+implementation:
+
+```json
+{
+  "framework": "llama.cpp",
+  "chat": { ... },
+  "model": { ... },
+  "runtime": { ... },
+  "stopWords": [ ... ]
+}
+```
+
+The generated `config_files/llmrunner.json` selects which configured framework
+entry to load by default. CMake writes its top-level `framework` at configure
+time. Set it explicitly with `LLM_DEFAULT_FRAMEWORK`; the value must be one of
+the enabled backends:
+
+```shell
+cmake --preset=native -B build -DLLM_ENABLE_ONNXRUNTIME_GENAI=ON -DLLM_ENABLE_EXECUTORCH=ON -DLLM_DEFAULT_FRAMEWORK=executorch
+```
+
+If `LLM_DEFAULT_FRAMEWORK` is not set in a multi-backend build, CMake chooses
+the first enabled backend in this priority order: `llama.cpp`, `mnn`,
+`onnxruntime-genai`, `executorch`.
 
 Details of configurable build options are given below:
 
-| Flag name           | Default     | Values                                                           | Description                                                                                                                                       |
-|---------------------|-------------|------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| LLM_FRAMEWORK       | llama.cpp   | llama.cpp / onnxruntime-genai / mnn / executorch                 | Specifies the backend framework to be used.                                                                                                       |
-| BUILD_DEBUG         | OFF         | ON/OFF                                                           | If set to ON a debug build is configured.                                                                                                         |
-| ENABLE_STREAMLINE   | OFF         | ON/OFF                                                           | Enables Arm Streamline timeline annotations for analyzing LLM initialization, encode, decode, and control-path performance.                       |
-| BUILD_LLM_TESTING   | ON          | ON/OFF                                                           | Builds the project's functional tests when ON.                                                                                                    |
-| BUILD_BENCHMARK     | OFF         | ON/OFF                                                           | Builds the framework's benchmark binaries and arm-llm-bench-cli for the project when ON.                                                          |
-| BUILD_JNI_LIB       | ON          | ON/OFF                                                           | Builds the JNI bindings for the project.                                                                                                          |
-| LOG_LEVEL           | INFO/DEBUG  | DEBUG, INFO, WARN &  ERROR                                       | For BUILD_DEBUG=OFF the default value is INFO. For BUILD_DEBUG=ON, the default value is DEBUG.                                                    |
-| USE_KLEIDIAI        | ON          | ON/OFF                                                           | Build the project with KLEIDIAI CPU optimizations; if set to OFF, optimizations are turned off.                                                   |
-| CPU_ARCH            | Not defined | Armv8.2_1, Armv8.2_2, Armv8.2_3, Armv8.2_4, Armv8.6_1, Armv9.2_1 | Sets the target ISA architecture (AArch64). Choose a nosve preset to keep SVE disabled when LLM_FRAMEWORK=llama.cpp (issue affects aarch64 only). |
-| GGML_METAL          | OFF         | ON/OFF                                                           | macOS specific. Enables Apple Metal backend in ggml for GPU acceleration (Apple Silicon only).                                                    |
-| GGML_BLAS           | OFF         | ON/OFF                                                           | macOS specific. Enables Accelerate/BLAS backend in ggml for CPU-optimized linear algebra kernels.                                                 |
-| DOWNLOAD_LLM_MODELS | ON          | ON/OFF                                                           | Download LLM models for the selected `LLM_FRAMEWORK` during configuration.                                                                        |
+| Flag name | Default | Values | Description |
+|---|---|---|---|
+| LLM_ENABLE_LLAMA_CPP | ON* | ON/OFF | Enable the llama.cpp backend. |
+| LLM_ENABLE_ONNXRUNTIME_GENAI | OFF | ON/OFF | Enable the onnxruntime-genai backend. |
+| LLM_ENABLE_MNN | OFF | ON/OFF | Enable the MNN backend. |
+| LLM_ENABLE_EXECUTORCH | OFF | ON/OFF | Enable the ExecuTorch backend. |
+| LLM_DEFAULT_FRAMEWORK | "" | Backend name | Default framework when multiple backends are enabled; must be one of the enabled backends. |
+| BUILD_DEBUG | OFF | ON/OFF | If set to ON a debug build is configured. |
+| ENABLE_STREAMLINE | OFF | ON/OFF | Enables Arm Streamline timeline annotations for analyzing LLM initialization, encode, decode, and control-path performance. |
+| BUILD_LLM_TESTING | ON | ON/OFF | Builds the project's functional tests when ON. |
+| BUILD_BENCHMARK | OFF | ON/OFF | Builds the framework's benchmark binaries and arm-llm-bench-cli for the project when ON. |
+| BUILD_JNI_LIB | ON | ON/OFF | Builds the JNI bindings for the project. |
+| LLM_JNI_TIMING | OFF | ON/OFF | Enables optional JNI timing helpers for encode/next-token overhead measurement. |
+| LOG_LEVEL | INFO/DEBUG | DEBUG, INFO, WARN & ERROR | For BUILD_DEBUG=OFF the default value is INFO. For BUILD_DEBUG=ON, the default value is DEBUG. |
+| USE_KLEIDIAI | ON | ON/OFF | Build the project with KLEIDIAI CPU optimizations; if set to OFF, optimizations are turned off. |
+| CPU_ARCH | Not defined | Armv8.2_1, Armv8.2_2, Armv8.2_3, Armv8.2_4, Armv8.6_1, Armv9.2_1 | Sets the target ISA architecture (AArch64). Choose a nosve preset to keep SVE disabled when llama.cpp is enabled (issue affects aarch64 only). |
+| GGML_METAL | OFF | ON/OFF | macOS specific. Enables Apple Metal backend in ggml for GPU acceleration (Apple Silicon only). |
+| GGML_BLAS | OFF | ON/OFF | macOS specific. Enables Accelerate/BLAS backend in ggml for CPU-optimized linear algebra kernels. |
 
+\* Default is ON unless another backend is explicitly enabled and LLM_ENABLE_LLAMA_CPP is not set, in which case it defaults to OFF.
+| DOWNLOAD_LLM_MODELS | ON | ON/OFF | Download LLM models for the enabled backends during configuration. |
 - `DOWNLOADS_LOCK_TIMEOUT`: A timeout value in seconds indicating how much time a lock should be tried for
   when downloading resources. This is a one-time download that CMake configuration will initiate unless it
   has been run by the user directly or another prior CMake configuration. The lock prevents multiple CMake
@@ -267,7 +306,8 @@ Recommended setup:
 
 ```sh
 cmake --preset=native -B build \
-  -DLLM_FRAMEWORK=executorch
+  -DLLM_ENABLE_EXECUTORCH=ON \
+  -DLLM_ENABLE_LLAMA_CPP=OFF
 ```
 
 If your system Python blocks package installation, configure with
@@ -347,7 +387,7 @@ Use these fields in your configuration file:
 
 If `"isVision"` is `true`, a valid `llmMmProjModelName` is required; omitting `"image"` runs the backend in **text-only** mode.
 
-You can find an example of multimodal settings in [`llamaVisionConfig-qwen2-vl-2B.json`](model_configuration_files/llamaVisionConfig-qwen2-vl-2B.json).
+You can find an example of multimodal settings in [`llamaVisionConfig-qwen2-vl-2B.json`](config_files/model_configuration_files/llamaVisionConfig-qwen2-vl-2B.json).
 
 ### onnxruntime genai model
 
@@ -406,7 +446,7 @@ The `MNN` backend **also supports multimodal (image + text)** inference in this 
 
 Set `model.maxInputDimension` in the wrapper configuration to cap image inputs. During `Encode()`, the wrapper preserves the original image aspect ratio, scales the longest side down to this value when needed, saves the resized image next to the source image, and updates the payload to use the resized image path. For MNN, the prompt also includes the prepared image height and width in the `<hw>height, width</hw>` tag. If this field is omitted, it defaults to `128`.
 
-You can find an example multimodal configuration in [mnnVisionConfig-qwen2.5-3B.json](model_configuration_files/mnnVisionConfig-qwen2.5-3B.json)
+You can find an example multimodal configuration in [mnnVisionConfig-qwen2.5-3B.json](config_files/model_configuration_files/mnnVisionConfig-qwen2.5-3B.json)
 
 ### executorch model
 
@@ -422,7 +462,7 @@ To use an ExecuTorch model with this framework, the following files are required
 - `model_name.pte`: ExecuTorch model program
 - `tokenizer.model`, `tokenizer.json`, or `tokenizer.bin`: Tokenizer file placed in the same directory as the `.pte` model
 
-The default wrapper configuration is available in [`executorchTextConfig-llama-3.2-1B.json`](model_configuration_files/executorchTextConfig-llama-3.2-1B.json).
+The default wrapper configuration is available in [`executorchTextConfig-llama-3.2-1B.json`](config_files/model_configuration_files/executorchTextConfig-llama-3.2-1B.json).
 
 > **NOTE**: The ExecuTorch backend currently supports text models only. If `runtime.contextSize` exceeds the context length exported into the `.pte` model, the backend cannot increase it at runtime; re-export the model with a larger context length.
 

@@ -72,6 +72,7 @@ private:
     RuntimeParams            m_runtime{};   ///< Runtime configuration block.
     ModelParams              m_model{};     ///< Model configuration block.
     std::vector<std::string> m_stopWords;   ///< List of stop words used by the tokenizer or model.
+    std::string              m_framework{}; ///< Framework identifier (optional).
 
 public:
     /**
@@ -96,16 +97,17 @@ public:
         UserTemplate = 2,             ///< Template for user messages
         LlmModelName = 3,             ///< Name or path of the LLM model
         ProjModelName = 4,            ///< Name or path of the projection (adapter) model
+        Framework = 5,                ///< Framework identifier
 
         // Boolean parameters
-        ApplyDefaultChatTemplate = 5, ///< Whether to use the default chat formatting
-        IsVision = 6,                 ///< True if model supports vision input
+        ApplyDefaultChatTemplate = 6, ///< Whether to use the default chat formatting
+        IsVision = 7,                 ///< True if model supports vision input
 
         // Integer parameters
-        NumThreads = 7,               ///< Number of CPU threads used for inference
-        BatchSize = 8,                ///< Number of tokens per batch
-        ContextSize = 9,              ///< Context window (max token limit)
-        MaxInputDimension = 10,       ///< Maximum width or height used when resizing image inputs
+        NumThreads = 8,               ///< Number of CPU threads used for inference
+        BatchSize = 9,                ///< Number of tokens per batch
+        ContextSize = 10,             ///< Context window (max token limit)
+        MaxInputDimension = 11,       ///< Maximum width or height used when resizing image inputs
     };
 
      /**
@@ -179,6 +181,18 @@ public:
      * @return Constant reference to the stop word vector.
      */
     const std::vector<std::string>& GetStopWords() const {return m_stopWords; }
+
+    /**
+     * @brief Retrieves the framework identifier, if set.
+     * @return Framework identifier string (empty if not set).
+     */
+    const std::string& GetFramework() const { return m_framework; }
+
+    /**
+     * @brief Sets the framework identifier.
+     * @param framework Framework identifier string.
+     */
+    void SetFramework(const std::string& framework) { m_framework = framework; }
 
     /**
      * @brief Sets the Stop words in config

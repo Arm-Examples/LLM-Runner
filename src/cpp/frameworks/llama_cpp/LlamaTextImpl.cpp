@@ -6,19 +6,20 @@
 #include "LlamaTextImpl.hpp"
 #include "is_utf8.h"
 #include "Logger.hpp"
+#include <iostream>
 
 /**
  * @brief LLama Implementation of our LLM API
  *
  */
-LLM::LLMImpl::LLMImpl() = default;
+LlamaTextImpl::LlamaTextImpl() = default;
 
-LLM::LLMImpl::~LLMImpl()
+LlamaTextImpl::~LlamaTextImpl()
 {
     this->FreeLlm();
 }
 
-void LLM::LLMImpl::LoadModel()
+void LlamaTextImpl::LoadModel()
 {
     const llama_model_params model_params = llama_model_default_params();
     const std::string& modelPath = this->m_config.GetConfigString(LlmConfig::ConfigParam::LlmModelName);
@@ -31,7 +32,7 @@ void LLM::LLMImpl::LoadModel()
     }
 }
 
-void LLM::LLMImpl::FreeModel()
+void LlamaTextImpl::FreeModel()
 {
     if (this->m_llmModel) {
         llama_model_free(this->m_llmModel);
@@ -39,7 +40,7 @@ void LLM::LLMImpl::FreeModel()
     }
 }
 
-void LLM::LLMImpl::NewContext()
+void LlamaTextImpl::NewContext()
 {
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx                = this->m_nCtx;
@@ -55,7 +56,7 @@ void LLM::LLMImpl::NewContext()
     }
 }
 
-void LLM::LLMImpl::FreeContext()
+void LlamaTextImpl::FreeContext()
 {
     if (this->m_llmContext) {
         llama_free(this->m_llmContext);
@@ -63,22 +64,21 @@ void LLM::LLMImpl::FreeContext()
     }
 }
 
-void LLM::LLMImpl::llama_llm_log_callback(enum ggml_log_level level, const char * text, void * user_data) {
+void LlamaTextImpl::llama_llm_log_callback(enum ggml_log_level level, const char * text, void * user_data) {
     // map the llama provided internal logs to LLM module style logs.
     switch (level) {
         case GGML_LOG_LEVEL_DEBUG:
-            LOG_DEBUG("%s",text);
+            LOG_DEBUG("%s", text);
             break;
         case GGML_LOG_LEVEL_INFO:
-            LOG_INF("%s",text);
+            LOG_INF("%s", text);
             break;
         case GGML_LOG_LEVEL_WARN:
-            LOG_WARN("%s",text);
+            LOG_WARN("%s", text);
             break;
         case GGML_LOG_LEVEL_ERROR:
-            LOG_ERROR("%s",text);
+            LOG_ERROR("%s", text);
             break;
-            // logs with GGML_LOG_LEVEL 0 and 5 are irrelevant in llama.cpp
         default:
             break;
     }
@@ -87,9 +87,10 @@ void LLM::LLMImpl::llama_llm_log_callback(enum ggml_log_level level, const char 
     (void) user_data;
 }
 
-void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPath)
+void LlamaTextImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPath)
 {
     try {
+        std::cout << "[llama.cpp] LlmInit invoked" << std::endl;
         llama_log_set(llama_llm_log_callback, nullptr);
         ggml_backend_load_all_from_path(sharedLibraryPath.c_str());
         this->m_config = config;
@@ -110,7 +111,7 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPat
     LOG_INF("Llama initialized successfully");
 }
 
-void LLM::LLMImpl::FreeLlm()
+void LlamaTextImpl::FreeLlm()
 {
     if (this->m_llmInitialized) {
         FreeContext();
@@ -123,61 +124,61 @@ void LLM::LLMImpl::FreeLlm()
     }
 }
 
-void LLM::LLMImpl::BackendInit()
+void LlamaTextImpl::BackendInit()
 {
     llama_backend_init();
 }
 
-void LLM::LLMImpl::BackendFree()
+void LlamaTextImpl::BackendFree()
 {
     llama_backend_free();
 }
 
-void LLM::LLMImpl::FreeBatch()
+void LlamaTextImpl::FreeBatch()
 {
     llama_batch_free(this->m_llmBatch);
 }
 
-void LLM::LLMImpl::FreeSampler()
+void LlamaTextImpl::FreeSampler()
 {
     llama_sampler_free(this->m_pLlmSampler);
 }
 
-float LLM::LLMImpl::GetEncodeTimings()
+float LlamaTextImpl::GetEncodeTimings()
 {
     const auto resultsTiming = llama_perf_context(this->m_llmContext);
     return static_cast<float>(1e3 / resultsTiming.t_p_eval_ms * resultsTiming.n_p_eval);
 }
 
-float LLM::LLMImpl::GetDecodeTimings()
+float LlamaTextImpl::GetDecodeTimings()
 {
     const auto resultsTiming = llama_perf_context(this->m_llmContext);
     return static_cast<float>(1e3 / resultsTiming.t_eval_ms * resultsTiming.n_eval);
 }
 
-void LLM::LLMImpl::ResetTimings()
+void LlamaTextImpl::ResetTimings()
 {
     llama_perf_context_reset(this->m_llmContext);
 }
 
-std::string LLM::LLMImpl::SystemInfo()
+std::string LlamaTextImpl::SystemInfo()
 {
     return std::string(llama_print_system_info());
 }
 
-void LLM::LLMImpl::KVCacheClear()
+void LlamaTextImpl::KVCacheClear()
 {
     llama_memory_clear(llama_get_memory(this->m_llmContext), true);
 }
 
-void LLM::LLMImpl::KVCacheSeqRm(int32_t p0, int p1)
+void LlamaTextImpl::KVCacheSeqRm(int32_t p0, int p1)
 {
     // setting sequence ID to negative to match any sequence
     int seqId = -1;
     llama_memory_seq_rm(llama_get_memory(this->m_llmContext), seqId, p0, p1);
 }
 
-int32_t LLM::LLMImpl::GetInitialPromptLength(const char* text,
+int32_t LlamaTextImpl::GetInitialPromptLength(const char* text,
                                              int32_t textLength,
                                              bool addSpecial,
                                              bool parseSpecial)
@@ -187,7 +188,7 @@ int32_t LLM::LLMImpl::GetInitialPromptLength(const char* text,
     return llama_tokenize(vocab, text, textLength, tokens, this->m_nCtx, addSpecial, parseSpecial);
 }
 
-void LLM::LLMImpl::ResetContext()
+void LlamaTextImpl::ResetContext()
 {
     if (!this->m_systemPrompt.empty()) {
         auto n_prefix = GetInitialPromptLength(
@@ -201,12 +202,12 @@ void LLM::LLMImpl::ResetContext()
     }
 }
 
-llama_batch LLM::LLMImpl::NewBatch(int numTokens, int embeddings, int numSequenceMax)
+llama_batch LlamaTextImpl::NewBatch(int numTokens, int embeddings, int numSequenceMax)
 {
     return llama_batch_init(numTokens, embeddings, numSequenceMax);
 }
 
-void LLM::LLMImpl::NewSampler()
+void LlamaTextImpl::NewSampler()
 {
     auto sparams        = llama_sampler_chain_default_params();
     sparams.no_perf     = false;
@@ -214,7 +215,7 @@ void LLM::LLMImpl::NewSampler()
     llama_sampler_chain_add(this->m_pLlmSampler, llama_sampler_init_greedy());
 }
 
-bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
+bool LlamaTextImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
 {
     const char* tmpl = llama_model_chat_template(this->m_llmModel, /*name*/ nullptr);
 
@@ -270,7 +271,7 @@ bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
     return true;
 }
 
-void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
+void LlamaTextImpl::Encode(LlmChat::Payload& payload)
 {
     const auto prompt_tokens = common_tokenize(this->m_llmContext, payload.textPrompt, true);
 
@@ -294,7 +295,7 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
     }
 }
 
-void LLM::LLMImpl::CompletionInit(llama_tokens sub_tokens_list, bool lastBatch)
+void LlamaTextImpl::CompletionInit(llama_tokens sub_tokens_list, bool lastBatch)
 {
     // Synchronize llama to remove idle time between function calls
     llama_synchronize(this->m_llmContext);
@@ -318,7 +319,7 @@ void LLM::LLMImpl::CompletionInit(llama_tokens sub_tokens_list, bool lastBatch)
     this->m_nCur += batch.n_tokens;
 }
 
-std::string LLM::LLMImpl::CompletionLoop()
+std::string LlamaTextImpl::CompletionLoop()
 {
     const auto model =
             llama_get_model(this->m_llmContext); // CHANGE FROM JOBJECT TO PASSING ACTUAL CONTEXT
@@ -353,7 +354,7 @@ std::string LLM::LLMImpl::CompletionLoop()
     return new_token;
 }
 
-std::string LLM::LLMImpl::NextToken()
+std::string LlamaTextImpl::NextToken()
 {
     std::string result = CompletionLoop();
     if ((result == this->m_eos) && (this->m_nCur >= this->m_nCtx)) {
@@ -364,21 +365,21 @@ std::string LLM::LLMImpl::NextToken()
     return result;
 }
 
-void LLM::LLMImpl::Cancel() {
+void LlamaTextImpl::Cancel() {
 	LOG_INF("Cancelling current operation");
 }
 
-size_t LLM::LLMImpl::GetChatProgress() const
+size_t LlamaTextImpl::GetChatProgress() const
 {
     return this->m_contextFilled;
 }
 
-void LLM::LLMImpl::StopGeneration()
+void LlamaTextImpl::StopGeneration()
 {
-    // TODO: add stop response to support cancelled queries
+    LOG_WARN("StopGeneration requested but is not implemented for llama.cpp backend");
 }
 
-std::string LLM::LLMImpl::GeneratePromptWithNumTokens(size_t numPromptTokens)
+std::string LlamaTextImpl::GeneratePromptWithNumTokens(size_t numPromptTokens)
 {
     if (numPromptTokens == 0) {
         return std::string{};

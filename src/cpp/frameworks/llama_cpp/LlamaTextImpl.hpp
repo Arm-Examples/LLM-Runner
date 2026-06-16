@@ -1,12 +1,12 @@
 //
-// SPDX-FileCopyrightText: Copyright 2024-2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2024-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
 
 #pragma once
 #include "LlmConfig.hpp"
-#include "Llm.hpp"
+#include "interface/LlmImpl.hpp"
 
 #include "common.h"
 #include "llama.h"
@@ -17,92 +17,92 @@
 /**
  * @brief LLama Implementation of our LLM API
  */
-class LLM::LLMImpl : public LlmChat {
+class LlamaTextImpl : public LLM::LLMImpl {
 
 public:
-    LLMImpl();
-    ~LLMImpl();
+    LlamaTextImpl();
+    ~LlamaTextImpl() override;
 
     /**
      * @brief Method to initialize a llama_model
      * @param config Configuration class with model's parameter and user defined parameters
      * @param sharedLibraryPath path to location of shared libs
      */
-    virtual void LlmInit(const LlmConfig& config, std::string sharedLibraryPath = "");
+    void LlmInit(const LlmConfig& config, std::string sharedLibraryPath = "") override;
 
     /**
      * @brief Method to free all allocations pertaining to llama model
      */
-    virtual void FreeLlm();
+    void FreeLlm() override;
 
     /**
      * @brief Function to retrieve the llama encode timings.
      * @return The encoded tokens per second
      */
-    virtual float GetEncodeTimings();
+    float GetEncodeTimings() override;
 
     /**
      * @brief Function to retrieve the llama decode timings.
      * @return The decoded tokens per second
      */
-    virtual float GetDecodeTimings();
+    float GetDecodeTimings() override;
 
     /**
      * @brief Function to reset the llama timing
      */
-    virtual void ResetTimings();
+    void ResetTimings() override;
 
     /**
      * @brief Function to print the system info
      * @return System info as a char pointer
      */
-    virtual std::string SystemInfo();
+    std::string SystemInfo() override;
 
     /**
      * @brief Method to reset conversation history and preserve model's character prefix.
      * If model's prefix is not defined all conversation history would be cleared
      */
-    virtual void ResetContext();
+    void ResetContext() override;
 
     /**
      * @brief Encode a multimodal payload (text + optional image).
      * @param payload Input payload containing text and/or image path.
      */
-    virtual void Encode(LlmChat::Payload& payload);
+    void Encode(LlmChat::Payload& payload) override;
 
     /**
      * @brief Method to wrap CompletionLoop function
      * @return the next token for encoded prompt
      */
-    virtual std::string NextToken();
+    std::string NextToken() override;
 
     /**
     * @brief Method to request the cancellation of a ongoing operation / functional call
     */
-    void Cancel();
+    void Cancel() override;
     
     /**
      * @brief The Method return the percentage of chat context filled
      * @return chat capacity filled in cache as percentage number
      */
-    virtual size_t GetChatProgress() const;
+    size_t GetChatProgress() const override;
 
     /**
      * @brief Method to get framework type
      * @return string framework type
      */
-    static std::string GetFrameworkType() {return "llama.cpp";}
+    std::string GetFrameworkType() const override {return "llama.cpp";}
 
     /**
      * @brief Method to Cancel generation of response tokens. Can be used to stop response once query commences
      */
-    void StopGeneration();
+    void StopGeneration() override;
 
     /**
      * @brief List supported input modalities.
      * @return A vector containing {"text", "vision"}.
      */
-    virtual std::vector<std::string> SupportedInputModalities() const{  return {"text"};}
+    std::vector<std::string> SupportedInputModalities() const override { return {"text"}; }
 
     /**
      * Applies the automatic chat template to the given prompt.
@@ -120,7 +120,7 @@ public:
      * @param numPromptTokens Desired number of input tokens.
      * @return A text prompt that produces that many tokens when encoded.
      */
-    std::string GeneratePromptWithNumTokens(size_t numPromptTokens);
+    std::string GeneratePromptWithNumTokens(size_t numPromptTokens) override;
 
 protected:
     llama_context* m_llmContext{nullptr};     /**< Pointer to the llama model context. */

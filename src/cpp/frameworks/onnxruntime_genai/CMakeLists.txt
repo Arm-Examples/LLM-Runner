@@ -160,26 +160,25 @@ FetchContent_MakeAvailable(onnxruntime-genai)
 file(REMOVE_RECURSE ${ORT_LIB_DIR})
 
 # Check internally defined dependency targets are visible
-if (NOT TARGET llm-config)
-    message(FATAL_ERROR "llm-config target not defined")
-elseif (NOT TARGET llm-chat)
-    message(FATAL_ERROR "llm-chat target not defined")
-elseif (NOT TARGET llm-interface)
-    message(FATAL_ERROR "llm-interface target not defined")
+if (NOT TARGET llm-framework-deps)
+    message(FATAL_ERROR "llm-framework-deps target not defined")
 elseif (NOT TARGET llm-log)
     message(FATAL_ERROR "llm-log target not defined")
 endif()
 
-add_library(llm-framework STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/OnnxrtImpl.cpp LlmFactory.cpp)
+add_library(arm-llm-framework-onnxruntime-genai STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/OnnxrtImpl.cpp)
 
-target_include_directories(llm-framework PUBLIC
+target_include_directories(arm-llm-framework-onnxruntime-genai PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../..
     ${ONNXRT_GENAI_SRC_DIR}/src)
 # List all libraries that we need to depend on here:
-target_link_libraries(llm-framework PUBLIC
+target_link_libraries(arm-llm-framework-onnxruntime-genai PUBLIC
     onnxruntime-genai
-    onnxruntime)
+    onnxruntime
+    llm-framework-deps
+    llm-log)
 
 if(BUILD_BENCHMARK)
     target_include_directories(model_benchmark PRIVATE

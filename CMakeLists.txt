@@ -121,6 +121,11 @@ include(enable-coverage)
 # Add default configuration options users can set from command line.
 include(configuration-options)
 
+# Populate the runtime config with the resolved default framework.
+set(LLM_RUNNER_CONFIG_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/config_files/llmrunner.json.in")
+set(LLM_RUNNER_CONFIG_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/config_files/llmrunner.json")
+configure_file("${LLM_RUNNER_CONFIG_TEMPLATE}" "${LLM_RUNNER_CONFIG_OUTPUT}" @ONLY)
+
 # Download the common resources that may be used. Once these are set up
 # in the repository, they won't be downloaded again for each build.
 include(download-resources)

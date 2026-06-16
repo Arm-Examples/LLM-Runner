@@ -70,10 +70,9 @@ struct mtmd_app_context {
               n_batch(params.n_batch),
               n_threads(params.cpuparams.n_threads) {
 
-        if (!llama_init) {
-            THROW_ERROR("Error initialising multimodal app context. common_init_from_params returned null.");
+        if (!llama_init || !llama_init->model() || !llama_init->context()) {
+            THROW_ERROR("Error initialising multimodal app context. llama_init model/context is null.");
         }
-
         model = llama_init->model();
         lctx  = llama_init->context();
 
@@ -105,7 +104,6 @@ struct mtmd_app_context {
         mparams.use_gpu = params.mmproj_use_gpu;
         mparams.print_timings = true;
         mparams.n_threads = params.cpuparams.n_threads;
-        mparams.warmup = false;
         std::unordered_map<int,ggml_log_level> log_mapping{
             {0,GGML_LOG_LEVEL_ERROR},
             {1,GGML_LOG_LEVEL_WARN},
@@ -124,9 +122,9 @@ struct mtmd_app_context {
 /**
  * @brief Llama multimodal (text + vision) wrapper implementation.
  */
-class LlamaVisionImpl : public LLM::LLMImpl {
+class LlamaVisionImpl : public LlamaTextImpl {
 public:
-    using LLM::LLMImpl::LLMImpl;  ///< Inherit base constructors
+    using LlamaTextImpl::LlamaTextImpl;  ///< Inherit base constructors
     ~LlamaVisionImpl() = default;
 
     /**
@@ -161,7 +159,7 @@ public:
      * @brief Reset both the LLM text context and the vision context state.
      */
     void ResetContext() override {
-        LLM::LLMImpl::ResetContext();
+        LlamaTextImpl::ResetContext();
         ResetVisionContext();
     }
 

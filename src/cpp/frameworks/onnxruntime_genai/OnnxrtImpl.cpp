@@ -17,14 +17,14 @@ using Duration = std::chrono::duration<double>;
  * @brief ONNX Implementation of our LLM API
  *
  */
-LLM::LLMImpl::LLMImpl() {}
+OnnxrtImpl::OnnxrtImpl() {}
 
-LLM::LLMImpl::~LLMImpl()
+OnnxrtImpl::~OnnxrtImpl()
 {
     this->FreeLlm();
 }
 
-void LLM::LLMImpl::InitSequence()
+void OnnxrtImpl::InitSequence()
 {
     this->m_sequencesPtr = OgaSequences::Create();
 
@@ -35,7 +35,7 @@ void LLM::LLMImpl::InitSequence()
     LOG_INF("Sequence Initialized");
 }
 
-void LLM::LLMImpl::FreeSequence()
+void OnnxrtImpl::FreeSequence()
 {
     if (this->m_sequencesPtr) {
         this->m_sequencesPtr.reset();
@@ -44,7 +44,7 @@ void LLM::LLMImpl::FreeSequence()
     }
 }
 
-void LLM::LLMImpl::InitConfigs()
+void OnnxrtImpl::InitConfigs()
 {
     // genai_config.json path (same as model path)
     this->m_llmConfigsPtr = OgaConfig::Create(this->m_modelPath.c_str());
@@ -79,7 +79,7 @@ void LLM::LLMImpl::InitConfigs()
     LOG_INF("Configs Initialized");
 }
 
-void LLM::LLMImpl::FreeConfigs()
+void OnnxrtImpl::FreeConfigs()
 {
     if (this->m_llmConfigsPtr) {
         this->m_llmConfigsPtr.reset();
@@ -88,7 +88,7 @@ void LLM::LLMImpl::FreeConfigs()
     }
 }
 
-void LLM::LLMImpl::InitGenerator()
+void OnnxrtImpl::InitGenerator()
 {
     this->m_llmGntParamsPtr = OgaGeneratorParams::Create(* this->m_llmModelPtr);
 
@@ -111,7 +111,7 @@ void LLM::LLMImpl::InitGenerator()
     LOG_INF("Generator Initialized");
 }
 
-void LLM::LLMImpl::FreeGenerator()
+void OnnxrtImpl::FreeGenerator()
 {
     if (this->m_llmGeneratorPtr) {
         this->m_llmGntParamsPtr.reset();
@@ -123,7 +123,7 @@ void LLM::LLMImpl::FreeGenerator()
     }
 }
 
-void LLM::LLMImpl::InitTokenizer()
+void OnnxrtImpl::InitTokenizer()
 {
     this->m_tokenizerPtr = OgaTokenizer::Create(*this->m_llmModelPtr);
 
@@ -141,7 +141,7 @@ void LLM::LLMImpl::InitTokenizer()
     LOG_INF("Tokenizer Stream Initialized");
 }
 
-void LLM::LLMImpl::FreeTokenizer()
+void OnnxrtImpl::FreeTokenizer()
 {
     if (this->m_tokenizerPtr) {
         this->m_tokenizerPtr.reset();
@@ -153,7 +153,7 @@ void LLM::LLMImpl::FreeTokenizer()
     }
 }
 
-void LLM::LLMImpl::LoadModel()
+void OnnxrtImpl::LoadModel()
 {
     this->m_llmModelPtr = OgaModel::Create(* this->m_llmConfigsPtr);
 
@@ -164,7 +164,7 @@ void LLM::LLMImpl::LoadModel()
     LOG_INF("Model Loaded");
 }
 
-void LLM::LLMImpl::FreeModel()
+void OnnxrtImpl::FreeModel()
 {
     if (this->m_llmModelPtr) {
         this->m_llmModelPtr.reset();
@@ -175,7 +175,7 @@ void LLM::LLMImpl::FreeModel()
     this->m_llmInitialized = false;
 }
 
-void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPath = "")
+void OnnxrtImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPath = "")
 {
     try {
         this->m_config            = config;
@@ -220,7 +220,7 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPat
     LOG_INF("LLM Initialized");
 }
 
-void LLM::LLMImpl::FreeLlm()
+void OnnxrtImpl::FreeLlm()
 {
     if (this->m_llmInitialized) {
         ResetContext();
@@ -235,7 +235,7 @@ void LLM::LLMImpl::FreeLlm()
     }
 }
 
-void LLM::LLMImpl::ResetContext()
+void OnnxrtImpl::ResetContext()
 {
     this->m_llmGeneratorPtr->RewindTo(0);
     this->m_isConversationStart = true;
@@ -245,7 +245,7 @@ void LLM::LLMImpl::ResetContext()
     LOG_INF("Reset Context");
 }
 
-bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
+bool OnnxrtImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
 {
     // Helper: default role is "user"
     auto chatMsg = [](std::string_view content, std::string_view role = "user") -> nlohmann::json {
@@ -279,7 +279,7 @@ bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
     }
 }
 
-void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
+void OnnxrtImpl::Encode(LlmChat::Payload& payload)
 {
     std::string prompt = payload.textPrompt;
 
@@ -305,7 +305,7 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
 
 }
 
-std::string LLM::LLMImpl::NextToken()
+std::string OnnxrtImpl::NextToken()
 {
     try {
         if(!this->m_llmGeneratorPtr->IsDone()) {
@@ -336,28 +336,28 @@ std::string LLM::LLMImpl::NextToken()
     }
 }
 
-void LLM::LLMImpl::Cancel() {
+void OnnxrtImpl::Cancel() {
 	LOG_INF("Cancelling current operation");
 }
 
-size_t LLM::LLMImpl::GetChatProgress() const
+size_t OnnxrtImpl::GetChatProgress() const
 {
     return this->m_contextFilled;
 }
 
-float LLM::LLMImpl::GetEncodeTimings()
+float OnnxrtImpl::GetEncodeTimings()
 {
     auto encoderTPS = this->m_totalEncodedTokens / this->m_totalEncoderTime;
     return encoderTPS;
 }
 
-float LLM::LLMImpl::GetDecodeTimings()
+float OnnxrtImpl::GetDecodeTimings()
 {
     auto decoderTPS = this->m_totalDecodedTokens / this->m_totalDecoderTime;
     return decoderTPS;
 }
 
-void LLM::LLMImpl::ResetTimings()
+void OnnxrtImpl::ResetTimings()
 {
     this->m_totalDecoderTime = 0;
     this->m_totalEncoderTime = 0;
@@ -367,7 +367,7 @@ void LLM::LLMImpl::ResetTimings()
 
 }
 
-std::string LLM::LLMImpl::SystemInfo()
+std::string OnnxrtImpl::SystemInfo()
 {
     std::string sysInfo = "\nSystem INFO:\n";
     std::string deviceType = std::string(this->m_llmModelPtr->GetDeviceType());
@@ -377,7 +377,7 @@ std::string LLM::LLMImpl::SystemInfo()
     return sysInfo;
 }
 
-std::string LLM::LLMImpl::GeneratePromptWithNumTokens(size_t numPromptTokens) {
+std::string OnnxrtImpl::GeneratePromptWithNumTokens(size_t numPromptTokens) {
     const char* const base_prompt = "A";
 
     // 1) Encode the base prompt into sequences
@@ -406,7 +406,7 @@ std::string LLM::LLMImpl::GeneratePromptWithNumTokens(size_t numPromptTokens) {
     };
 }
 
-void LLM::LLMImpl::StopGeneration()
+void OnnxrtImpl::StopGeneration()
 {
-    // TODO: add stop response to support cancelled query
+    LOG_WARN("StopGeneration requested but is not implemented for onnxruntime-genai backend");
 }

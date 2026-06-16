@@ -21,7 +21,11 @@ add_subdirectory(config)
 # Add chat lib;
 add_subdirectory(chat)
 
-set(LLM_BUILD_FRAMEWORK_NAME "${LLM_FRAMEWORK}")
+if (LLM_MULTI_BACKEND)
+    set(LLM_BUILD_FRAMEWORK_NAME "multi")
+else()
+    set(LLM_BUILD_FRAMEWORK_NAME "${LLM_DEFAULT_BACKEND}")
+endif()
 set(LLM_BUILD_FRAMEWORK_DEPENDENCY_VERSIONS "unknown")
 
 # Add frameworks lib:

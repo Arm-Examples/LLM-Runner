@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+# SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -22,7 +22,7 @@ set(CMAKE_CROSSCOMPILING true)
 set(CMAKE_SYSTEM_NAME Linux)
 set(TARGET_PLATFORM "linux-aarch64")
 
-set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES CPU_ARCH TARGET_PLATFORM LLM_FRAMEWORK)
+set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES CPU_ARCH TARGET_PLATFORM LLM_ENABLE_LLAMA_CPP)
 
 include("${CMAKE_CURRENT_LIST_DIR}/base.cmake")
 

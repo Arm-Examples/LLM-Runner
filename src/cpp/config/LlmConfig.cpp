@@ -17,6 +17,7 @@ static inline const char* to_string(LlmConfig::ConfigParam key) {
     case LlmConfig::ConfigParam::UserTemplate:            return "UserTemplate";
     case LlmConfig::ConfigParam::LlmModelName:            return "LlmModelName";
     case LlmConfig::ConfigParam::ProjModelName:           return "ProjModelName";
+    case LlmConfig::ConfigParam::Framework:              return "Framework";
     case LlmConfig::ConfigParam::ApplyDefaultChatTemplate:return "ApplyDefaultChatTemplate";
     case LlmConfig::ConfigParam::IsVision:                return "IsVision";
     case LlmConfig::ConfigParam::NumThreads:              return "NumThreads";
@@ -36,7 +37,40 @@ LlmConfig::LlmConfig(const std::string& jsonStr)
         THROW_INVALID_ARGUMENT("config: schema/type error: %s", e.what());
     }
 
-    // Required sections (throws via .at if missing)
+    if (cfg.contains("backend")) {
+        THROW_INVALID_ARGUMENT("config.backend is no longer supported; use config.framework");
+    }
+
+    // Optional framework selection
+    if (cfg.contains("framework")) {
+        const json& frameworkJ = cfg.at("framework");
+        if (!frameworkJ.is_string()) {
+            THROW_INVALID_ARGUMENT("config.framework must be a string");
+        }
+        m_framework = frameworkJ.get<std::string>();
+    }
+
+    // Required sections
+    std::vector<const char*> missingSections;
+    if (!cfg.contains("chat")) {
+        missingSections.push_back("chat");
+    }
+    if (!cfg.contains("model")) {
+        missingSections.push_back("model");
+    }
+    if (!cfg.contains("runtime")) {
+        missingSections.push_back("runtime");
+    }
+    if (!missingSections.empty()) {
+        std::string message = "config: missing required section(s): ";
+        for (size_t i = 0; i < missingSections.size(); ++i) {
+            message += missingSections[i];
+            if (i + 1 < missingSections.size()) {
+                message += ", ";
+            }
+        }
+        THROW_INVALID_ARGUMENT("%s", message.c_str());
+    }
     const json& chatJ    = cfg.at("chat");
     const json& modelJ   = cfg.at("model");
     const json& runtimeJ = cfg.at("runtime");
@@ -62,6 +96,9 @@ LlmConfig::LlmConfig(const std::string& jsonStr)
         THROW_INVALID_ARGUMENT("config.model.maxInputDimension must be positive");
 
     // stopWords: must exist, array, non-empty, all non-empty strings
+    if (!cfg.contains("stopWords")) {
+        THROW_INVALID_ARGUMENT("config: missing required stopWords");
+    }
     const json& sw = cfg.at("stopWords");
     if (!sw.is_array() || sw.empty())
         THROW_INVALID_ARGUMENT("config.stopWords must be a non-empty array of strings");
@@ -86,6 +123,7 @@ void LlmConfig::SetConfigString(ConfigParam key, const std::string& value) {
         case ConfigParam::UserTemplate:     m_chat.userTemplate   = value; return;
         case ConfigParam::LlmModelName:     m_model.llmModelName  = value; return;
         case ConfigParam::ProjModelName:    m_model.projModelName = value; return;
+        case ConfigParam::Framework:        m_framework           = value; return;
         default: THROW_INVALID_ARGUMENT("Unknown string key: %s", to_string(key));
     }
 }
@@ -131,6 +169,7 @@ void LlmConfig::SetConfigInt(ConfigParam key, int value) {
         case ConfigParam::UserTemplate:     return m_chat.userTemplate;
         case ConfigParam::LlmModelName:     return m_model.llmModelName;
         case ConfigParam::ProjModelName:    return m_model.projModelName;
+        case ConfigParam::Framework:        return m_framework;
         default: THROW_INVALID_ARGUMENT("Unknown string key: %s", to_string(key));
     }
 }

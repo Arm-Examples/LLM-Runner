@@ -551,7 +551,8 @@ def ensure_resource_present(resource: ResourceDetails) -> None:
 
 def download_resources(resources_file: Path, download_dir: Path,
                        download_models: bool = True,
-                       hf_token: Optional[str] = None) -> None:
+                       hf_token: Optional[str] = None,
+                       llm_frameworks: Optional[list] = None) -> None:
     """
     Downloads resource files as per the requirements json into the download dir.
 
@@ -564,6 +565,9 @@ def download_resources(resources_file: Path, download_dir: Path,
     @param download_models: Whether to download models from the requirements file.
     """
     download_dir.mkdir(parents=True, exist_ok=True)
+    if not llm_frameworks:
+        llm_frameworks = [default_llm_framework]
+
     with (open(resources_file, encoding="utf8") as f):
         resource_list = json.load(f)
         resources = []
@@ -575,11 +579,15 @@ def download_resources(resources_file: Path, download_dir: Path,
                 if not download_models:
                     logging.info("Skipping model downloads (download_models=False)")
                     continue
-                model_resources = resource_list[resource_type][llm_framework]
-                for model_name in model_resources:
-                    model_dir = Path(resource_dir / llm_framework / model_name)
-                    model_dir.mkdir(parents=True, exist_ok=True)
-                    resources.extend(model_resources[model_name])
+                resources = []
+                for framework in llm_frameworks:
+                    if framework not in resource_list[resource_type]:
+                        raise ValueError(f"Unknown LLM framework '{framework}' in requirements.json")
+                    model_resources = resource_list[resource_type][framework]
+                    for model_name in model_resources:
+                        model_dir = Path(resource_dir / framework / model_name)
+                        model_dir.mkdir(parents=True, exist_ok=True)
+                        resources.extend(model_resources[model_name])
             else:
                 resources = resource_list[resource_type]
 
@@ -617,6 +625,10 @@ if __name__ == "__main__":
         choices=["llama.cpp", "onnxruntime-genai", "mnn", "executorch"],
         default=None)
     parser.add_argument(
+        "--llm-frameworks",
+        help="Comma-separated list of LLM frameworks to download models for.",
+        default=None)
+    parser.add_argument(
         "--download-models",
         help="Whether to download LLM models (ON/OFF).",
         choices=["ON", "OFF"],
@@ -625,12 +637,23 @@ if __name__ == "__main__":
     req_file = Path(args.requirements_file)
     download_dir = Path(args.download_dir)
     llm_framework = args.llm_framework
+    llm_frameworks = None
+    if args.llm_frameworks:
+        llm_frameworks = [fw.strip() for fw in args.llm_frameworks.split(",") if fw.strip()]
+    elif llm_framework:
+        llm_frameworks = [llm_framework]
     download_models = args.download_models == "ON"
     hf_token = None
     if download_models:
         hf_token = get_huggingface_token()
         if not hf_token:
             logging.error("HF_TOKEN is not set in the environment")
+
+    valid_frameworks = {"llama.cpp", "onnxruntime-genai", "mnn", "executorch"}
+    if llm_frameworks:
+        invalid_frameworks = [fw for fw in llm_frameworks if fw not in valid_frameworks]
+        if invalid_frameworks:
+            raise ValueError(f"Unknown LLM frameworks: {', '.join(invalid_frameworks)}")
 
     if not req_file.exists():
         raise FileNotFoundError(f'{req_file} does not exist')
@@ -639,4 +662,5 @@ if __name__ == "__main__":
         req_file,
         download_dir,
         download_models,
-        hf_token)
+        hf_token,
+        llm_frameworks)

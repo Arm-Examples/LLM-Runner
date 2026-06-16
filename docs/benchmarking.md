@@ -106,13 +106,10 @@ Record the delta in latency and throughput.
 To enable additional timeline annotations using Arm Streamline, configure the build with:
 
 ```shell
-
 cmake --preset=x-android-aarch64 -B build \
-
-  -DLLM_FRAMEWORK=llama.cpp \
   -DBUILD_BENCHMARK=ON \
   -DENABLE_STREAMLINE=ON \
-  
+
 cmake --build build
 ```
 

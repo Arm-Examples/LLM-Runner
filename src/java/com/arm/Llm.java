@@ -82,6 +82,14 @@ public class Llm {
     private native long llmInitJNI(String configPathStr, String sharedLibraryPath);
 
     /**
+     * Native method to register a backend configuration under a key.
+     * @param key identifier for the framework config
+     * @param configPathStr config.json as a string
+     * @param nativeLlmHandle native handle to the LLM instance
+     */
+    private native void registerBackendConfigJNI(String key, String configPathStr, long nativeLlmHandle);
+
+    /**
      * Native method to encode the given text and image
      * @param text               the prompt to be encoded
      * @param pathToImage        path to the image to be encoded
@@ -277,10 +285,12 @@ public class Llm {
     }
 
     /**
-     * Return the frameworkType
+     * Return the frameworkType.
      * @return Framework type as string.
      */
-    public native String getFrameworkType();
+    public String getFrameworkType() {
+        return getFrameworkTypeJNI(getNativeLlmHandle());
+    }
 
 
     /**
@@ -304,6 +314,16 @@ public class Llm {
     public void llmInit(String configPathStr, String sharedLibraryPath)
     {
         this.nativeLlmHandle = llmInitJNI(configPathStr, sharedLibraryPath);
+    }
+
+    /**
+     * Register a backend configuration under a key for easy switching.
+    * @param key identifier for the framework config
+     * @param configPathStr config.json file content as a string
+     */
+    public void registerBackendConfig(String key, String configPathStr)
+    {
+        registerBackendConfigJNI(key, configPathStr, getNativeLlmHandle());
     }
 
     /**

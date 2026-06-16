@@ -74,7 +74,7 @@ void ThrowGenerationError(const char* operation, Error error)
  * tokenization, token prefill, one-step decode, and detokenization as separate
  * stages so token-based entry points can reuse the same runtime path later.
  */
-class LLM::LLMImpl::SynchronousTextRunner {
+class ExecuTorchImpl::SynchronousTextRunner {
 public:
     /**
      * Build the runner and wire the tokenizer, module, IO manager, decoder, and prefiller.
@@ -459,14 +459,14 @@ private:
     bool m_hasPendingPrefillToken{false};
 };
 
-LLM::LLMImpl::LLMImpl() = default;
+ExecuTorchImpl::ExecuTorchImpl() = default;
 
-LLM::LLMImpl::~LLMImpl()
+ExecuTorchImpl::~ExecuTorchImpl()
 {
     FreeLlm();
 }
 
-void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPath)
+void ExecuTorchImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPath)
 {
     m_config = config;
     m_modelPath = config.GetConfigString(LlmConfig::ConfigParam::LlmModelName);
@@ -500,7 +500,7 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPat
             m_modelPath.c_str(), m_tokenizerPath.c_str(), m_numThreads);
 }
 
-void LLM::LLMImpl::FreeLlm()
+void ExecuTorchImpl::FreeLlm()
 {
     if (!m_initialized && !m_runner) {
         return;
@@ -514,17 +514,17 @@ void LLM::LLMImpl::FreeLlm()
     LOG_INF("Freed ExecuTorch LLM");
 }
 
-float LLM::LLMImpl::GetEncodeTimings()
+float ExecuTorchImpl::GetEncodeTimings()
 {
     return TokensPerSecond(m_totalEncodedTokens, m_totalEncoderTime);
 }
 
-float LLM::LLMImpl::GetDecodeTimings()
+float ExecuTorchImpl::GetDecodeTimings()
 {
     return TokensPerSecond(m_totalDecodedTokens, m_totalDecoderTime);
 }
 
-void LLM::LLMImpl::ResetTimings()
+void ExecuTorchImpl::ResetTimings()
 {
     m_totalDecodedTokens = 0;
     m_totalEncodedTokens = 0;
@@ -532,13 +532,13 @@ void LLM::LLMImpl::ResetTimings()
     m_totalEncoderTime = 0.0;
 }
 
-std::string LLM::LLMImpl::SystemInfo()
+std::string ExecuTorchImpl::SystemInfo()
 {
     EnsureInitialized("SystemInfo");
     return "System INFO:\nFramework: ExecuTorch\nModel: " + m_modelPath + "\n";
 }
 
-void LLM::LLMImpl::ResetContext()
+void ExecuTorchImpl::ResetContext()
 {
     EnsureInitialized("ResetContext");
 
@@ -552,7 +552,7 @@ void LLM::LLMImpl::ResetContext()
     LOG_INF("Reset ExecuTorch context");
 }
 
-void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
+void ExecuTorchImpl::Encode(LlmChat::Payload& payload)
 {
     EnsureInitialized("Encode");
 
@@ -578,7 +578,7 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
     m_contextFilled = m_runner->ContextProgress(m_nCtx);
 }
 
-std::string LLM::LLMImpl::NextToken()
+std::string ExecuTorchImpl::NextToken()
 {
     EnsureInitialized("NextToken");
 
@@ -601,31 +601,31 @@ std::string LLM::LLMImpl::NextToken()
     return token;
 }
 
-void LLM::LLMImpl::Cancel()
+void ExecuTorchImpl::Cancel()
 {
     LOG_INF("Cancelling ExecuTorch generation");
     StopGeneration();
 }
 
-size_t LLM::LLMImpl::GetChatProgress() const
+size_t ExecuTorchImpl::GetChatProgress() const
 {
     return m_contextFilled;
 }
 
-void LLM::LLMImpl::StopGeneration()
+void ExecuTorchImpl::StopGeneration()
 {
     if (m_runner) {
         m_runner->Stop();
     }
 }
 
-bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
+bool ExecuTorchImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
 {
     (void)payload;
     return false;
 }
 
-std::string LLM::LLMImpl::GeneratePromptWithNumTokens(size_t numPromptTokens)
+std::string ExecuTorchImpl::GeneratePromptWithNumTokens(size_t numPromptTokens)
 {
     EnsureInitialized("GeneratePromptWithNumTokens");
     if (numPromptTokens == 0) {
@@ -655,14 +655,14 @@ std::string LLM::LLMImpl::GeneratePromptWithNumTokens(size_t numPromptTokens)
     }
 }
 
-void LLM::LLMImpl::EnsureInitialized(const char* operation) const
+void ExecuTorchImpl::EnsureInitialized(const char* operation) const
 {
     if (!m_initialized) {
         THROW_ERROR("ExecuTorch %s failed: backend not initialized", operation);
     }
 }
 
-void LLM::LLMImpl::ConfigureThreadPool()
+void ExecuTorchImpl::ConfigureThreadPool()
 {
     auto* threadPool = executorch::extension::threadpool::get_threadpool();
     if (!threadPool) {
@@ -685,7 +685,7 @@ void LLM::LLMImpl::ConfigureThreadPool()
             threadPool->get_thread_count());
 }
 
-void LLM::LLMImpl::WarnIfContextSizeExceedsModelLimit(tokenizers::Tokenizer* tokenizer) const
+void ExecuTorchImpl::WarnIfContextSizeExceedsModelLimit(tokenizers::Tokenizer* tokenizer) const
 {
     Module metadataModule(m_modelPath, Module::LoadMode::MmapUseMlockIgnoreErrors);
     const auto metadataResult = get_llm_metadata(tokenizer, &metadataModule);
@@ -708,7 +708,7 @@ void LLM::LLMImpl::WarnIfContextSizeExceedsModelLimit(tokenizers::Tokenizer* tok
     }
 }
 
-std::string LLM::LLMImpl::ResolveTokenizerPath() const
+std::string ExecuTorchImpl::ResolveTokenizerPath() const
 {
     const std::filesystem::path modelPath(m_modelPath);
     const std::filesystem::path modelDir = modelPath.parent_path();

@@ -9,6 +9,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <optional>
 
 using namespace std::chrono;
 
@@ -47,13 +48,33 @@ uintmax_t ValidateAndComputeModelSizeBytes(const std::filesystem::path& path)
     THROW_ERROR("Configured model path is neither a regular file nor a directory: %s", path.string().c_str());
 }
 
+std::optional<std::string> InferFrameworkFromModelPath(const std::filesystem::path& path)
+{
+    for (const auto& part : path) {
+        const std::string name = part.string();
+        if (name == "onnxruntime-genai") {
+            return std::string("onnxruntime-genai");
+        }
+        if (name == "mnn") {
+            return std::string("mnn");
+        }
+        if (name == "executorch") {
+            return std::string("executorch");
+        }
+        if (name == "llama.cpp") {
+            return std::string("llama.cpp");
+        }
+    }
+    return std::nullopt;
+}
+
 }  // namespace
 
 LlmBench::LlmBench(LLM& llm, int numInputTokens, int numOutputTokens)
     : m_llm(llm)
     , m_numInputTokens(numInputTokens)
     , m_numOutputTokens(numOutputTokens)
-    , m_frameworkType(LLM::GetFrameworkType())
+    , m_frameworkType(m_llm.GetFrameworkType())
 {}
 
 double LlmBench::MeasureTimingSec(const std::string& tag, const std::function<void()>& operation)
@@ -112,11 +133,14 @@ int LlmBench::Initialize(const std::string& modelPath,
             }
         )JSON");
         config.SetConfigString(LlmConfig::ConfigParam::LlmModelName, modelPath);
+        if (const auto framework = InferFrameworkFromModelPath(modelPath)) {
+            config.SetConfigString(LlmConfig::ConfigParam::Framework, *framework);
+        }
         config.SetConfigInt(LlmConfig::ConfigParam::NumThreads, numThreads);
         config.SetConfigInt(LlmConfig::ConfigParam::ContextSize, contextSize);
 
         m_llm.LlmInit(config, sharedLibraryPath);
-        m_frameworkType = LLM::GetFrameworkType();
+        m_frameworkType = m_llm.GetFrameworkType();
         PreparePayload();
     } catch (const std::exception& ex) {
         LOG_ERROR("LlmBench initialization failed: %s", ex.what());

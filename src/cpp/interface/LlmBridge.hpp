@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -7,6 +7,7 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 
 /**
  * @brief Result codes for operations.
@@ -27,7 +28,7 @@ enum ResultCode {
  */
 struct WorkState {
     long operationId;           ///< Unique identifier for this work item.
-    std::atomic<bool> cancelled;///< True if cancellation was requested.
+    std::atomic<bool> cancelled{false};///< True if cancellation was requested.
 };
 
 // Internal utilities (defined in .cpp)

@@ -1,0 +1,36 @@
+{
+  "chat": {
+    "systemPrompt": "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",
+    "applyDefaultChatTemplate": true,
+    "systemTemplate": "system: %s",
+    "userTemplate": "user: %s\nassistant:"
+  },
+  "model": {
+    "llmModelName": "llama.cpp/phi-2/phi2_Q4_model.gguf",
+    "isVision": false
+  },
+  "runtime": {
+    "batchSize": 256,
+    "numThreads": 5,
+    "contextSize": 2048
+  },
+  "stopWords": [
+    "Orbita:",
+    "User:",
+    "AI:",
+    "<|user|>",
+    "Assistant:",
+    "user:",
+    "[end of text]",
+    "<|endoftext|>",
+    "<|start_header_id|>",
+    "<eos>",
+    "<|end|>",
+    "model:",
+    "Question:",
+    "\\n\\n",
+    "<end_of_turn>",
+    "Consider the following scenario:\\n"
+  ],
+  "framework": "llama.cpp"
+}

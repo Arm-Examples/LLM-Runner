@@ -6,7 +6,7 @@
 
 include_guard(GLOBAL)
 
-if("${LLM_FRAMEWORK}" STREQUAL "llama.cpp"
+if((LLM_ENABLE_LLAMA_CPP)
         AND "${TARGET_PLATFORM}"  STREQUAL "linux-aarch64")
 
   # Following block of code determines CMAKE_C_FLAGS / CMAKE_CXX_FLAGS to be used.

@@ -65,27 +65,24 @@ if(BUILD_BENCHMARK)
     set_target_properties(llm_demo PROPERTIES EXCLUDE_FROM_ALL OFF)
 endif()
 
-if (NOT TARGET llm-config)
-    message(FATAL_ERROR "llm-config target not defined")
-elseif (NOT TARGET llm-chat)
-    message(FATAL_ERROR "llm-chat target not defined")
-elseif (NOT TARGET llm-interface)
-    message(FATAL_ERROR "llm-interface target not defined")
+if (NOT TARGET llm-framework-deps)
+    message(FATAL_ERROR "llm-framework-deps target not defined")
 endif()
 
-add_library(llm-framework STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/MnnImpl.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/LlmFactory.cpp)
+add_library(arm-llm-framework-mnn STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/MnnImpl.cpp)
 
-target_include_directories(llm-framework PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(arm-llm-framework-mnn PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 
-target_include_directories(llm-framework
+target_include_directories(arm-llm-framework-mnn
   PUBLIC
     "${MNN_SRC_DIR}/include"
     "${MNN_SRC_DIR}/transformers/llm/engine/include"
 )
 
 # List all libraries that we need to depend on here:
-target_link_libraries(llm-framework PUBLIC
-    MNN)
+target_link_libraries(arm-llm-framework-mnn PUBLIC
+    MNN
+    llm-framework-deps)

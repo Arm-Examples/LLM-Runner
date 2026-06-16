@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+# SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -42,13 +42,13 @@ message(STATUS "USE_KLEIDIAI = ${USE_KLEIDIAI} (build CPU: ${CMAKE_HOST_SYSTEM_P
 
 
 # CPU_ARCH may be specified only when:
-# LLM_FRAMEWORK == "llama.cpp"  AND  target == Linux/aarch64
+# llama.cpp is enabled AND target == Linux/aarch64
 if(DEFINED CPU_ARCH AND
-   NOT ("${LLM_FRAMEWORK}" STREQUAL "llama.cpp" AND
-        "${TARGET_PLATFORM}"  STREQUAL "linux-aarch64"))
+   NOT ((DEFINED LLM_ENABLE_LLAMA_CPP AND LLM_ENABLE_LLAMA_CPP)
+        AND "${TARGET_PLATFORM}"  STREQUAL "linux-aarch64"))
   
   message(FATAL_ERROR
     "CPU_ARCH is set ('${CPU_ARCH}'), but this is only allowed when "
-    "LLM_FRAMEWORK='llama.cpp' AND target platform is Linux/aarch64. "
-    "Current: LLM_FRAMEWORK='${LLM_FRAMEWORK}', target=${TARGET_PLATFORM}.")
+    "llama.cpp is enabled AND target platform is Linux/aarch64. "
+    "Current target=${TARGET_PLATFORM}.")
 endif()

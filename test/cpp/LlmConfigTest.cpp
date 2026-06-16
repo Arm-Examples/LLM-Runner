@@ -102,8 +102,9 @@ TEST_CASE("Configuration paramaters test")
             });
 
             LlmConfig config(missingParamConfig);
-        } catch (const nlohmann::json::out_of_range& e) {
-            CHECK(std::string(e.what()).find("'runtime' not found") != std::string::npos);
+            CHECK(false);
+        } catch (const std::invalid_argument& e) {
+            CHECK(std::string(e.what()).find("config: missing required section(s): runtime") != std::string::npos);
         }
     }
 

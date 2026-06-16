@@ -3,18 +3,17 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-#ifndef LLM_IMPL_HPP
-#define LLM_IMPL_HPP
+#ifndef EXECUTORCH_LLM_IMPL_HPP
+#define EXECUTORCH_LLM_IMPL_HPP
 
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "Llm.hpp"
+#include "interface/LlmImpl.hpp"
 #include "LlmConfig.hpp"
 #include "LlmChat.hpp"
 
-class LLM;
 namespace tokenizers {
 class Tokenizer;
 }
@@ -22,90 +21,90 @@ class Tokenizer;
 /**
  * @brief ExecuTorch implementation for the LLM API.
  */
-class LLM::LLMImpl : public LlmChat {
+class ExecuTorchImpl : public LLM::LLMImpl {
 public:
-    LLMImpl();
-    ~LLMImpl();
+    ExecuTorchImpl();
+    ~ExecuTorchImpl() override;
 
     /**
      * Method to initialize an ExecuTorch model
      * @param config Configuration class with model's parameter and user defined parameters
      * @param sharedLibraryPath path to location of shared libs
      */
-    void LlmInit(const LlmConfig& config, std::string sharedLibraryPath);
+    void LlmInit(const LlmConfig& config, std::string sharedLibraryPath) override;
 
     /**
      * Method to free all allocations pertaining to ExecuTorch model
      */
-    void FreeLlm();
+    void FreeLlm() override;
 
     /**
      * Function to retrieve the ExecuTorch encode timings.
      * @return The encoded tokens per second
      */
-    float GetEncodeTimings();
+    float GetEncodeTimings() override;
 
     /**
      * Function to retrieve the ExecuTorch decode timings.
      * @return The decoded tokens per second
      */
-    float GetDecodeTimings();
+    float GetDecodeTimings() override;
 
     /**
      * Function to reset the ExecuTorch timing
      */
-    void ResetTimings();
+    void ResetTimings() override;
 
     /**
      * Function to print the system info
      * @return System info as a char pointer
      */
-    std::string SystemInfo();
+    std::string SystemInfo() override;
 
     /**
      * Method to reset the whole conversation history
      */
-    void ResetContext();
+    void ResetContext() override;
 
     /**
      * Encode a payload containing text.
      * @param payload Input payload containing text.
      */
-    void Encode(LlmChat::Payload& payload);
+    void Encode(LlmChat::Payload& payload) override;
 
     /**
      * Method to produce next token
      * @return the next token for encoded prompt
      */
-    std::string NextToken();
+    std::string NextToken() override;
 
     /**
     * Method to request the cancellation of a ongoing operation / functional call
     */
-    void Cancel();
+    void Cancel() override;
 
     /**
      * The method return the percentage of chat context filled
      * @return chat capacity filled in cache as percentage number
      */
-    size_t GetChatProgress() const;
+    size_t GetChatProgress() const override;
 
     /**
      * Method to get framework type
      * @return string framework type
      */
-    static std::string GetFrameworkType() { return "executorch"; }
+    std::string GetFrameworkType() const override { return "executorch"; }
 
     /**
      * @brief List supported input modalities.
      * @return A vector containing {"text"}.
      */
-    std::vector<std::string> SupportedInputModalities() const { return {"text"}; }
+    std::vector<std::string> SupportedInputModalities() const override { return {"text"}; }
 
     /**
     * Method to Cancel generation of response tokens. Can be used to stop response once query commences
     */
-    void StopGeneration();
+    void StopGeneration() override;
 
     /**
      * Applies the automatic chat template to the given prompt.
@@ -123,7 +122,7 @@ public:
      * @param numPromptTokens Desired number of input tokens.
      * @return A text prompt that produces that many tokens when encoded.
      */
-    std::string GeneratePromptWithNumTokens(size_t numPromptTokens);
+    std::string GeneratePromptWithNumTokens(size_t numPromptTokens) override;
 
 private:
     class SynchronousTextRunner;
@@ -151,4 +150,4 @@ private:
     std::unique_ptr<tokenizers::Tokenizer> m_promptTokenizer{nullptr};
 };
 
-#endif /* LLM_IMPL_HPP */
+#endif /* EXECUTORCH_LLM_IMPL_HPP */

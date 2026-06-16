@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+# SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -7,7 +7,10 @@
 include_guard(GLOBAL)
 
 if (NOT CMAKE_CROSSCOMPILING)
-  set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES LLM_FRAMEWORK CPU_ARCH TARGET_PLATFORM)
+set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
+    LLM_ENABLE_LLAMA_CPP
+    CPU_ARCH
+    TARGET_PLATFORM)
 endif()
 
 # BUILD_DEBUG defaults to OFF unless provided by CLI/presets.
