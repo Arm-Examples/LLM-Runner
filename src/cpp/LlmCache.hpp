@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -8,10 +8,12 @@
 #include <unordered_map>
 #include <memory>
 #include <mutex>
-#include <jni.h>
+#include <cstdint>
 #include "LlmImpl.hpp"
 
 #pragma once
+
+using LlmHandle = std::int64_t;
 
 /**
  * @class LLMCache
@@ -37,20 +39,20 @@ public:
      * @param obj LLM instance to be added to the cache.
      * @return The new handle associated with the LLM instance.
      */
-    jlong Add(std::unique_ptr<LLM> obj);
+    LlmHandle Add(std::unique_ptr<LLM> obj);
 
     /**
      * Look up an LLM by its handle (nullptr if not found).
      * @param handle handle associated with LLM instance.
      * @return LLM instance, null if not found
      */
-    LLM* Lookup(jlong handle);
+    LLM* Lookup(LlmHandle handle);
 
     /**
      * Remove LLM associated with the handle.
      * @param handle handle associated with LLM instance.
      */ 
-    void Remove(jlong handle);
+    void Remove(LlmHandle handle);
 
 private:
     LLMCache() = default;
@@ -60,6 +62,6 @@ private:
     LLMCache& operator=(const LLMCache&) = delete;
 
     std::mutex m_mutex;
-    std::unordered_map<jlong, std::unique_ptr<LLM>> m_cache;
-    jlong m_nextHandle = 1;
+    std::unordered_map<LlmHandle, std::unique_ptr<LLM>> m_cache;
+    LlmHandle m_nextHandle = 1;
 };

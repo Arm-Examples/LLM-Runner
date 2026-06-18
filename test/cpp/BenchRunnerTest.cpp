@@ -269,3 +269,151 @@ TEST_CASE("LlmBench: MeasureTimingSec executes callable and returns elapsed time
     CHECK(callCount.load() == 1);
     CHECK(elapsed >= 0.0);
 }
+
+TEST_CASE("LlmBench: Initialize rejects invalid benchmark settings")
+{
+    const auto modelPath = CreateTinyModelFile();
+
+    SECTION("input tokens must be positive") {
+        LLM llm;
+        LlmBench bench(llm, 0, 1);
+        CHECK(bench.Initialize(modelPath.string(), 1, 4, ".") == 1);
+    }
+
+    SECTION("output tokens must be positive") {
+        LLM llm;
+        LlmBench bench(llm, 1, 0);
+        CHECK(bench.Initialize(modelPath.string(), 1, 4, ".") == 1);
+    }
+
+    SECTION("threads must be positive") {
+        LLM llm;
+        LlmBench bench(llm, 1, 1);
+        CHECK(bench.Initialize(modelPath.string(), 0, 4, ".") == 1);
+    }
+
+    SECTION("context size must be positive") {
+        LLM llm;
+        LlmBench bench(llm, 1, 1);
+        CHECK(bench.Initialize(modelPath.string(), 1, 0, ".") == 1);
+    }
+
+    SECTION("model path must not be empty") {
+        LLM llm;
+        LlmBench bench(llm, 1, 1);
+        CHECK(bench.Initialize("", 1, 4, ".") == 1);
+    }
+
+    std::filesystem::remove(modelPath);
+}
+
+TEST_CASE("LlmBench: Initialize rejects context size that cannot fit requested tokens")
+{
+    const auto modelPath = CreateTinyModelFile();
+    LLM llm;
+    LlmBench bench(llm, 3, 2);
+
+    CHECK(bench.Initialize(modelPath.string(), 1, 5, ".") == 1);
+    CHECK(bench.Initialize(modelPath.string(), 1, 4, ".") == 1);
+
+    std::filesystem::remove(modelPath);
+}
+
+TEST_CASE("LlmBench: Initialize rejects nonexistent model path")
+{
+    const auto modelPath = std::filesystem::temp_directory_path() / "bench-runner-missing-model.bin";
+    std::filesystem::remove(modelPath);
+
+    LLM llm;
+    LlmBench bench(llm, 1, 1);
+
+    CHECK(bench.Initialize(modelPath.string(), 1, 4, ".") == 1);
+}
+
+TEST_CASE("LlmBench: BuildIterationResult handles zero encode time")
+{
+    const BenchEncodeStepResult encode{0.0};
+    const BenchDecodeStepResult decode{5, 2.0, 50.0};
+
+    const auto result = LlmBench::BuildIterationResult(encode, decode, 100);
+
+    CHECK(result.encodeTokensPerSec == 0.0);
+    CHECK(result.decodeTokensPerSec == Catch::Approx(2.5));
+    CHECK(result.totalTimeMs == Catch::Approx(2000.0));
+}
+
+TEST_CASE("LlmBench: BuildIterationResult handles zero decode time")
+{
+    const BenchEncodeStepResult encode{1.0};
+    const BenchDecodeStepResult decode{0, 0.0, 0.0};
+
+    const auto result = LlmBench::BuildIterationResult(encode, decode, 50);
+
+    CHECK(result.encodeTokensPerSec == Catch::Approx(50.0));
+    CHECK(result.decodeTokensPerSec == 0.0);
+    CHECK(result.totalTimeMs == Catch::Approx(1000.0));
+}
+
+TEST_CASE("LlmBench: GetOutputTokens and GetInputTokens return configured values")
+{
+    LLM llm;
+    LlmBench bench(llm, 128, 64);
+
+    CHECK(bench.GetInputTokens() == 128);
+    CHECK(bench.GetOutputTokens() == 64);
+}
+
+TEST_CASE("BenchRunner: single iteration produces zero stdev")
+{
+    const std::vector<BenchIterationResult> singleResult{
+        BenchIterationResult{10.0, 20.0, 4, 1.0, 2.0, 100.0, 2.0},
+    };
+
+    const auto stats = BenchRunner::ComputeSummaryStats(singleResult);
+
+    // With n=1, mean should equal the single value
+    CHECK(stats.mean.timeToFirstTokenMs == Catch::Approx(10.0));
+    CHECK(stats.mean.totalTimeMs == Catch::Approx(20.0));
+
+    // stddev should be 0 (no variance with single sample)
+    CHECK(stats.stddev.timeToFirstTokenMs == Catch::Approx(0.0).margin(1e-9));
+    CHECK(stats.stddev.totalTimeMs == Catch::Approx(0.0).margin(1e-9));
+}
+
+TEST_CASE("BenchRunner: empty results produce zero statistics")
+{
+    const std::vector<BenchIterationResult> emptyResults{};
+
+    const auto stats = BenchRunner::ComputeSummaryStats(emptyResults);
+
+    CHECK(stats.mean.timeToFirstTokenMs == 0.0);
+    CHECK(stats.mean.totalTimeMs == 0.0);
+    CHECK(stats.stddev.timeToFirstTokenMs == 0.0);
+    CHECK(stats.stddev.totalTimeMs == 0.0);
+}
+
+TEST_CASE("BenchRunner: FormatText and FormatJson output can be parsed independently")
+{
+    const auto modelPath = CreateTinyModelFile();
+    BenchReport report{};
+    report.config = BenchRunConfig{1, 2};
+    report.modelSizeBytes = std::filesystem::file_size(modelPath);
+    report.results = {
+        BenchIterationResult{11.1119, 22.2229, 4, 1.2349, 2.3459, 100.1239, 50.5679},
+        BenchIterationResult{10.5, 21.0, 4, 1.0, 2.0, 100.0, 50.0},
+    };
+    report.summary = BenchRunner::ComputeSummaryStats(report.results);
+
+    const std::string textOutput = BenchRunner::FormatText(report, modelPath.string(), 512, 2, 128, 64, "llama.cpp");
+    const std::string jsonOutput = BenchRunner::FormatJson(report, modelPath.string(), 512, 2, 128, 64, "llama.cpp");
+
+    // Text should at least contain framework name
+    CHECK(textOutput.find("llama.cpp") != std::string::npos);
+
+    // JSON should parse and contain iteration count matching report
+    const auto parsed = nlohmann::json::parse(jsonOutput);
+    CHECK(parsed["iterations"].size() == 2);
+    CHECK(parsed["framework"] == "llama.cpp");
+
+    std::filesystem::remove(modelPath);
+}

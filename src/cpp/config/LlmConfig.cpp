@@ -10,7 +10,7 @@
 
 using nlohmann::json;
 
-static inline const char* to_string(LlmConfig::ConfigParam key) {
+static inline const char* to_string(const LlmConfig::ConfigParam key) {
   switch (key) {
     case LlmConfig::ConfigParam::SystemPrompt:            return "SystemPrompt";
     case LlmConfig::ConfigParam::SystemTemplate:          return "SystemTemplate";
@@ -79,7 +79,7 @@ LlmConfig::LlmConfig(const std::string& jsonStr)
     m_stopWords = std::move(stopWords);
 }
 
-void LlmConfig::SetConfigString(ConfigParam key, const std::string& value) {
+void LlmConfig::SetConfigString(const ConfigParam key, const std::string& value) {
     switch (key) {
         case ConfigParam::SystemPrompt:     m_chat.systemPrompt   = value; return;
         case ConfigParam::SystemTemplate:   m_chat.systemTemplate = value; return;
@@ -90,15 +90,16 @@ void LlmConfig::SetConfigString(ConfigParam key, const std::string& value) {
     }
 }
 
-void LlmConfig::SetConfigBool(ConfigParam key, bool value) {
+void LlmConfig::SetConfigBool(const ConfigParam key, const bool value) {
     switch (key) {
         case ConfigParam::ApplyDefaultChatTemplate: m_chat.applyDefaultChatTemplate = value; return;
         case ConfigParam::IsVision:                 m_model.isVision                = value; return;
-        THROW_INVALID_ARGUMENT("Unknown bool key: %s", to_string(key));
+            //THROW_INVALID_ARGUMENT("Unknown bool key: %s", to_string(key));
+        default: THROW_INVALID_ARGUMENT("Unknown bool key: %s", to_string(key));
     }
 }
 
-void LlmConfig::SetConfigInt(ConfigParam key, int value) {
+void LlmConfig::SetConfigInt(const ConfigParam key, const int value) {
     switch (key) {
         case ConfigParam::NumThreads:
             if (value <= 0) {
@@ -124,7 +125,7 @@ void LlmConfig::SetConfigInt(ConfigParam key, int value) {
     }
 }
 
-[[nodiscard]] std::string LlmConfig::GetConfigString(ConfigParam key) const {
+[[nodiscard]] std::string LlmConfig::GetConfigString(const ConfigParam key) const {
     switch (key) {
         case ConfigParam::SystemPrompt:     return m_chat.systemPrompt;
         case ConfigParam::SystemTemplate:   return m_chat.systemTemplate;
@@ -135,7 +136,7 @@ void LlmConfig::SetConfigInt(ConfigParam key, int value) {
     }
 }
 
-[[nodiscard]] bool LlmConfig::GetConfigBool(ConfigParam key) const {
+[[nodiscard]] bool LlmConfig::GetConfigBool(const ConfigParam key) const {
     switch (key) {
         case ConfigParam::ApplyDefaultChatTemplate: return m_chat.applyDefaultChatTemplate;
         case ConfigParam::IsVision:                 return m_model.isVision;
@@ -143,7 +144,7 @@ void LlmConfig::SetConfigInt(ConfigParam key, int value) {
     }
 }
 
-[[nodiscard]] int LlmConfig::GetConfigInt(ConfigParam key) const {
+[[nodiscard]] int LlmConfig::GetConfigInt(const ConfigParam key) const {
     switch (key) {
         case ConfigParam::NumThreads:  return m_runtime.numThreads;
         case ConfigParam::BatchSize:   return m_runtime.batchSize;

@@ -49,7 +49,7 @@ uintmax_t ValidateAndComputeModelSizeBytes(const std::filesystem::path& path)
 
 }  // namespace
 
-LlmBench::LlmBench(LLM& llm, int numInputTokens, int numOutputTokens)
+LlmBench::LlmBench(LLM& llm, const int numInputTokens, const int numOutputTokens)
     : m_llm(llm)
     , m_numInputTokens(numInputTokens)
     , m_numOutputTokens(numOutputTokens)
@@ -67,8 +67,8 @@ double LlmBench::MeasureTimingSec(const std::string& tag, const std::function<vo
 }
 
 int LlmBench::Initialize(const std::string& modelPath,
-                         int numThreads,
-                         int contextSize,
+                         const int numThreads,
+                         const int contextSize,
                          const std::string& sharedLibraryPath)
 {
     if (m_numInputTokens <= 0 || m_numOutputTokens <= 0 || numThreads <= 0 || contextSize <= 0 || modelPath.empty()) {

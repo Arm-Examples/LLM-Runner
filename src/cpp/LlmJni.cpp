@@ -158,7 +158,8 @@ JNIEXPORT jlong JNICALL Java_com_arm_Llm_llmInitJNI(JNIEnv* env,
             LlmConfig config(modelCStr.get());
             auto llm = std::make_unique<LLM>();
             llm->LlmInit(config, sharedLibraryPathNative.get());
-            return LLMCache::Instance().Add(std::move(llm));
+            const LlmHandle nativeHandle = LLMCache::Instance().Add(std::move(llm));
+            return static_cast<jlong>(nativeHandle);
         } catch (const std::exception& e) {
             std::string msg = std::string("Failed to create Llm from config : ") + e.what();
             LlmLog::LogInitializationFailure(LlmLog::GetBuildMetadata().frameworkName, msg);
@@ -181,14 +182,16 @@ JNIEXPORT jlong JNICALL Java_com_arm_Llm_llmInitJNI(JNIEnv* env,
  */
 JNIEXPORT void JNICALL Java_com_arm_Llm_freeLlmJNI(JNIEnv* env, jobject, jlong llmHandle)
 {
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    const LlmHandle nativeHandle = static_cast<LlmHandle>(llmHandle);
+    auto* llm = LLMCache::Instance().Lookup(nativeHandle);
     if (!llm) {
-        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        LOG_ERROR("%s", ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+        ThrowJavaException(env, ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
         return;
     }
 
     llm->FreeLlm();
-    LLMCache::Instance().Remove(llmHandle);
+    LLMCache::Instance().Remove(nativeHandle);
 }
 
 /**
@@ -201,8 +204,7 @@ JNIEXPORT void JNICALL Java_com_arm_Llm_freeLlmJNI(JNIEnv* env, jobject, jlong l
  */
 JNIEXPORT void JNICALL Java_com_arm_Llm_encodeJNI(JNIEnv *env, jobject thiz, jstring jtext, jstring path_to_image,
                                                jboolean is_first_message, jlong llmHandle) {
-
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    auto* llm = LLMCache::Instance().Lookup(static_cast<LlmHandle>(llmHandle));
     if (!llm) {
         ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
         return;
@@ -228,7 +230,7 @@ JNIEXPORT void JNICALL Java_com_arm_Llm_encodeJNI(JNIEnv *env, jobject thiz, jst
  */
 JNIEXPORT jstring JNICALL Java_com_arm_Llm_getNextTokenJNI(JNIEnv* env, jobject, jlong llmHandle)
 {
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    auto* llm = LLMCache::Instance().Lookup(static_cast<LlmHandle>(llmHandle));
     if (!llm) {
         ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
         return env->NewStringUTF("");
@@ -253,7 +255,7 @@ JNIEXPORT jstring JNICALL Java_com_arm_Llm_getNextTokenJNI(JNIEnv* env, jobject,
  */
 JNIEXPORT jstring JNICALL Java_com_arm_Llm_getNextTokenCancellableJNI(JNIEnv* env, jobject, jlong operationId, jlong llmHandle)
 {
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    auto* llm = LLMCache::Instance().Lookup(static_cast<LlmHandle>(llmHandle));
     if (!llm) {
         ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
         return env->NewStringUTF("");
@@ -271,7 +273,7 @@ JNIEXPORT jstring JNICALL Java_com_arm_Llm_getNextTokenCancellableJNI(JNIEnv* en
  */
 JNIEXPORT jfloat JNICALL Java_com_arm_Llm_getEncodeRateJNI(JNIEnv* env, jobject, jlong llmHandle)
 {
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    auto* llm = LLMCache::Instance().Lookup(static_cast<LlmHandle>(llmHandle));
     if (!llm) {
         ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
         return 0.0;
@@ -289,7 +291,7 @@ JNIEXPORT jfloat JNICALL Java_com_arm_Llm_getEncodeRateJNI(JNIEnv* env, jobject,
  */
 JNIEXPORT jfloat JNICALL Java_com_arm_Llm_getDecodeRateJNI(JNIEnv* env, jobject, jlong llmHandle)
 {
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    auto* llm = LLMCache::Instance().Lookup(static_cast<LlmHandle>(llmHandle));
     if (!llm) {
         ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
         return 0.0;
@@ -300,7 +302,7 @@ JNIEXPORT jfloat JNICALL Java_com_arm_Llm_getDecodeRateJNI(JNIEnv* env, jobject,
 
 JNIEXPORT jstring JNICALL Java_com_arm_Llm_generatePromptWithNumTokensJNI(JNIEnv* env, jobject, jint numTokens, jlong llmHandle)
 {
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    auto* llm = LLMCache::Instance().Lookup(static_cast<LlmHandle>(llmHandle));
     if (!llm) {
         ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
         return env->NewStringUTF("");
@@ -323,7 +325,7 @@ JNIEXPORT jstring JNICALL Java_com_arm_Llm_generatePromptWithNumTokensJNI(JNIEnv
  */
 JNIEXPORT void JNICALL Java_com_arm_Llm_resetTimingsJNI(JNIEnv* env,  jobject, jlong llmHandle)
 {
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    auto* llm = LLMCache::Instance().Lookup(static_cast<LlmHandle>(llmHandle));
     if (!llm) {
         ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
 
@@ -341,7 +343,7 @@ JNIEXPORT void JNICALL Java_com_arm_Llm_resetTimingsJNI(JNIEnv* env,  jobject, j
  */
 JNIEXPORT jsize JNICALL Java_com_arm_Llm_getChatProgressJNI(JNIEnv* env, jobject, jlong llmHandle)
 {
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    auto* llm = LLMCache::Instance().Lookup(static_cast<LlmHandle>(llmHandle));
     if (!llm) {
         ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
 
@@ -359,10 +361,10 @@ JNIEXPORT jsize JNICALL Java_com_arm_Llm_getChatProgressJNI(JNIEnv* env, jobject
 JNIEXPORT void JNICALL Java_com_arm_Llm_resetContextJNI(JNIEnv* env, jobject, jlong llmHandle)
 {
     try {
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
-    if (!llm) {
-        ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
-        return;
+        auto* llm = LLMCache::Instance().Lookup(static_cast<LlmHandle>(llmHandle));
+        if (!llm) {
+            ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
+            return;
     }
 
     llm->ResetContext();
@@ -402,7 +404,7 @@ JNIEXPORT jstring JNICALL Java_com_arm_Llm_getFrameworkTypeJNI(JNIEnv* env, jobj
  */
 JNIEXPORT jboolean JNICALL
 Java_com_arm_Llm_supportsImageInputJNI(JNIEnv *env, jobject thiz, jlong llmHandle) {
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    auto* llm = LLMCache::Instance().Lookup(static_cast<LlmHandle>(llmHandle));
     if (!llm) {
         ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
         return JNI_FALSE;
@@ -894,7 +896,7 @@ void deliverCompletion(long operationId, int rc, const std::string &payload) {
  */
 JNIEXPORT void JNICALL Java_com_arm_Llm_cancelJNI(JNIEnv* env, jobject, jlong operationId, jlong llmHandle)
 {
-    auto* llm = LLMCache::Instance().Lookup(llmHandle);
+    auto* llm = LLMCache::Instance().Lookup(static_cast<LlmHandle>(llmHandle));
     if (!llm) {
         ThrowJavaException(env,ILLEGAL_STATE_EXCEPTION_LOG_MESSAGE);
     }

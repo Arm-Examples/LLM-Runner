@@ -138,7 +138,7 @@ public:
      * @return String value corresponding to the key (empty string if optional and unset).
      * @throws std::invalid_argument if the key is unknown or not a string.
      */
-    std::string GetConfigString(ConfigParam key) const;
+    [[nodiscard]] std::string GetConfigString(ConfigParam key) const;
 
     /**
      * @brief Retrieves a boolean parameter by key name.
@@ -146,7 +146,7 @@ public:
      * @return Boolean value corresponding to the key.
      * @throws std::invalid_argument if the key is unknown or not a boolean.
      */
-    bool GetConfigBool(ConfigParam key) const;
+    [[nodiscard]] bool GetConfigBool(ConfigParam key) const;
 
     /**
      * @brief Retrieves an integer parameter by key name.
@@ -154,31 +154,31 @@ public:
      * @return Integer value corresponding to the key.
      * @throws std::invalid_argument if the key is unknown or not an integer.
      */
-    int GetConfigInt(ConfigParam key) const;
+    [[nodiscard]] int GetConfigInt(ConfigParam key) const;
 
     /**
      * @brief Accessor for chat configuration parameters.
      * @return Constant reference to the ChatParams structure.
      */
-    const ChatParams& GetChat() const { return m_chat; }
+    [[nodiscard]] const ChatParams& GetChat() const { return m_chat; }
 
     /**
      * @brief Accessor for runtime configuration parameters.
      * @return Constant reference to the RuntimeParams structure.
      */
-    const RuntimeParams& GetRuntime() const { return m_runtime; }
+    [[nodiscard]] const RuntimeParams& GetRuntime() const { return m_runtime; }
 
     /**
      * @brief Accessor for model configuration parameters.
      * @return Constant reference to the ModelParams structure.
      */
-    const ModelParams& GetModel() const { return m_model; }
+    [[nodiscard]] const ModelParams& GetModel() const { return m_model; }
 
     /**
      * @brief Retrieves the list of configured stop words.
      * @return Constant reference to the stop word vector.
      */
-    const std::vector<std::string>& GetStopWords() const {return m_stopWords; }
+    [[nodiscard]] const std::vector<std::string>& GetStopWords() const {return m_stopWords; }
 
     /**
      * @brief Sets the Stop words in config

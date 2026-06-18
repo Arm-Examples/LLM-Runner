@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -55,7 +55,7 @@ static std::string FormatString(const char* format, ...)
     return result;
 }
 
-void LlmChat::ApplyDefaultChatTemplate(Payload& payload)
+void LlmChat::ApplyDefaultChatTemplate(Payload& payload) const
 {
     const bool hasUserPlaceholder   = m_userTemplate.find(m_templatePlaceholder)   != std::string::npos;
     const bool hasSystemPlaceholder = m_systemTemplate.find(m_templatePlaceholder) != std::string::npos;

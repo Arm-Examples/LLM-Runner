@@ -62,7 +62,7 @@ public:
      * @param report Output report populated with configuration, results, and summary.
      * @return 0 on success, non-zero on failure.
      */
-    int Run(BenchReport& report);
+    int Run(BenchReport& report) const;
 
     /**
      * @brief Format benchmark report as a human-readable table.

@@ -17,7 +17,7 @@ using nlohmann::json;
 
 namespace {
 
-std::string FormatModelSize(uintmax_t sizeBytes)
+std::string FormatModelSize(const uintmax_t sizeBytes)
 {
     constexpr double bytesPerGb = 1000.0 * 1000.0 * 1000.0;
     std::ostringstream oss;
@@ -33,8 +33,7 @@ BenchRunner::BenchRunner(IBenchAdapter& bench, const BenchRunConfig& config)
     , m_config(config)
 {}
 
-int BenchRunner::Run(BenchReport& report)
-{
+int BenchRunner::Run(BenchReport& report) const {
     if (m_config.measuredIterations <= 0) {
         LOG_ERROR("Measured iterations must be positive");
         return 1;
@@ -55,7 +54,7 @@ int BenchRunner::Run(BenchReport& report)
         BenchDecodeStepResult decode{};
         decode.decodeTimeSec = LlmBench::MeasureTimingSec(
             isMeasured ? "bench_runner.decode_total.measure" : "bench_runner.decode_total.warmup",
-            [&]() {
+            [&] {
                 for (int tokenIdx = 0; tokenIdx < m_bench.GetOutputTokens(); ++tokenIdx) {
                     const auto step = m_bench.DecodeStep();
                     decode.tokensGenerated += step.tokensGenerated;
@@ -110,10 +109,10 @@ BenchSummaryStats BenchRunner::ComputeSummaryStats(const std::vector<BenchIterat
 
 std::string BenchRunner::FormatText(const BenchReport& report,
                                     const std::string& modelPath,
-                                    int contextSize,
-                                    int numThreads,
-                                    int numInputTokens,
-                                    int numOutputTokens,
+                                    const int contextSize,
+                                    const int numThreads,
+                                    const int numInputTokens,
+                                    const int numOutputTokens,
                                     const std::string& frameworkType)
 {
     std::ostringstream oss;
@@ -131,7 +130,7 @@ std::string BenchRunner::FormatText(const BenchReport& report,
     oss << "  num_warmup         : " << report.config.warmupIterations << "\n\n";
 
     auto pad = [](const std::string& s, std::size_t width) {
-        std::string out = s;
+        const std::string& out = s;
         if (s.find("±") != std::string::npos) {
             width += 1;
         }
@@ -141,7 +140,7 @@ std::string BenchRunner::FormatText(const BenchReport& report,
         return out + std::string(width - out.size(), ' ');
     };
 
-    auto formatPerf = [](double mean, double stddev, const char* unit) {
+    auto formatPerf = [](const double mean, const double stddev, const char* unit) {
         std::ostringstream s;
         s << std::fixed;
         s << std::setw(9) << std::setprecision(3) << mean;

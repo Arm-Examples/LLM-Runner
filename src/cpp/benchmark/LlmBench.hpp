@@ -58,12 +58,12 @@ public:
     virtual ~IBenchAdapter() = default;
     virtual BenchEncodeStepResult EncodeStep() = 0;
     virtual BenchDecodeStepResult DecodeStep() = 0;
-    virtual BenchIterationResult BuildIterationResult(const BenchEncodeStepResult& encodeResult,
+    [[nodiscard]] virtual BenchIterationResult BuildIterationResult(const BenchEncodeStepResult& encodeResult,
                                                       const BenchDecodeStepResult& decodeResult) const = 0;
     virtual void StopGeneration() = 0;
     virtual void FinishIteration() = 0;
-    virtual int GetOutputTokens() const = 0;
-    virtual uintmax_t GetModelSizeBytes() const = 0;
+    [[nodiscard]] virtual int GetOutputTokens() const = 0;
+    [[nodiscard]] virtual uintmax_t GetModelSizeBytes() const = 0;
 };
 
 class LlmBench : public IBenchAdapter {
@@ -101,7 +101,7 @@ public:
      * @param decodeResult Decode-step aggregate timings.
      * @return Iteration metrics including TTFT, total time, and throughput.
      */
-    BenchIterationResult BuildIterationResult(const BenchEncodeStepResult& encodeResult,
+    [[nodiscard]] BenchIterationResult BuildIterationResult(const BenchEncodeStepResult& encodeResult,
                                               const BenchDecodeStepResult& decodeResult) const override;
     /**
      * @brief Build a full-iteration benchmark record from raw step timings and explicit metadata.
@@ -125,19 +125,19 @@ public:
     /**
      * @brief Return the configured benchmark input token count.
      */
-    int GetInputTokens() const { return m_numInputTokens; }
+    [[nodiscard]] int GetInputTokens() const { return m_numInputTokens; }
     /**
      * @brief Return the configured benchmark output token count.
      */
-    int GetOutputTokens() const override { return m_numOutputTokens; }
+    [[nodiscard]] int GetOutputTokens() const override { return m_numOutputTokens; }
     /**
      * @brief Return the framework/backend type reported by the wrapped LLM.
      */
-    std::string GetFrameworkType() const { return m_frameworkType; }
+    [[nodiscard]] std::string GetFrameworkType() const { return m_frameworkType; }
     /**
      * @brief Return the validated model package size in bytes.
      */
-    uintmax_t GetModelSizeBytes() const override { return m_modelSizeBytes; }
+    [[nodiscard]] uintmax_t GetModelSizeBytes() const override { return m_modelSizeBytes; }
 
     /**
      * @brief Measure wall-clock duration of an operation and optionally emit debug timing logs.
