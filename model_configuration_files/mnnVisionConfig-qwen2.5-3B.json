@@ -1,7 +1,7 @@
 {
   "chat" : {
     "systemPrompt" : "You are a helpful and factual AI assistant named Orbita. Orbita answers with maximum of two sentences.",
-    "applyDefaultChatTemplate" : false,
+    "applyDefaultChatTemplate" : true,
     "systemTemplate" : "<|im_start|>system\n%s<|im_end|>",
     "userTemplate"   : "<|im_start|>user\n%s<|im_end|>\n<|im_start|>assistant\n"
   },
@@ -27,8 +27,11 @@
     "user:",
     "[end of text]",
     "<|endoftext|>",
+    "<|end_of_text|>",
     "<|im_end|>",
     "<eos>",
+    "<|eot_id|>",
+    "</s>",
     "model:",
     "Question:",
     "Consider the following scenario:\\n"

@@ -320,11 +320,20 @@ public class Llm {
         submit(query);
 
         StringBuilder response = new StringBuilder();
+        // Guard against backends that do not emit stop tokens: avoid filling the entire context.
+        final int maxChatProgressPercent = 95;
         while (getChatProgress() < 100) {
             String token = getNextToken();
             response.append(token);
 
             if (eosToken.equals(token)) {
+                break;
+            }
+            if (getChatProgress() >= maxChatProgressPercent) {
+                System.out.printf(
+                    "LLM: No stop token emitted before completion (progress=%d%%). Returning partial response.%n",
+                    getChatProgress()
+                );
                 break;
             }
         }

@@ -229,11 +229,7 @@ For customising MNN framework , following parameters can be used:
 - `MNN_GIT_URL`: Git URL to clone the sources from.
 - `MNN_GIT_TAG`: Git SHA for checkout
 
-> **NOTE**: This repository has been tested with `MNN` version `v3.3.0`.
-
-> **KleidiAI™ NOTE**: :
-Although MNN can be built with USE_KLEIDIAI defined, the current MNN implementation does not fully enable KleidiAI™ optimizations at runtime.
-This limitation is due to the current MNN runtime initialization logic and will be resolved once full support is implemented upstream in MNN.
+> **NOTE**: This repository has been tested with `MNN` version `3.6.0`.
 
 #### executorch options
 
