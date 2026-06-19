@@ -276,7 +276,7 @@ TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
             const std::array<Case, 3> cases {{
                 {"cat.bmp",   {"cat"}},
                 {"tiger.bmp", {"tiger"}},
-                {"dog.bmp",   {"dog", "puppy"}},
+                {"dog.bmp",   {"dog", "puppy", "pug"}},
             }};
 
             bool isFirstMessage = true;

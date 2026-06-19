@@ -191,6 +191,80 @@
           "revision": "main",
           "sha256sum": "14fb9cbd31e982e92c332ed59d3cc6c300996c796838c20311f70488b4c9b235"
         }
+      ],
+      "qwen35-2b": [
+        {
+          "name": "config json",
+          "purpose": "Model configuration file",
+          "destination": "mnn/qwen35-2b/config.json",
+          "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
+          "filename": "config.json",
+          "revision": "main",
+          "sha256sum": "92853033efe602f95efca3e1c05cd8b108f973c8beed417843a9671f8147ed8d"
+        },
+        {
+          "name": "mnn llm model",
+          "purpose": "LLM model",
+          "destination": "mnn/qwen35-2b/llm.mnn",
+          "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
+          "filename": "llm.mnn",
+          "revision": "main",
+          "sha256sum": "23df98f8b341b277365e0bbca025c1d192939e3d32d7f79776352c6f32e77960"
+        },
+        {
+          "name": "mnn llm model json",
+          "purpose": "LLM model json",
+          "destination": "mnn/qwen35-2b/llm.mnn.json",
+          "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
+          "filename": "llm.mnn.json",
+          "revision": "main",
+          "sha256sum": "7131ff4f1a441add1039d371815ad94652ae6801f579591cb2f9ad90b5954025"
+        },
+        {
+          "name": "mnn llm model weight",
+          "purpose": "LLM model weight",
+          "destination": "mnn/qwen35-2b/llm.mnn.weight",
+          "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
+          "filename": "llm.mnn.weight",
+          "revision": "main",
+          "sha256sum": "c93f71a2dbecf9328782bd38861656d8faa82e95e7f99607350074768a482054"
+        },
+        {
+          "name": "llm config",
+          "purpose": "llm config json",
+          "destination": "mnn/qwen35-2b/llm_config.json",
+          "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
+          "filename": "llm_config.json",
+          "revision": "main",
+          "sha256sum": "a88234b36c2af0eff8e5c89667011badf71c15e30459eb0e21030a8f3f9ed240"
+        },
+        {
+          "name": "tokenizer",
+          "purpose": "tokenizer file",
+          "destination": "mnn/qwen35-2b/tokenizer.txt",
+          "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
+          "filename": "tokenizer.txt",
+          "revision": "main",
+          "sha256sum": "7e75de1f279a10b65bd9dc1a5207205cb8993823861c4c42bbbd74e48e1c23a4"
+        },
+        {
+          "name": "vision model file",
+          "purpose": "vision model mnn",
+          "destination": "mnn/qwen35-2b/visual.mnn",
+          "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
+          "filename": "visual.mnn",
+          "revision": "main",
+          "sha256sum": "88fc40a7b676e90eb2cb86d854db15cb90b9eb1f34087ab0f48c5e43572c8dac"
+        },
+        {
+          "name": "vision model weights",
+          "purpose": "vision model weights mnn",
+          "destination": "mnn/qwen35-2b/visual.mnn.weight",
+          "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
+          "filename": "visual.mnn.weight",
+          "revision": "main",
+          "sha256sum": "8f90e106f5b9ae9a939faed240305cfdd5c6740ae91d3fc418a990bee0cce36b"
+        }
       ]
     },
     "onnxruntime-genai": {
