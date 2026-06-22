@@ -147,10 +147,16 @@ BenchEncodeStepResult LlmBench::EncodeStep()
 BenchDecodeStepResult LlmBench::DecodeStep()
 {
     BenchDecodeStepResult result{};
-    result.tokensGenerated = 1;
     result.decodeTimeSec = MeasureTimingSec("bench_adapter.decode_step", [&]() {
-        const std::string token = m_llm.NextToken();
-        (void)token;
+        const auto tokenId = m_llm.NextTokenId();
+        if (!tokenId.has_value()) {
+            result.tokensGenerated = 0;
+            return;
+        }
+
+        // Benchmark one emitted output step end-to-end, including detokenization.
+        (void)m_llm.DetokenizeTextToken(*tokenId);
+        result.tokensGenerated = 1;
     });
     result.firstTokenFromDecodeStartMs = result.decodeTimeSec * 1000.0;
     return result;

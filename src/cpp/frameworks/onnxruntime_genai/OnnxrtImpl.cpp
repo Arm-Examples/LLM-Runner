@@ -305,7 +305,7 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
 
 }
 
-std::string LLM::LLMImpl::NextToken()
+std::optional<LLM::TextTokenId> LLM::LLMImpl::NextTokenId()
 {
     try {
         if(!this->m_llmGeneratorPtr->IsDone()) {
@@ -315,7 +315,6 @@ std::string LLM::LLMImpl::NextToken()
             this->m_llmGeneratorPtr->GenerateNextToken();
             size_t cnt = this->m_llmGeneratorPtr->GetSequenceCount(0);
             int32_t tok = this->m_llmGeneratorPtr->GetSequenceData(0)[cnt - 1];
-            auto out = this->m_tokenizerStreamPtr->Decode(tok);
 
             // Record finishing time
             this->m_totalDecoderTime += Duration(Clock::now() - startTimeStampDecoder).count();
@@ -325,15 +324,23 @@ std::string LLM::LLMImpl::NextToken()
             this->m_nCurr += 1;
             this->m_contextFilled = 100 * this->m_nCurr / this->m_nCtx;
 
-            return out;
+            m_lastTerminationReason = TerminationReason::None;
+            return tok;
         }
         else {
-            return this->m_eos;
+            m_lastTerminationReason = TerminationReason::BackendEos;
+            return std::nullopt;
         }
     }
     catch (const std::exception& e) {
         THROW_ERROR("Failed to decode next token : %s",e.what());
     }
+    return std::nullopt;
+}
+
+std::string LLM::LLMImpl::DetokenizeTextToken(TextTokenId token)
+{
+    return this->m_tokenizerStreamPtr->Decode(token);
 }
 
 void LLM::LLMImpl::Cancel() {

@@ -160,6 +160,7 @@ void LLM::ResetContext()
     sl::Scope scope(sl::CH_CONTROL, ANNOTATE_DKGRAY, "LLM::ResetContext");
 #endif
     this->m_impl->ResetContext();
+    this->m_impl->SetLastTerminationReason(TerminationReason::None);
 }
 
 void LLM::Encode(LlmChat::Payload& payload) {
@@ -195,6 +196,7 @@ void LLM::Encode(LlmChat::Payload& payload) {
         PrepareImagePayload(payload, m_config);
     }
     this->m_impl->QueryBuilder(payload);
+    this->m_impl->SetLastTerminationReason(TerminationReason::None);
     this->m_impl->Encode(payload);
 }
 
@@ -216,32 +218,26 @@ bool LLM::SupportsModality(const std::vector<std::string> &inptMods, std::string
     return supportsText;
 }
 
-std::string LLM::NextToken()
+std::optional<LLM::TextTokenId> LLM::NextTokenId()
 {
 #if defined(ENABLE_STREAMLINE)
-    sl::Scope scope(sl::CH_DECODE, ANNOTATE_PURPLE, "LLM::NextToken");
+    sl::Scope scope(sl::CH_DECODE, ANNOTATE_PURPLE, "LLM::NextTokenId");
 #endif
 
-    auto token = this->m_impl->NextToken();
-
-    if (this->isStopToken(token)) {
-        return endToken;
-    } else {
-        return token;
-    }
+    return this->m_impl->NextTokenId();
 }
 
-std::string LLM::CancellableNextToken(long operationId) const
+std::optional<LLM::TextTokenId> LLM::CancellableNextTokenId(long operationId) const
 {
 #if defined(ENABLE_STREAMLINE)
-    sl::Scope outer(sl::CH_DECODE, ANNOTATE_PURPLE, "LLM::CancellableNextToken");
+    sl::Scope outer(sl::CH_DECODE, ANNOTATE_PURPLE, "LLM::CancellableNextTokenId");
 #endif
 
     auto state = std::make_shared<WorkState>();
     state->operationId = operationId;
     addWork(state);
 
-    std::string nextToken = this->m_impl->NextToken();
+    auto nextToken = this->m_impl->NextTokenId();
 
     auto work = removeWork(state->operationId);
 
@@ -255,14 +251,8 @@ std::string LLM::CancellableNextToken(long operationId) const
         deliverCompletion(state->operationId, RESULT_CANCELLED, "cancelled");
 #endif
 
-        // Returned value won't be used, because operation will be cancelled.
-        // But send end token just in case
-        return  endToken;
-    }
-    for (auto &stopWord: this->m_config.GetStopWords()) {
-        if (nextToken == stopWord) {
-            return endToken;
-        }
+        this->m_impl->SetLastTerminationReason(TerminationReason::Cancelled);
+        return std::nullopt;
     }
     return nextToken;
 }
@@ -299,10 +289,20 @@ std::vector<std::string> LLM::SupportedInputModalities() const
     return this->m_impl->SupportedInputModalities();
 }
 
-bool LLM::isStopToken(std::string token)
+std::string LLM::DetokenizeTextToken(TextTokenId token)
 {
-   for (auto &stopToken: this->m_config.GetStopWords()) {
-        if (token == stopToken) {
+    return this->m_impl->DetokenizeTextToken(token);
+}
+
+LLM::TerminationReason LLM::GetLastTerminationReason() const
+{
+    return this->m_impl->GetLastTerminationReason();
+}
+
+bool LLM::IsStopTextPiece(const std::string& text) const
+{
+   for (const auto& stopToken: this->m_config.GetStopWords()) {
+        if (text == stopToken) {
             return true;
         }
     }

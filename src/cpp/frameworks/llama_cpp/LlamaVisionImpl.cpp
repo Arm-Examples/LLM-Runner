@@ -6,6 +6,7 @@
 
 #include "LlamaVisionImpl.hpp"
 #include "Logger.hpp"
+#include "is_utf8.h"
 
 #include <stdexcept>
 #include <string>
@@ -170,23 +171,29 @@ void LlamaVisionImpl::Encode(LlmChat::Payload& payload) {
 
 }
 
-std::string LlamaVisionImpl::NextToken() {
-
+std::optional<LLM::TextTokenId> LlamaVisionImpl::NextTokenId() {
     // Check if context is full before new token is being processed
     if (this->m_nCur  >= this->m_nCtx) {
         this->m_contextFilled = 100;
-        return this->m_eos;
+        this->m_lastTerminationReason = LLM::TerminationReason::ContextFull;
+        return std::nullopt;
     }
 
-    const auto token_id = common_sampler_sample(this->m_commonSampler, this->m_mtmdContext->lctx, -1);
+    const llama_vocab* vocab = llama_model_get_vocab(this->m_mtmdContext->model);
+    const auto tokenId = common_sampler_sample(this->m_commonSampler, this->m_mtmdContext->lctx, -1);
+    if (llama_vocab_is_eog(vocab, tokenId)) {
+        this->m_lastTerminationReason = LLM::TerminationReason::BackendEos;
+        return std::nullopt;
+    }
+
     // Sample and accept the next token
-    common_sampler_accept(this->m_commonSampler, token_id, true);
+    common_sampler_accept(this->m_commonSampler, tokenId, true);
 
     // Prepare the batch for decoding
     common_batch_clear(this->m_mtmdContext->batch);
     common_batch_add(
             this->m_mtmdContext->batch,
-            token_id,
+            tokenId,
             this->m_mtmdContext->n_past++,
             /* embedding = */ {0},
             /* skip      = */ true
@@ -195,7 +202,6 @@ std::string LlamaVisionImpl::NextToken() {
     // Decode and log any errors
     if (llama_decode(this->m_mtmdContext->lctx, this->m_mtmdContext->batch)) {
         THROW_ERROR("Failed to decode token");
-        return "";
     }
 
     ++this->m_nCur;
@@ -205,7 +211,21 @@ std::string LlamaVisionImpl::NextToken() {
     // Update fill to reflect the token we just processed
     this->m_contextFilled = std::min<size_t>((100ULL * this->m_nCur) / this->m_nCtx, 100);
 
-    return common_token_to_piece(this->m_mtmdContext->lctx, token_id);
+    this->m_lastTerminationReason = LLM::TerminationReason::None;
+    return static_cast<LLM::TextTokenId>(tokenId);
+}
+
+std::string LlamaVisionImpl::DetokenizeTextToken(LLM::TextTokenId token)
+{
+    auto newTokenChars = common_token_to_piece(this->m_mtmdContext->lctx, token);
+    this->m_cachedTokenChars += newTokenChars;
+    if (is_utf8(this->m_cachedTokenChars.c_str(), this->m_cachedTokenChars.size())) {
+        std::string tokenText = this->m_cachedTokenChars.c_str();
+        this->m_cachedTokenChars.clear();
+        return tokenText;
+    }
+
+    return "";
 }
 
 void LlamaVisionImpl::Cancel() {

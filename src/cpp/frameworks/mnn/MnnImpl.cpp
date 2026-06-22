@@ -98,17 +98,23 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload) {
     this->m_llm->generate(/*input_ids=*/token_ids, /*max_tokens=*/0);
 }
 
-std::string LLM::LLMImpl::NextToken() {
+std::optional<LLM::TextTokenId> LLM::LLMImpl::NextTokenId() {
     // Generate the next token
     m_llm->generate(/*max_token=*/1);
     // Retrieve the most recent token ID from the output buffer
-    int token_id = m_ctx->output_tokens.back();
+    const LLM::TextTokenId tokenId = static_cast<LLM::TextTokenId>(m_ctx->output_tokens.back());
     // Check if the model signaled a stop condition
-    if (this->m_llm->is_stop(token_id)) {
-        return m_eos;
+    if (this->m_llm->is_stop(tokenId)) {
+        m_lastTerminationReason = TerminationReason::BackendEos;
+        return std::nullopt;
     }
-    // Decode the token ID back into a string and return it
-    return m_llm->tokenizer_decode(token_id);
+    m_lastTerminationReason = TerminationReason::None;
+    return tokenId;
+}
+
+std::string LLM::LLMImpl::DetokenizeTextToken(TextTokenId token)
+{
+    return m_llm->tokenizer_decode(token);
 }
 
 void LLM::LLMImpl::Cancel() {

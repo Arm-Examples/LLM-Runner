@@ -318,27 +318,23 @@ void LLM::LLMImpl::CompletionInit(llama_tokens sub_tokens_list, bool lastBatch)
     this->m_nCur += batch.n_tokens;
 }
 
-std::string LLM::LLMImpl::CompletionLoop()
+std::optional<llama_token> LLM::LLMImpl::CompletionLoop()
 {
     const auto model =
             llama_get_model(this->m_llmContext); // CHANGE FROM JOBJECT TO PASSING ACTUAL CONTEXT
 
     const llama_vocab* vocab = llama_model_get_vocab(model);
 
-    const auto new_token_id = llama_sampler_sample(this->m_pLlmSampler, this->m_llmContext, -1);
-
-    if ((llama_vocab_eos(vocab) == new_token_id) || (this->m_nCur == this->m_nCtx)) {
-        return this->m_eos;
+    if (this->m_nCur >= this->m_nCtx) {
+        m_lastTerminationReason = TerminationReason::ContextFull;
+        return std::nullopt;
     }
 
-    auto new_token_chars = common_token_to_piece(this->m_llmContext, new_token_id);
-    this->m_cachedTokenChars += new_token_chars;
-    std::string new_token = "";
-    if (is_utf8(this->m_cachedTokenChars.c_str(), this->m_cachedTokenChars.size())) {
-        new_token = this->m_cachedTokenChars.c_str();
-        this->m_cachedTokenChars.clear();
-    } else {
-        new_token = "";
+    const auto new_token_id = llama_sampler_sample(this->m_pLlmSampler, this->m_llmContext, -1);
+
+    if (llama_vocab_is_eog(vocab, new_token_id)) {
+        m_lastTerminationReason = TerminationReason::BackendEos;
+        return std::nullopt;
     }
     llama_batch batch = NewBatch(this->m_batchSz, 0, 1);
     common_batch_clear(batch);
@@ -350,18 +346,36 @@ std::string LLM::LLMImpl::CompletionLoop()
     // Synchronize llama to remove idle time between function calls
     llama_synchronize(this->m_llmContext);
     ++this->m_nCur;
-    return new_token;
+    m_lastTerminationReason = TerminationReason::None;
+    return new_token_id;
 }
 
-std::string LLM::LLMImpl::NextToken()
+std::optional<LLM::TextTokenId> LLM::LLMImpl::NextTokenId()
 {
-    std::string result = CompletionLoop();
-    if ((result == this->m_eos) && (this->m_nCur >= this->m_nCtx)) {
+    const auto result = CompletionLoop();
+    if (!result.has_value() && (m_lastTerminationReason == TerminationReason::ContextFull)) {
         this->m_contextFilled = 100;
     } else {
         this->m_contextFilled = 100 * this->m_nCur / this->m_nCtx;
     }
-    return result;
+
+    if (!result.has_value()) {
+        return std::nullopt;
+    }
+    return static_cast<int32_t>(*result);
+}
+
+std::string LLM::LLMImpl::DetokenizeTextToken(TextTokenId token)
+{
+    auto newTokenChars = common_token_to_piece(this->m_llmContext, token);
+    this->m_cachedTokenChars += newTokenChars;
+    if (is_utf8(this->m_cachedTokenChars.c_str(), this->m_cachedTokenChars.size())) {
+        std::string tokenText = this->m_cachedTokenChars.c_str();
+        this->m_cachedTokenChars.clear();
+        return tokenText;
+    }
+
+    return "";
 }
 
 void LLM::LLMImpl::Cancel() {

@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cinttypes>
 #include <filesystem>
+#include <limits>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -168,6 +169,7 @@ public:
         m_active = false;
         m_stopped = false;
         m_hasPendingPrefillToken = false;
+        m_hasPreviousDetokenizedTokenId = false;
         m_generatedTokens = 0;
         m_maxNewTokens = 0;
     }
@@ -314,9 +316,10 @@ public:
      * @param finished Output flag set when the current response stream is complete.
      * @return Error::Ok on success or normal completion, or the decode/detokenize error.
      */
-    Error NextToken(std::string& token, bool& finished)
+    Error NextTokenId(uint64_t& tokenId, bool& hasToken, bool& finished)
     {
-        token.clear();
+        tokenId = 0;
+        hasToken = false;
         finished = false;
 
         // Returning Ok with finished=true lets the outer wrapper emit its
@@ -328,12 +331,10 @@ public:
 
         if (m_hasPendingPrefillToken) {
             m_hasPendingPrefillToken = false;
-            // Prefill already sampled the first generated token. Emit it here
-            // so the benchmark's first NextToken() measures TTFT cleanly.
-            const Error detokenizeError = Detokenize(m_currentToken, m_currentToken, token);
-            if (detokenizeError != Error::Ok) {
-                return detokenizeError;
-            }
+            // Prefill already sampled the first generated token. Emit its raw
+            // token id here so callers can decide when and how to detokenize it.
+            tokenId = m_currentToken;
+            hasToken = true;
             ++m_generatedTokens;
             FinishIfNeeded(finished);
             return Error::Ok;
@@ -345,7 +346,6 @@ public:
             return logitsResult.error();
         }
 
-        const uint64_t previousToken = m_currentToken;
         m_currentToken = static_cast<uint64_t>(m_decoder->logits_to_token(logitsResult.get(), m_temperature));
         ++m_pos;
 
@@ -356,14 +356,24 @@ public:
         }
         m_decodeTokenData[0] = m_currentToken;
 
-        const Error detokenizeError = Detokenize(previousToken, m_currentToken, token);
-        if (detokenizeError != Error::Ok) {
-            return detokenizeError;
-        }
-
+        tokenId = m_currentToken;
+        hasToken = true;
         ++m_generatedTokens;
         FinishIfNeeded(finished);
         return Error::Ok;
+    }
+
+    Error DetokenizeToken(uint64_t tokenId, std::string& piece)
+    {
+        const uint64_t previousTokenId = m_hasPreviousDetokenizedTokenId
+                                       ? m_previousDetokenizedTokenId
+                                       : tokenId;
+        const Error detokenizeError = Detokenize(previousTokenId, tokenId, piece);
+        if (detokenizeError == Error::Ok) {
+            m_previousDetokenizedTokenId = tokenId;
+            m_hasPreviousDetokenizedTokenId = true;
+        }
+        return detokenizeError;
     }
 
     /**
@@ -457,6 +467,8 @@ private:
     bool m_active{false};
     bool m_stopped{false};
     bool m_hasPendingPrefillToken{false};
+    uint64_t m_previousDetokenizedTokenId{0};
+    bool m_hasPreviousDetokenizedTokenId{false};
 };
 
 LLM::LLMImpl::LLMImpl() = default;
@@ -578,27 +590,50 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
     m_contextFilled = m_runner->ContextProgress(m_nCtx);
 }
 
-std::string LLM::LLMImpl::NextToken()
+std::optional<LLM::TextTokenId> LLM::LLMImpl::NextTokenId()
 {
-    EnsureInitialized("NextToken");
+    EnsureInitialized("NextTokenId");
 
-    std::string token;
+    uint64_t tokenId = 0;
+    bool hasToken = false;
     bool finished = false;
     const auto tStart = Clock::now();
-    const Error decodeError = m_runner->NextToken(token, finished);
+    const Error decodeError = m_runner->NextTokenId(tokenId, hasToken, finished);
     const auto tEnd = Clock::now();
     ThrowGenerationError("decode", decodeError);
 
-    if (finished && token.empty()) {
-        return m_eos;
-    }
-
-    if (!token.empty()) {
+    if (hasToken) {
+        m_lastTerminationReason = TerminationReason::None;
         ++m_totalDecodedTokens;
         m_totalDecoderTime += Duration(tEnd - tStart).count();
+        if (tokenId > static_cast<uint64_t>(std::numeric_limits<TextTokenId>::max())) {
+            THROW_ERROR("ExecuTorch token id %" PRIu64 " exceeds int32_t range", tokenId);
+        }
+        m_contextFilled = m_runner->ContextProgress(m_nCtx);
+        return static_cast<TextTokenId>(tokenId);
+    }
+
+    if (finished) {
+        m_lastTerminationReason = TerminationReason::BackendEos;
+    } else {
+        m_lastTerminationReason = TerminationReason::None;
     }
     m_contextFilled = m_runner->ContextProgress(m_nCtx);
-    return token;
+    return std::nullopt;
+}
+
+std::string LLM::LLMImpl::DetokenizeTextToken(TextTokenId token)
+{
+    EnsureInitialized("DetokenizeTextToken");
+
+    if (token < 0) {
+        THROW_ERROR("ExecuTorch token id %d must be non-negative", token);
+    }
+
+    std::string piece;
+    const Error detokenizeError = m_runner->DetokenizeToken(static_cast<uint64_t>(token), piece);
+    ThrowGenerationError("detokenize", detokenizeError);
+    return piece;
 }
 
 void LLM::LLMImpl::Cancel()

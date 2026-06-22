@@ -7,8 +7,10 @@
 #pragma once
 #include "LlmConfig.hpp"
 #include "LlmChat.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -22,6 +24,18 @@
 class LLM {
 public:
     class LLMImpl; // Forward declaration for PImpl
+
+    /** Canonical reasons why generation stopped. */
+    enum class TerminationReason {
+        None,
+        BackendEos,
+        StopWord,
+        ContextFull,
+        Cancelled
+    };
+
+    /** Public text token id type. */
+    using TextTokenId = int32_t;
 
     /**
      * @brief Construct an LLM instance.
@@ -82,23 +96,34 @@ public:
     void ResetContext();
 
     /**
-     * Encode a text query into the model. Call NextToken() to retrieve tokens.
+     * Encode a text query into the model. Call NextTokenId() to retrieve token ids.
      * @param payload The input payload containing text and optional image data.
      */
     void Encode(LlmChat::Payload& payload);
 
-    /**
-     * Retrieve the next token from the model after Encode().
-     * @return A single token (possibly empty if generation has finished).
-     */
-    [[nodiscard]] std::string NextToken();
+    /** @return The next generated token id, or no value when generation stops. */
+    [[nodiscard]] std::optional<TextTokenId> NextTokenId();
 
-    /** 
-     * Function to produce next token
-     * @param operationId can be used to return an error or check for user cancel operation requests
-     * @return the next Token for Encoded Prompt
+    /** @return The next generated token id, or no value when generation stops or is cancelled. */
+    std::optional<TextTokenId> CancellableNextTokenId(long operationId) const;
+
+    /** @return The decoded text for a token id. */
+    std::string DetokenizeTextToken(TextTokenId token);
+
+    /**
+     * @return The reason the most recent token-id query returned no token.
+     *
+     * This is currently used to distinguish cancellation from normal completion
+     * after the token-return API was simplified to `std::optional<TextTokenId>`.
      */
-    std::string CancellableNextToken(long operationId) const;
+    [[nodiscard]] TerminationReason GetLastTerminationReason() const;
+
+    /**
+     * @brief Check whether a decoded text fragment matches one of the configured stop words.
+     * @param text Decoded text piece.
+     * @return true when `text` should terminate the decoded stream.
+     */
+    [[nodiscard]] bool IsStopTextPiece(const std::string& text) const;
 
     /**
      * Function to request the cancellation of a ongoing operation / functional call
@@ -135,13 +160,6 @@ protected:
     std::unique_ptr<LLMImpl> m_impl{};                  /**< Implementation pointer. */
 
 private:
-    /**
-     * Checks token to see if its a stop token
-     * @param token checks token
-     * @return return true if it is a stop token.
-    */
-    [[nodiscard]] bool isStopToken(std::string token);
-
     LlmConfig m_config{};
     bool SupportsModality(const std::vector<std::string> &inptMods, std::string modality) const;
 

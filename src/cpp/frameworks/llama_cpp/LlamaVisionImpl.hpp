@@ -165,11 +165,11 @@ public:
         ResetVisionContext();
     }
 
-    /**
-     * @brief Sample and return the next token from the model.
-     * @return The decoded token as a string.
-     */
-    std::string NextToken() override;
+    /** @return The next token id, or no value when generation stops. */
+    std::optional<LLM::TextTokenId> NextTokenId() override;
+
+    /** @return The decoded text for a token id. */
+    std::string DetokenizeTextToken(LLM::TextTokenId token) override;
  
     /**
     * Method to request the cancellation of a ongoing operation / functional call
