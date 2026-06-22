@@ -11,6 +11,7 @@ project(llm-bench
 
 # Add the LLM chat library
 add_library(llm-bench STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/BenchScenario.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/LlmBench.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/BenchRunner.cpp)
 

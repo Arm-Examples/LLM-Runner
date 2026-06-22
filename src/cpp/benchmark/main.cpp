@@ -5,12 +5,15 @@
 //
 
 #include "BenchRunner.hpp"
+#include "BenchScenario.hpp"
 #include "LlmBench.hpp"
 #include "Logger.hpp"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -24,6 +27,8 @@ static void PrintUsage(const char* prog)
               << " --output <tokens>"
               << " --threads <n>"
               << " --iterations <n>"
+              << " [--scenario <json>]"
+              << " [--model-root <dir>]"
               << " [--context <tokens>]"
               << " [--json-output <path>]"
               << " [--warmup <n>] [--help]\n\n";
@@ -57,6 +62,8 @@ int main(int argc, char** argv)
 
     std::string modelPath;
     std::string jsonOutputPath;
+    std::string scenarioPath;
+    std::string modelRootPath;
     int numInputTokens   = 0;
     int numOutputTokens  = 0;
     int numThreads       = 0;
@@ -104,6 +111,10 @@ int main(int argc, char** argv)
             requireValue(arg);
             modelPath = argv[++i];
         }
+        else if (arg == "--model-root") {
+            requireValue(arg);
+            modelRootPath = argv[++i];
+        }
         else if (arg == "--input" || arg == "-i") {
             numInputTokens = parseIntArg(arg);
         }
@@ -112,7 +123,7 @@ int main(int argc, char** argv)
         }
         else if (arg == "--context" || arg == "--context-size" || arg == "-c") {
             contextSize = parseIntArg(arg);
-                auto isPowerOfTwo = [](int value) {
+                auto isPowerOfTwo = [](const int value) {
                     return value > 0 && (value & (value - 1)) == 0;
                 };
             if (!isPowerOfTwo(contextSize)) {
@@ -126,6 +137,10 @@ int main(int argc, char** argv)
         }
         else if (arg == "--iterations" || arg == "-n") {
             numIterations = parseIntArg(arg);
+        }
+        else if (arg == "--scenario" || arg == "-s") {
+            requireValue(arg);
+            scenarioPath = argv[++i];
         }
         else if (arg == "--warmup" || arg == "-w") {
             numWarmup = parseIntArg(arg);
@@ -141,9 +156,37 @@ int main(int argc, char** argv)
         }
     }
 
+    std::optional<BenchScenario> scenario;
+    if (!scenarioPath.empty()) {
+        try {
+            // Scenario mode builds the benchmark payload from JSON.
+            scenario = LoadBenchScenarioFromJson(scenarioPath);
+            if (scenario->maxOutputTokens.has_value()) {
+                numOutputTokens = scenario->maxOutputTokens.value();
+            }
+        } catch (const std::exception& ex) {
+            LOG_ERROR("Failed to load benchmark scenario: %s", ex.what());
+            return 1;
+        }
+    }
+
+    // Match the test harness convention for wrapper config JSON model paths.
+    if (modelRootPath.empty()) {
+        const std::filesystem::path defaultModelRoot = std::filesystem::path("resources_downloaded") / "models";
+        if (std::filesystem::exists(defaultModelRoot)) {
+            modelRootPath = defaultModelRoot.string();
+        }
+    }
+
+    if (!modelRootPath.empty() && !std::filesystem::is_directory(modelRootPath)) {
+        LOG_ERROR("Error: model root directory does not exist: %s", modelRootPath.c_str());
+        return 1;
+    }
+
     // Basic validation
+    const bool scenarioMode = scenario.has_value();
     if (modelPath.empty() ||
-        numInputTokens <= 0 ||
+        (!scenarioMode && numInputTokens <= 0) ||
         numOutputTokens <= 0 ||
         numThreads <= 0 ||
         numIterations <= 0 ||
@@ -172,13 +215,19 @@ int main(int argc, char** argv)
     try {
         LLM llm;
 
-        LlmBench bench(llm, numInputTokens, numOutputTokens);
-        if (bench.Initialize(modelPath, numThreads, contextSize, sharedLibraryPath) != 0) {
+        std::unique_ptr<LlmBench> bench;
+        if (scenarioMode) {
+            // Scenario mode uses explicit prompt/image payloads.
+            bench = std::make_unique<LlmBench>(llm, numInputTokens, numOutputTokens, scenario.value());
+        } else {
+            bench = std::make_unique<LlmBench>(llm, numInputTokens, numOutputTokens);
+        }
+        if (bench->Initialize(modelPath, numThreads, contextSize, sharedLibraryPath, modelRootPath) != 0) {
             LOG_ERROR("Benchmark initialization failed.");
             return 1;
         }
 
-        BenchRunner runner(bench, BenchRunConfig{numWarmup, numIterations});
+        BenchRunner runner(*bench, BenchRunConfig{numWarmup, numIterations});
         resultCode = runner.Run(report);
         if (resultCode == 0) {
             resultsText = BenchRunner::FormatText(report,
@@ -187,14 +236,14 @@ int main(int argc, char** argv)
                                                   numThreads,
                                                   numInputTokens,
                                                   numOutputTokens,
-                                                  bench.GetFrameworkType());
+                                                  bench->GetFrameworkType());
             resultsJson = BenchRunner::FormatJson(report,
                                                   modelPath,
                                                   contextSize,
                                                   numThreads,
                                                   numInputTokens,
                                                   numOutputTokens,
-                                                  bench.GetFrameworkType());
+                                                  bench->GetFrameworkType());
         }
     } catch (const std::exception& ex) {
         LOG_ERROR("Benchmark execution failed: %s", ex.what());
@@ -219,8 +268,7 @@ int main(int argc, char** argv)
             return 1;
         }
         out << resultsJson << std::endl;
-        const std::string absoluteOutputPath = std::filesystem::absolute(jsonOutputPath).string();
-        std::cout << "JSON output written to: " << absoluteOutputPath << "\n";
+        std::cout << "JSON output written to: " << jsonOutputPath << "\n";
     }
     return resultCode;
 }

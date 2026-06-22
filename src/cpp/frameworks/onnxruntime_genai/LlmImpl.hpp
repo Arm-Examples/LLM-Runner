@@ -77,7 +77,7 @@ public:
      * Encode a payload containing text and an optional image.
      * @param payload Input payload containing text and an optional image.
      */
-    void Encode(const LlmChat::Payload& payload);
+    void Encode(const LlmChat::Payload& payload, InferenceStats* inferenceStats = nullptr);
 
     /** @return The next token id, or no value when generation stops. */
     std::optional<TextTokenId> NextTokenId();
@@ -87,6 +87,9 @@ public:
 
     /** @return The reason the most recent generation terminated. */
     TerminationReason GetLastTerminationReason() const { return m_lastTerminationReason; }
+
+    /** @return Backend-specific metrics from the most recent request, when available. */
+    InferenceStats GetLastInferenceStats() const { return m_lastInferenceStats; }
 
     /** Override the reason reported for the most recent termination. */
     void SetLastTerminationReason(const TerminationReason reason) { m_lastTerminationReason = reason; }
@@ -192,6 +195,9 @@ private:
     LlmConfig m_config;
     // Reason the most recent generation terminated.
     TerminationReason m_lastTerminationReason{TerminationReason::None};
+    // Metrics recorded for the current request.
+    InferenceStats m_lastInferenceStats{};
+    bool m_collectInferenceStats{false};
 
 
     // Map llm-log-level to Onnx log severity level

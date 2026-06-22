@@ -561,10 +561,12 @@ void LLM::LLMImpl::ResetContext()
     LOG_INF("Reset ExecuTorch context");
 }
 
-void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
+void LLM::LLMImpl::Encode(LlmChat::Payload& payload, InferenceStats* inferenceStats)
 {
     EnsureInitialized("Encode");
 
+    m_lastInferenceStats = InferenceStats{};
+    m_collectInferenceStats = inferenceStats != nullptr;
     StopGeneration();
 
     GenerationConfig generationConfig;
@@ -575,15 +577,28 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
 
     size_t promptTokens = 0;
     std::vector<uint64_t> promptTokenIds;
-    const auto tStart = Clock::now();
+    const auto encodeStart = Clock::now();
     const Error tokenizeError = m_runner->Tokenize(payload.textPrompt, generationConfig, promptTokenIds);
     ThrowGenerationError("tokenize", tokenizeError);
-    const Error prefillError = m_runner->PrefillTokens(std::move(promptTokenIds), generationConfig, promptTokens);
-    const auto tEnd = Clock::now();
+    const std::size_t textPromptTokens = promptTokenIds.size();
+
+    const auto prefillStart = m_collectInferenceStats ? Clock::now() : Clock::time_point{};
+    const Error prefillError =
+        m_runner->PrefillTokens(std::move(promptTokenIds), generationConfig, promptTokens);
+    const auto prefillEnd = Clock::now();
     ThrowGenerationError("prefill", prefillError);
 
+    if (m_collectInferenceStats) {
+        const double prefillTimeMs = Duration(prefillEnd - prefillStart).count() * 1000.0;
+        m_lastInferenceStats.textPromptTokens = textPromptTokens;
+        if (prefillTimeMs > 0.0) {
+            m_lastInferenceStats.prefillTimeMs = prefillTimeMs;
+        }
+        *inferenceStats = m_lastInferenceStats;
+    }
+
     m_totalEncodedTokens += promptTokens;
-    m_totalEncoderTime += Duration(tEnd - tStart).count();
+    m_totalEncoderTime += Duration(prefillEnd - encodeStart).count();
     m_contextFilled = m_runner->ContextProgress(m_nCtx);
 }
 
@@ -600,9 +615,14 @@ std::optional<LLM::TextTokenId> LLM::LLMImpl::NextTokenId()
     ThrowGenerationError("decode", decodeError);
 
     if (hasToken) {
+        const double decodeTimeMs = Duration(tEnd - tStart).count() * 1000.0;
         m_lastTerminationReason = TerminationReason::None;
         ++m_totalDecodedTokens;
-        m_totalDecoderTime += Duration(tEnd - tStart).count();
+        m_totalDecoderTime += decodeTimeMs / 1000.0;
+        if (m_collectInferenceStats && decodeTimeMs > 0.0) {
+            m_lastInferenceStats.decodeTimeMs =
+                m_lastInferenceStats.decodeTimeMs.value_or(0.0) + decodeTimeMs;
+        }
         if (tokenId > static_cast<uint64_t>(std::numeric_limits<TextTokenId>::max())) {
             THROW_ERROR("ExecuTorch token id %" PRIu64 " exceeds int32_t range", tokenId);
         }

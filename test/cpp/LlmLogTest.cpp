@@ -34,7 +34,6 @@ bool contains(const std::string& str, const std::string& sub) {
  * Simple Test file for testing config related cases
  */
 TEST_CASE("Test logging issues") {
-
     auto jsonString = SetupConfigString();
     nlohmann::json modelConfig;
     modelConfig = nlohmann::json::parse(jsonString);
@@ -45,7 +44,7 @@ TEST_CASE("Test logging issues") {
             LlmConfig configTest(jsonString);
             LLM llm{};
             llm.LlmInit(configTest);
-        } catch (std::runtime_error e) {
+        } catch (std::runtime_error& e) {
             CHECK(contains(e.what(),"initialization failed"));
         }
     }
@@ -56,7 +55,7 @@ TEST_CASE("Test logging issues") {
             configTest.SetStopWords({});
             LLM llm{};
             llm.LlmInit(configTest);
-        } catch (std::invalid_argument e) {
+        } catch (std::invalid_argument& e) {
             CHECK(contains(e.what(),"config.stopWords: strings must be non-empty"));
         }
     }
@@ -68,7 +67,7 @@ TEST_CASE("Test logging issues") {
 
             LlmConfig configTest(updatedJsonString);
 
-        } catch (std::invalid_argument e) {
+        } catch (std::invalid_argument& e) {
             CHECK(contains(e.what(),"config.stopWords: all entries must be strings"));
         }
     }
@@ -84,7 +83,7 @@ TEST_CASE("Test logging issues") {
                 std::string updatedJsonString = modelConfig.dump();
                 LlmConfig configTest(updatedJsonString);
             }
-            catch (std::invalid_argument e) {
+            catch (std::invalid_argument& e) {
                 CHECK(contains(e.what(),testDictionary[param]+" must be a positive integer."));
             }
         }

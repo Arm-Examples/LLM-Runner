@@ -424,8 +424,10 @@ bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload &payload)
     }
 }
 
-void LLM::LLMImpl::Encode(const LlmChat::Payload &payload)
+void LLM::LLMImpl::Encode(const LlmChat::Payload &payload, InferenceStats* inferenceStats)
 {
+    m_lastInferenceStats = InferenceStats{};
+    m_collectInferenceStats = inferenceStats != nullptr;
     const std::string prompt = payload.textPrompt;
     const bool hasVisionImage = this->m_isVision && !payload.imagePath.empty();
     const bool requiresVisionReplay = this->m_isVision &&
@@ -480,7 +482,20 @@ void LLM::LLMImpl::Encode(const LlmChat::Payload &payload)
             {
                 THROW_ERROR("LLM encoding failed, context is full");
             }
+
+            // ORT GenAI executes prompt evaluation synchronously in AppendTokenSequences.
+            const TimePoint prefillStart = m_collectInferenceStats ? Clock::now() : TimePoint{};
             this->m_llmGeneratorPtr->AppendTokenSequences(*this->m_sequencesPtr);
+            if (m_collectInferenceStats)
+            {
+                const double prefillTimeMs = Duration(Clock::now() - prefillStart).count() * 1000.0;
+                m_lastInferenceStats.textPromptTokens = sequenceCount;
+                if (prefillTimeMs > 0.0)
+                {
+                    m_lastInferenceStats.prefillTimeMs = prefillTimeMs;
+                }
+            }
+
             this->m_totalEncodedTokens += sequenceCount;
             this->m_nCurr += sequenceCount;
             this->m_contextFilled = 100 * this->m_nCurr / this->m_nCtx;
@@ -494,6 +509,10 @@ void LLM::LLMImpl::Encode(const LlmChat::Payload &payload)
 
         this->m_totalEncoderTime += Duration(Clock::now() - startTimeStampEncoder).count();
         this->m_isConversationStart = false;
+        if (m_collectInferenceStats)
+        {
+            *inferenceStats = m_lastInferenceStats;
+        }
     }
     catch (const std::exception &e)
     {
@@ -534,8 +553,13 @@ std::optional<LLM::TextTokenId> LLM::LLMImpl::NextTokenId()
                     this->m_visionReplayTokenizerStreamPtr->Decode(tok);
             }
 
-            this->m_totalDecoderTime += Duration(Clock::now() - startTimeStampDecoder).count();
+            const double decodeTimeMs = Duration(Clock::now() - startTimeStampDecoder).count() * 1000.0;
+            this->m_totalDecoderTime += decodeTimeMs / 1000.0;
             this->m_totalDecodedTokens += 1;
+            if (m_collectInferenceStats && decodeTimeMs > 0.0) {
+                m_lastInferenceStats.decodeTimeMs =
+                    m_lastInferenceStats.decodeTimeMs.value_or(0.0) + decodeTimeMs;
+            }
 
             this->m_nCurr += 1;
             this->m_contextFilled = 100 * this->m_nCurr / this->m_nCtx;

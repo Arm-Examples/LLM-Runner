@@ -150,7 +150,7 @@ public:
      * @brief Move assignment operator.
      * @return Reference to this instance.
      */
-    LlamaVisionImpl& operator=(LlamaVisionImpl&&) noexcept = default;
+    LlamaVisionImpl& operator=(LlamaVisionImpl&&) noexcept = delete;
 
     /**
      * @brief Initialize the LLM with configuration parameters.
@@ -185,7 +185,7 @@ public:
      * @brief Encode a multimodal payload (text + optional image).
      * @param payload Input payload containing text and/or image path.
      */
-    void Encode(LlmChat::Payload& payload) override;
+    void Encode(LlmChat::Payload& payload, LLM::InferenceStats* inferenceStats = nullptr) override;
 
     /**
      * @brief Load the llama model from the given configuration.

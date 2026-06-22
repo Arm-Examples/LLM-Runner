@@ -18,7 +18,8 @@
  *
  * Defines warmup and measured iteration counts for a benchmark run.
  */
-struct BenchRunConfig {
+struct BenchRunConfig
+{
     int warmupIterations = 0;   ///< Warmup iterations executed before measurements (not included in report results).
     int measuredIterations = 1; ///< Number of measured iterations included in summary statistics.
 };
@@ -29,7 +30,8 @@ struct BenchRunConfig {
  *
  * Holds mean and standard deviation values computed from the per-iteration metrics.
  */
-struct BenchSummaryStats {
+struct BenchSummaryStats
+{
     BenchIterationResult mean{};   ///< Mean values across measured iterations.
     BenchIterationResult stddev{}; ///< Population standard deviation across measured iterations.
 };
@@ -41,28 +43,31 @@ struct BenchSummaryStats {
  * Contains run configuration, per-iteration measured results,
  * and computed summary statistics.
  */
-struct BenchReport {
+struct BenchReport
+{
     BenchRunConfig config{};                     ///< Runner configuration used for this report.
-    uintmax_t modelSizeBytes = 0;               ///< Validated model package size captured before execution.
+    uintmax_t modelSizeBytes = 0;                ///< Validated model package size captured before execution.
+    BenchWorkloadMetadata workload{};            ///< Payload metadata used for scenario-aware reporting.
     std::vector<BenchIterationResult> results{}; ///< Per-iteration measured benchmark records.
     BenchSummaryStats summary{};                 /// Aggregate summary statistics computed from results.
 };
 
-class BenchRunner {
+class BenchRunner
+{
 public:
     /**
      * @brief Construct a benchmark runner over a benchmark adapter.
      * @param bench Benchmark adapter used for encode/decode operations.
      * @param config Warmup and measured iteration counts.
      */
-    BenchRunner(IBenchAdapter& bench, const BenchRunConfig& config);
+    BenchRunner(IBenchAdapter &bench, const BenchRunConfig &config);
 
     /**
      * @brief Execute benchmark warmup and measured iterations.
      * @param report Output report populated with configuration, results, and summary.
      * @return 0 on success, non-zero on failure.
      */
-    int Run(BenchReport& report) const;
+    int Run(BenchReport &report) const;
 
     /**
      * @brief Format benchmark report as a human-readable table.
@@ -75,13 +80,13 @@ public:
      * @param frameworkType Backend/framework label reported with the results.
      * @return Formatted benchmark report text.
      */
-    static std::string FormatText(const BenchReport& report,
-                                  const std::string& modelPath,
+    static std::string FormatText(const BenchReport &report,
+                                  const std::string &modelPath,
                                   int contextSize,
                                   int numThreads,
                                   int numInputTokens,
                                   int numOutputTokens,
-                                  const std::string& frameworkType);
+                                  const std::string &frameworkType);
 
     /**
      * @brief Format benchmark report as JSON.
@@ -94,23 +99,23 @@ public:
      * @param frameworkType Backend/framework label reported with the results.
      * @return Benchmark report serialized as JSON.
      */
-    static std::string FormatJson(const BenchReport& report,
-                                  const std::string& modelPath,
+    static std::string FormatJson(const BenchReport &report,
+                                  const std::string &modelPath,
                                   int contextSize,
                                   int numThreads,
                                   int numInputTokens,
                                   int numOutputTokens,
-                                  const std::string& frameworkType);
+                                  const std::string &frameworkType);
 
     /**
      * @brief Compute mean and standard deviation across measured iterations.
      * @param results Per-iteration measured benchmark results.
      * @return Aggregate mean and population standard deviation across the provided results.
      */
-    static BenchSummaryStats ComputeSummaryStats(const std::vector<BenchIterationResult>& results);
+    static BenchSummaryStats ComputeSummaryStats(const std::vector<BenchIterationResult> &results);
 
 private:
-    IBenchAdapter& m_bench;
+    IBenchAdapter &m_bench;
     BenchRunConfig m_config;
 };
 

@@ -72,7 +72,7 @@ public:
      * Encode a multimodal payload (text + optional image).
      * @param payload Input payload containing text and/or image path.
      */
-    void Encode(LlmChat::Payload& payload);
+    void Encode(LlmChat::Payload& payload, InferenceStats* inferenceStats = nullptr);
 
     /** @return The next token id, or no value when generation stops. */
     std::optional<TextTokenId> NextTokenId();
@@ -82,6 +82,9 @@ public:
 
     /** @return The reason the most recent generation terminated. */
     TerminationReason GetLastTerminationReason() const { return m_lastTerminationReason; }
+
+    /** @return Backend-specific metrics from the most recent request, when available. */
+    InferenceStats GetLastInferenceStats() const { return m_lastInferenceStats; }
 
     /** Override the reason reported for the most recent termination. */
     void SetLastTerminationReason(TerminationReason reason) { m_lastTerminationReason = reason; }
@@ -165,11 +168,20 @@ private:
     LlmConfig m_config;
     // Reason the most recent generation terminated.
     TerminationReason m_lastTerminationReason{TerminationReason::None};
+    // Backend-specific metrics from the most recent request.
+    InferenceStats m_lastInferenceStats{};
+    bool m_collectInferenceStats{false};
     // Used as a general signal in our LLM module to terminate response
     std::string m_eos = "<|endoftext|>";
 
     // Function to set the configurations
     void SetConfig();
+
+    // Build and tokenize input from provided payload
+    std::vector<int> BuildAndTokenizeInput(const LlmChat::Payload& payload);
+
+    // Update decode statistics
+    void UpdateDecodeStats();
 
 };
 

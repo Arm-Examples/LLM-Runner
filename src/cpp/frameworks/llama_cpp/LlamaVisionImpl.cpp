@@ -9,10 +9,58 @@
 #include "chat.h"
 #include "is_utf8.h"
 
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include "ggml-backend.h"
+
+namespace {
+
+void PopulateMtmdChunkStats(const mtmd_input_chunks* chunks, LLM::InferenceStats& stats)
+{
+    std::size_t textTokens = 0;
+    std::size_t visionTokens = 0;
+    std::size_t fusedPromptPositions = 0;
+    bool hasTextChunk = false;
+    bool hasVisionChunk = false;
+
+    const std::size_t chunkCount = mtmd_input_chunks_size(chunks);
+    for (std::size_t index = 0; index < chunkCount; ++index) {
+        const mtmd_input_chunk* chunk = mtmd_input_chunks_get(chunks, index);
+        const auto chunkType = mtmd_input_chunk_get_type(chunk);
+
+        const llama_pos positions = mtmd_input_chunk_get_n_pos(chunk);
+        if (positions > 0) {
+            fusedPromptPositions += static_cast<std::size_t>(positions);
+        }
+
+        if (chunkType == MTMD_INPUT_CHUNK_TYPE_TEXT) {
+            std::size_t chunkTextTokens = 0;
+            (void)mtmd_input_chunk_get_tokens_text(chunk, &chunkTextTokens);
+            textTokens += chunkTextTokens;
+            hasTextChunk = true;
+        } else if (chunkType == MTMD_INPUT_CHUNK_TYPE_IMAGE) {
+            const mtmd_image_tokens* imageTokens = mtmd_input_chunk_get_tokens_image(chunk);
+            if (imageTokens != nullptr) {
+                visionTokens += mtmd_image_tokens_get_n_tokens(imageTokens);
+                hasVisionChunk = true;
+            }
+        }
+    }
+
+    if (hasTextChunk) {
+        stats.textPromptTokens = textTokens;
+    }
+    if (hasVisionChunk) {
+        stats.visionTokens = visionTokens;
+    }
+    if (chunkCount > 0) {
+        stats.fusedPromptPositions = fusedPromptPositions;
+    }
+}
+
+} // namespace
 
 void LlamaVisionImpl::NewSampler() {
     // Set deterministic sampling parameters
@@ -50,6 +98,7 @@ void LlamaVisionImpl::FreeLlm() {
     this->m_nCur = 0;
     this->m_contextFilled = 0;
     this->m_allocated = 0;
+    this->m_lastInferenceStats = {};
     this->m_llmInitialized = false;
 }
 
@@ -164,8 +213,13 @@ bool LlamaVisionImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
     }
 }
 
-void LlamaVisionImpl::Encode(LlmChat::Payload& payload) {
+void LlamaVisionImpl::Encode(LlmChat::Payload& payload, LLM::InferenceStats* inferenceStats) {
+    m_lastInferenceStats = {};
+    m_collectInferenceStats = inferenceStats != nullptr;
     llama_synchronize(this->m_llmContext);
+    const auto prefillPerfBefore = m_collectInferenceStats
+                                      ? llama_perf_context(this->m_llmContext)
+                                      : llama_perf_context_data{};
 
     // 1) Load image into a local bitmaps container (only on first message)
     auto visionCtx = this->m_mtmdContext->ctx_vision.get();
@@ -176,6 +230,17 @@ void LlamaVisionImpl::Encode(LlmChat::Payload& payload) {
         if (!loadedMedia.bitmap) {
             THROW_ERROR("Encode: Failed to load image '%s'", payload.imagePath.c_str());
         }
+
+        if (m_collectInferenceStats) {
+            const auto imageWidth = mtmd_bitmap_get_nx(loadedMedia.bitmap);
+            const auto imageHeight = mtmd_bitmap_get_ny(loadedMedia.bitmap);
+            m_lastInferenceStats.processedImagePixels =
+                    static_cast<std::uint64_t>(imageWidth) *
+                    static_cast<std::uint64_t>(imageHeight);
+            m_lastInferenceStats.processedImagePixelsSource =
+                    "llama_mtmd_bitmap_rgb_pixels";
+        }
+
         bitmaps.entries.emplace_back(loadedMedia.bitmap);
     }
 
@@ -200,6 +265,9 @@ void LlamaVisionImpl::Encode(LlmChat::Payload& payload) {
     if (tokenizeResult != 0) {
         THROW_ERROR("Encode: Failed to tokenize multimodal prompt (error=%d)", tokenizeResult);
     }
+    if (m_collectInferenceStats) {
+        PopulateMtmdChunkStats(chunks.ptr.get(), m_lastInferenceStats);
+    }
 
     // 4) Clear any previously stored bitmaps in the context
     this->m_mtmdContext->bitmaps.entries.clear();
@@ -209,28 +277,66 @@ void LlamaVisionImpl::Encode(LlmChat::Payload& payload) {
     }
     //clip_n_output_tokens
 
-    // 5) Evaluate the chunks
-    llama_pos newPast = 0;
-    const bool evalFailed = mtmd_helper_eval_chunks(
-            visionCtx,
-            this->m_mtmdContext->lctx,
-            chunks.ptr.get(),
-            this->m_mtmdContext->n_past,
-            /* offset = */ 0,
-            this->m_mtmdContext->n_batch,
-            /* reset_state = */ true,
-            &newPast
-    );
+    // 5) Evaluate chunks. Image encoding is split from llama prompt evaluation so
+    // that the MTMD vision encoder has an explicit, backend-defined timing boundary.
+    llama_pos newPast = this->m_mtmdContext->n_past;
+    const std::size_t chunkCount = mtmd_input_chunks_size(chunks.ptr.get());
+    for (std::size_t index = 0; index < chunkCount; ++index) {
+        const mtmd_input_chunk* chunk = mtmd_input_chunks_get(chunks.ptr.get(), index);
+        const auto chunkType = mtmd_input_chunk_get_type(chunk);
+        int32_t evaluationResult = 0;
+
+        if (chunkType == MTMD_INPUT_CHUNK_TYPE_IMAGE) {
+            const int64_t visionStartUs = m_collectInferenceStats ? ggml_time_us() : 0;
+            evaluationResult = mtmd_encode_chunk(visionCtx, chunk);
+            if (m_collectInferenceStats) {
+                const int64_t visionEndUs = ggml_time_us();
+                if (visionEndUs > visionStartUs) {
+                    m_lastInferenceStats.visionTimeMs = m_lastInferenceStats.visionTimeMs.value_or(0.0) +
+                                                        static_cast<double>(visionEndUs - visionStartUs) / 1000.0;
+                }
+            }
+
+            if (evaluationResult == 0) {
+                evaluationResult = mtmd_helper_decode_image_chunk(
+                    visionCtx,
+                    this->m_mtmdContext->lctx,
+                    chunk,
+                    mtmd_get_output_embd(visionCtx),
+                    newPast,
+                    /* seq_id = */ 0,
+                    this->m_mtmdContext->n_batch,
+                    &newPast,
+                    /* callback = */ nullptr,
+                    /* user_data = */ nullptr);
+            }
+        } else {
+            evaluationResult = mtmd_helper_eval_chunk_single(
+                visionCtx,
+                this->m_mtmdContext->lctx,
+                chunk,
+                newPast,
+                /* offset = */ 0,
+                this->m_mtmdContext->n_batch,
+                /* logits_last = */ index + 1 == chunkCount,
+                &newPast);
+        }
+
+        if (evaluationResult != 0) {
+            LOG_WARN("Encode: Failed to evaluate multimodal chunk %zu; continuing", index);
+        }
+    }
+
     // This error can be linked to ggml status to get a better context error
     if (newPast >= this->m_nCtx) {
         THROW_ERROR("Encode: Failed to evaluate: context is full" );
     }
-    
-    if (evalFailed) {
-        THROW_ERROR("Encode: Failed to evaluate multimodal prompt");
-    }
 
     llama_synchronize(this->m_llmContext);
+    if (m_collectInferenceStats) {
+        RecordPrefillTime(prefillPerfBefore, llama_perf_context(this->m_llmContext), m_lastInferenceStats);
+        *inferenceStats = m_lastInferenceStats;
+    }
     this->m_mtmdContext->n_past = newPast;
     this->m_nCur                = newPast;
     this->m_allocated += mtmd_helper_get_n_tokens(chunks.ptr.get());
@@ -267,6 +373,9 @@ std::optional<LLM::TextTokenId> LlamaVisionImpl::NextTokenId() {
     );
 
     // Decode and log any errors
+    const auto decodePerfBefore = m_collectInferenceStats
+                                      ? llama_perf_context(this->m_llmContext)
+                                      : llama_perf_context_data{};
     if (llama_decode(this->m_mtmdContext->lctx, this->m_mtmdContext->batch)) {
         THROW_ERROR("Failed to decode token");
     }
@@ -274,6 +383,9 @@ std::optional<LLM::TextTokenId> LlamaVisionImpl::NextTokenId() {
     ++this->m_nCur;
     ++this->m_allocated;
     llama_synchronize(this->m_llmContext);
+    if (m_collectInferenceStats) {
+        AccumulateDecodeTime(decodePerfBefore, llama_perf_context(this->m_llmContext), m_lastInferenceStats);
+    }
 
     // Update fill to reflect the token we just processed
     this->m_contextFilled = std::min<size_t>((100ULL * this->m_nCur) / this->m_nCtx, 100);
