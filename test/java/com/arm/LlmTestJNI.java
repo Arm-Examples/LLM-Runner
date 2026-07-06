@@ -255,7 +255,7 @@ public class LlmTestJNI {
         // Resetting context should cause model to forget what country is being referred to
         llm.resetContext();
 
-        String question2 = "What country is that capital of? Reply with one word. please.";
+        String question2 = "What country is that capital of?";
         String response2 = getResponseOrFail(llm, question2);
         checkLlmMatch(question2, response2, "Canada", false);
         llm.freeModel();
@@ -271,7 +271,7 @@ public class LlmTestJNI {
         String response1 = getResponseOrFail(llm, question1);
         checkLlmMatch(question1, response1, "Ottawa", true);
 
-        String question2 = "What country is that capital of? Reply with one word.";
+        String question2 = "What country is that capital of?";
         String response2 = getResponseOrFail(llm, question2);
         checkLlmMatch(question2, response2, "Canada", true);
         llm.freeModel();
@@ -382,7 +382,7 @@ public class LlmTestJNI {
         llm.resetContext();
 
         // Second Question (After Reset)
-        String question2 = "What country is that capital of? Reply with one word.";
+        String question2 = "What country is that capital of?";
         String response2 = getResponseOrFail(llm, question2);
         checkLlmMatch(question2, response2, "Canada", false);
         // Ask First Question Again. Note an additional reset is required to prevent the generic answer

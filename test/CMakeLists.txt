@@ -35,6 +35,7 @@ elseif (${LLM_FRAMEWORK} STREQUAL "mnn")
     set(CONFIG_FILE_NAME
             "mnnTextConfig-llama-3.2-1B.json"
             "mnnVisionConfig-qwen2.5-3B.json"
+            "mnnVisionConfig-qwen3.5-2B.json"
             CACHE STRING "Path to the MNN config files")
 elseif (${LLM_FRAMEWORK} STREQUAL "executorch")
     set(CONFIG_FILE_NAME

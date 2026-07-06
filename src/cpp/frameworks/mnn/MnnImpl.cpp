@@ -54,6 +54,7 @@ void LLM::LLMImpl::SetConfig() {
         << "\"top_k\": 1,"
         << "\"top_p\": 1.0,"
         << "\"temperature\": 0.0,"
+        << "\"jinja\": {\"context\": {\"enable_thinking\": false}},"
         << "\"max_new_tokens\": " << m_nCtx
         << "}";
 
