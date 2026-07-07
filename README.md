@@ -123,7 +123,7 @@ Test project /home/user/llm/build
 | Framework / Backend   | Supported Models                                   | Licenses                                                                                                                                                                                                                                                 |
 |-----------------------|----------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **llama.cpp**         | `phi-2`<br/>`qwen-2-VL`<br/>`llama-3.2-1B`         | [mit](https://huggingface.co/microsoft/phi-2/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)          |
-| **onnxruntime-genai** | `phi4-mini-instruct`<br/>`llama-3.2-1B`            | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)                                                                                  |
+| **onnxruntime-genai** | `phi4-mini-instruct`<br/>`llama-3.2-1B` | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
 | **mnn**               | `qwen-2.5-VL`<br/>`qwen-3.5-2B`<br/>`llama-3.2-1B` | [apache-2.0](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen3.5-2B/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
 | **executorch**        | `llama-3.2-1B`                                     | [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)                                                                                                                                                                     |
 
@@ -217,8 +217,8 @@ onnxruntime-genai:
 - `ONNXRT_GENAI_GIT_URL`: Git URL to clone the sources from.
 - `ONNXRT_GENAI_GIT_TAG`: Git SHA for checkout.
 
-> **NOTE**: This repository has been tested with `onnxruntime` version `v1.24.2` and
-`onnxruntime-genai` version `v0.12.0`.
+> **NOTE**: This repository has been tested with `onnxruntime` version `v1.29.0` and
+`onnxruntime-genai` version `v0.15.2`.
 
 #### mnn options
 
@@ -347,14 +347,17 @@ You can find an example of multimodal settings in [`llamaVisionConfig-qwen2-vl-2
 
 ### onnxruntime genai model
 
-This project uses the **Phi-4-mini-instruct-onnx** as its default network for `onnxruntime-genai` framework.
-The model is distributed using **int4 quantization format** with the **block size: 32**, which is highly recommended as it
-delivers effective inference times by striking a balance between computational efficiency and model performance.
+For text-only `onnxruntime-genai` configurations, this project uses
+**Phi-4-mini-instruct-onnx** as its default network. It uses the CPU/mobile
+**int4 quantization format** with a **block size of 32**,
+which is recommended for effective inference performance.
 
-- You can access the model from [Hugging Face](https://huggingface.co/microsoft/Phi-4-mini-instruct-onnx/tree/main/cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4).
-- The default model configuration is declared in the [`requirements.json`](scripts/py/requirements.json) file.
+- Text model: [Phi-4-mini-instruct-onnx](https://huggingface.co/microsoft/Phi-4-mini-instruct-onnx/tree/main/cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4).
+- Model download definitions are declared in [`requirements.json`](scripts/py/requirements.json) file.
 
 However, any model supported by the backend library could be used.
+For vision inference, users must supply a compatible model package and wrapper
+configuration that they are licensed to use. Reasonable performance has been achieved with ONNXRT GenAI variants of the Qwen 3 VL model.
 
 To use an ONNX model with this framework, the following files are required:
 - `genai_config.json`: Configuration file
@@ -364,6 +367,12 @@ To use an ONNX model with this framework, the following files are required:
 - `tokenizer_config.json`: Tokenizer config file
 
 These files are essential for loading and running ONNX models effectively.
+
+Vision model packages may also include separate text, embedding, and vision ONNX
+components, their external-data files, and `processor_config.json`.
+
+> **NOTE**: `llm-bench-cli` currently measures text-only workloads. Vision benchmarking
+> support will be added separately.
 
 > **NOTE**: Currently only int4 and block size 32 models are accelerated by Arm® KleidiAI™ kernels in `onnxruntime-genai`.
 
