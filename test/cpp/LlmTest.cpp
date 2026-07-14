@@ -134,8 +134,13 @@ static std::string DecodeTokens(LLM &llm, int testId)
     int circuitBreaker = 0; // Reset for each decode operation
 
     while (llm.GetChatProgress() < 100) {
-        std::string tok = llm.NextToken();
-        if (LLM::endToken == tok) {
+        const auto tokenId = llm.NextTokenId();
+        if (!tokenId.has_value()) {
+            break;
+        }
+
+        const std::string tok = llm.DetokenizeTextToken(*tokenId);
+        if (llm.IsStopTextPiece(tok)) {
             break;
         }
 

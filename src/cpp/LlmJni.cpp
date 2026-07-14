@@ -237,8 +237,16 @@ JNIEXPORT jstring JNICALL Java_com_arm_Llm_getNextTokenJNI(JNIEnv* env, jobject,
     }
 
     try {
-        std::string result = llm->NextToken();
-        return env->NewStringUTF(result.c_str());
+        const auto tokenId = llm->NextTokenId();
+        if (!tokenId.has_value()) {
+            return env->NewStringUTF(LLM::endToken);
+        }
+
+        std::string token = llm->DetokenizeTextToken(*tokenId);
+        if (llm->IsStopTextPiece(token)) {
+            token = LLM::endToken;
+        }
+        return env->NewStringUTF(token.c_str());
     } catch (const std::exception& e) {
         std::string msg = std::string("Failed to get next token: ") + e.what();
         ThrowJavaException(env,msg.c_str() );
@@ -261,8 +269,16 @@ JNIEXPORT jstring JNICALL Java_com_arm_Llm_getNextTokenCancellableJNI(JNIEnv* en
         return env->NewStringUTF("");
     }
 
-    std::string result = llm->CancellableNextToken(operationId);
-    return env->NewStringUTF(result.c_str());
+    const auto tokenId = llm->CancellableNextTokenId(operationId);
+    if (!tokenId.has_value()) {
+        return env->NewStringUTF(LLM::endToken);
+    }
+
+    std::string token = llm->DetokenizeTextToken(*tokenId);
+    if (llm->IsStopTextPiece(token)) {
+        token = LLM::endToken;
+    }
+    return env->NewStringUTF(token.c_str());
 }
 
 /**

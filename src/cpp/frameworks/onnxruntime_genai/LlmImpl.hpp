@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2025-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -72,11 +72,17 @@ public:
      */
     void Encode(LlmChat::Payload& payload);
 
-    /**
-     * Method to produce next token
-     * @return the next token for encoded prompt
-     */
-    std::string NextToken();
+    /** @return The next token id, or no value when generation stops. */
+    std::optional<TextTokenId> NextTokenId();
+
+    /** @return The decoded text for a token id. */
+    std::string DetokenizeTextToken(TextTokenId token);
+
+    /** @return The reason the most recent generation terminated. */
+    TerminationReason GetLastTerminationReason() const { return m_lastTerminationReason; }
+
+    /** Override the reason reported for the most recent termination. */
+    void SetLastTerminationReason(TerminationReason reason) { m_lastTerminationReason = reason; }
 
     /**
     * Method to request the cancellation of a ongoing operation / functional call
@@ -164,6 +170,8 @@ private:
     double m_totalEncoderTime = {0.0};
     // Configuration for model
     LlmConfig m_config;
+    // Reason the most recent generation terminated.
+    TerminationReason m_lastTerminationReason{TerminationReason::None};
 
 
     // Map llm-log-level to Onnx log severity level

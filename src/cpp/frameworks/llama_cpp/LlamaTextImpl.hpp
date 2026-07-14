@@ -1,5 +1,5 @@
 //
-// SPDX-FileCopyrightText: Copyright 2024-2025 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2024-2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -70,11 +70,17 @@ public:
      */
     virtual void Encode(LlmChat::Payload& payload);
 
-    /**
-     * @brief Method to wrap CompletionLoop function
-     * @return the next token for encoded prompt
-     */
-    virtual std::string NextToken();
+    /** @return The next token id, or no value when generation stops. */
+    virtual std::optional<TextTokenId> NextTokenId();
+
+    /** @return The decoded text for a token id. */
+    virtual std::string DetokenizeTextToken(TextTokenId token);
+
+    /** @return The reason the most recent generation terminated. */
+    TerminationReason GetLastTerminationReason() const { return m_lastTerminationReason; }
+
+    /** Override the reason reported for the most recent termination. */
+    void SetLastTerminationReason(TerminationReason reason) { m_lastTerminationReason = reason; }
 
     /**
     * @brief Method to request the cancellation of a ongoing operation / functional call
@@ -134,6 +140,7 @@ protected:
     std::string m_llmPrefix{""};              /**< Prefix prepended to prompts. */
     bool m_llmInitialized{false};             /**< Indicates whether the LLM is initialized. */
     size_t m_nCur{0};                         /**< Current token index in the context. */
+    TerminationReason m_lastTerminationReason{TerminationReason::None}; /**< Reason the most recent generation terminated. */
     std::string m_eos = "<|endoftext|>";      /**< Used as a general signal in our LLM module to terminate response. */
     LlmConfig m_config;                       /**< Configuration for model. */
 
@@ -236,7 +243,7 @@ protected:
      * @return The generated token as a string. Returns "<|endoftext|>" if the end-of-sequence token
      * is produced or if the current length reaches the maximum length.
      */
-    std::string CompletionLoop();
+    std::optional<llama_token> CompletionLoop();
 
     /**
      * We are using our Logging functions and overriding default ggml logging callback.

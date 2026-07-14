@@ -136,11 +136,11 @@ int main(int argc, char** argv)
         llm.Encode(payload);
 
         while (llm.GetChatProgress() < 100) {
-            std::string tok = llm.NextToken();
-            if (tok == LLM::endToken) {
+            const auto token = llm.NextTokenId();
+            if (!token.has_value()) {
                 break;
             }
-            std::cout << tok;
+            std::cout << llm.DetokenizeTextToken(*token);
         }
         std::cout << std::endl;
 

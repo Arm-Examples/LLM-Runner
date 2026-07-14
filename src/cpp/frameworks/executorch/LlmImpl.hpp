@@ -73,11 +73,17 @@ public:
      */
     void Encode(LlmChat::Payload& payload);
 
-    /**
-     * Method to produce next token
-     * @return the next token for encoded prompt
-     */
-    std::string NextToken();
+    /** @return The next token id, or no value when generation stops. */
+    std::optional<TextTokenId> NextTokenId();
+
+    /** @return The decoded text for a token id. */
+    std::string DetokenizeTextToken(TextTokenId token);
+
+    /** @return The reason the most recent generation terminated. */
+    TerminationReason GetLastTerminationReason() const { return m_lastTerminationReason; }
+
+    /** Override the reason reported for the most recent termination. */
+    void SetLastTerminationReason(TerminationReason reason) { m_lastTerminationReason = reason; }
 
     /**
     * Method to request the cancellation of a ongoing operation / functional call
@@ -144,6 +150,7 @@ private:
     size_t m_totalEncodedTokens{0};
     double m_totalDecoderTime{0.0};
     double m_totalEncoderTime{0.0};
+    TerminationReason m_lastTerminationReason{TerminationReason::None};
     bool m_initialized{false};
     std::string m_eos{LLM::endToken};
 
