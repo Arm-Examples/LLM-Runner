@@ -24,6 +24,7 @@ if (${LLM_FRAMEWORK} STREQUAL "llama.cpp")
     set(CONFIG_FILE_NAME
             "llamaTextConfig-phi-2.json"
             "llamaVisionConfig-qwen2-vl-2B.json"
+            "llamaVisionConfig-qwen3.5-vl-4B.json"
             "llamaTextConfig-llama-3.2-1B.json"
             CACHE STRING "Path to the llama.cpp config files")
 elseif (${LLM_FRAMEWORK} STREQUAL "onnxruntime-genai")

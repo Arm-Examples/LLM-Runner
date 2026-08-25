@@ -6,6 +6,7 @@
 
 #include "LlamaVisionImpl.hpp"
 #include "Logger.hpp"
+#include "chat.h"
 #include "is_utf8.h"
 
 #include <stdexcept>
@@ -91,6 +92,14 @@ void LlamaVisionImpl::ResetVisionContext() {
     common_sampler_reset(this->m_commonSampler);
 }
 
+void LlamaVisionImpl::ResetContext()
+{
+    KVCacheClear();
+    this->m_nCur = 0;
+    this->m_isConversationStart = true;
+    ResetVisionContext();
+}
+
 void LlamaVisionImpl::LoadModel()
 {
     const auto& mmproj = this->m_config.GetConfigString(LlmConfig::ConfigParam::ProjModelName);
@@ -103,6 +112,56 @@ void LlamaVisionImpl::LoadModel()
     // Just assign directly (keep it simple)
     this->m_commonParams.mmproj.path = mmproj;
     this->m_commonParams.model.path  = model;
+}
+
+bool LlamaVisionImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
+{
+    auto tmpls = common_chat_templates_init(this->m_llmModel, this->m_commonParams.chat_template);
+    if (!tmpls) {
+        LOG_WARN("ApplyAutoChatTemplate: no llama.cpp chat template found. Falling back to default template.");
+        return false;
+    }
+
+    common_chat_templates_inputs inputs;
+    inputs.use_jinja = true;
+    inputs.add_generation_prompt = true;
+    inputs.enable_thinking = false;
+    inputs.chat_template_kwargs["enable_thinking"] = "false";
+
+    if (this->m_isConversationStart && !this->m_systemPrompt.empty()) {
+        inputs.messages.push_back({
+                /* role              = */ "system",
+                /* content           = */ this->m_systemPrompt,
+                /* content_parts     = */ {},
+                /* tool_calls        = */ {},
+                /* reasoning_content = */ {},
+                /* tool_name         = */ {},
+                /* tool_call_id      = */ {}
+        });
+    }
+
+    inputs.messages.push_back({
+            /* role              = */ "user",
+            /* content           = */ payload.textPrompt,
+            /* content_parts     = */ {},
+            /* tool_calls        = */ {},
+            /* reasoning_content = */ {},
+            /* tool_name         = */ {},
+            /* tool_call_id      = */ {}
+    });
+
+    try {
+        const auto chatParams = common_chat_templates_apply(tmpls.get(), inputs);
+        if (chatParams.prompt.empty()) {
+            LOG_WARN("ApplyAutoChatTemplate: llama.cpp chat template produced an empty prompt. Falling back to default template.");
+            return false;
+        }
+        payload.textPrompt = chatParams.prompt;
+        return true;
+    } catch (const std::exception& e) {
+        LOG_WARN("ApplyAutoChatTemplate failed: %s. Falling back to default template.", e.what());
+        return false;
+    }
 }
 
 void LlamaVisionImpl::Encode(LlmChat::Payload& payload) {
@@ -255,6 +314,7 @@ void LlamaVisionImpl::NewContext() {
     params.cpuparams_batch.n_threads = this->m_config.GetConfigInt(LlmConfig::ConfigParam::NumThreads);
     params.n_batch                   = this->m_batchSz;
     params.n_ctx                     = this->m_nCtx;
+    params.image_min_tokens          = this->m_config.GetConfigInt(LlmConfig::ConfigParam::VisualTokenBudget);
 
     auto ctx = std::make_unique<mtmd_app_context>(params);
 

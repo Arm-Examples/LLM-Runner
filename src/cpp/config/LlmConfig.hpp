@@ -10,8 +10,6 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 
-using nlohmann::json;
-
 /**
  * @struct ChatParams
  * @brief Defines all parameters related to chat behavior and templating.
@@ -36,13 +34,14 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ChatParams, systemPrompt, applyDefaultChatTem
  * Defines the runtime threading and batching behavior for model inference.
  */
 struct RuntimeParams {
-    int numThreads;                         ///< Number of threads to use for model execution.
-    int batchSize;                          ///< Number of samples processed in each inference batch.
-    int contextSize;                        ///< Maximum context length
+    int numThreads = 0;                     ///< Number of threads to use for model execution.
+    int batchSize = 0;                      ///< Number of samples processed in each inference batch.
+    int contextSize = 0;                    ///< Maximum context length
+    int visualTokenBudget = 0;              ///< Minimum visual tokens requested by vision backends.
 };
 
 /// Enables JSON serialization and deserialization for RuntimeParams.
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RuntimeParams, numThreads, batchSize, contextSize)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(RuntimeParams, numThreads, batchSize, contextSize, visualTokenBudget)
 
 /**
  * @struct ModelParams
@@ -106,6 +105,7 @@ public:
         BatchSize = 8,                ///< Number of tokens per batch
         ContextSize = 9,              ///< Context window (max token limit)
         MaxInputDimension = 10,       ///< Maximum width or height used when resizing image inputs
+        VisualTokenBudget = 11,       ///< Minimum visual token budget for vision backends
     };
 
      /**
