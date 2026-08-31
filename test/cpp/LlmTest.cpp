@@ -126,14 +126,27 @@ static void TranscriptSeparator()
  *
  * @param llm  LLM instance
  * @param testId Identifier for reporting which test failed
+ * @param maxTokens Maximum number of tokens to decode
  * @return Combined decoded output string
  */
-static std::string DecodeTokens(LLM &llm, int testId)
+static std::string DecodeTokens(LLM &llm, int testId, int maxTokens = maxTokenRetrievalAttempts)
 {
     std::string output;
     int circuitBreaker = 0; // Reset for each decode operation
 
     while (llm.GetChatProgress() < 100) {
+        if (circuitBreaker >= maxTokenRetrievalAttempts) {
+            FAIL("Token retrieval attempts exceeded safety threshold in DecodeTokens() [Test "
+                 + std::to_string(testId) + "]");
+        }
+
+        if (circuitBreaker >= maxTokens) {
+            LOG_INF("DecodeTokens stopped after reaching the configured limit of %d tokens for test %d",
+                    maxTokens,
+                    testId);
+            break;
+        }
+
         const auto tokenId = llm.NextTokenId();
         if (!tokenId.has_value()) {
             break;
@@ -146,10 +159,7 @@ static std::string DecodeTokens(LLM &llm, int testId)
 
         output += tok;
 
-        if (circuitBreaker++ > maxTokenRetrievalAttempts) {
-            FAIL("Token retrieval attempts exceeded safety threshold in DecodeTokens() [Test "
-                 + std::to_string(testId) + "]");
-        }
+        ++circuitBreaker;
     }
     return output;
 }
@@ -493,6 +503,70 @@ TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
 
         llm.FreeLlm();
     }
+
+    llm.FreeLlm();
+}
+
+TEST_CASE("ONNX Runtime GenAI vision: text and sequential images") {
+    LlmConfig configTest = SetupTestConfig();
+    if (LLM::GetFrameworkType() != "onnxruntime-genai" ||
+        !configTest.GetConfigBool(LlmConfig::ConfigParam::IsVision))
+    {
+        SKIP("This test requires the ONNX Runtime GenAI Vision configuration.");
+    }
+
+    constexpr int maxSmokeResponseTokens = 32;
+    LLM llm{};
+    llm.LlmInit(configTest, s_backendSharedLibraryDir);
+
+    LlmChat::Payload textFirst{
+        "Reply briefly so I know you are ready.",
+        "",
+        true
+    };
+    REQUIRE_NOTHROW(llm.Encode(textFirst));
+    CHECK_FALSE(DecodeTokens(llm, 8, maxSmokeResponseTokens).empty());
+
+    LlmChat::Payload firstImage{
+        "Describe this image briefly.",
+        std::string{TEST_RESOURCE_DIR} + "/tiger.bmp",
+        false
+    };
+    REQUIRE_NOTHROW(llm.Encode(firstImage));
+    CHECK_FALSE(DecodeTokens(llm, 9, maxSmokeResponseTokens).empty());
+
+    LlmChat::Payload followUp{
+        "What is the most notable object?",
+        "",
+        false
+    };
+    REQUIRE_NOTHROW(llm.Encode(followUp));
+    CHECK_FALSE(DecodeTokens(llm, 10, maxSmokeResponseTokens).empty());
+
+    LlmChat::Payload secondImage{
+        "Describe this image too.",
+        std::string{TEST_RESOURCE_DIR} + "/cat.bmp",
+        false
+    };
+    REQUIRE_NOTHROW(llm.Encode(secondImage));
+    CHECK_FALSE(DecodeTokens(llm, 11, maxSmokeResponseTokens).empty());
+
+    LlmChat::Payload comparison{
+        "Compare the two images briefly.",
+        "",
+        false
+    };
+    REQUIRE_NOTHROW(llm.Encode(comparison));
+    CHECK_FALSE(DecodeTokens(llm, 12, maxSmokeResponseTokens).empty());
+
+    llm.ResetContext();
+    LlmChat::Payload imageAfterReset{
+        "Describe this new image briefly.",
+        std::string{TEST_RESOURCE_DIR} + "/dog.bmp",
+        true
+    };
+    REQUIRE_NOTHROW(llm.Encode(imageAfterReset));
+    CHECK_FALSE(DecodeTokens(llm, 13, maxSmokeResponseTokens).empty());
 
     llm.FreeLlm();
 }

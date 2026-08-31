@@ -7,6 +7,7 @@
 #define LLM_IMPL_HPP
 
 #include <unordered_map>
+#include <vector>
 
 #include "Llm.hpp"
 #include "LlmConfig.hpp"
@@ -24,14 +25,14 @@ class LLM::LLMImpl : public LlmChat {
 
 public:
     LLMImpl();
-    ~LLMImpl();
+    ~LLMImpl() override;
 
     /**
      * Method to initialize a ONNX model
      * @param config Configuration class with model's parameter and user defined parameters
      * @param sharedLibraryPath path to location of shared libs
      */
-    void LlmInit(const LlmConfig& config, std::string sharedLibraryPath);
+    void LlmInit(const LlmConfig& config, const std::string &sharedLibraryPath);
 
     /**
      * Method to free all allocations pertaining to ONNX model
@@ -42,13 +43,13 @@ public:
      * Function to retrieve the ONNX encode timings.
      * @return The encoded tokens per second
      */
-    float GetEncodeTimings();
+    float GetEncodeTimings() const;
 
     /**
      * Function to retrieve the ONNX decode timings.
      * @return The decoded tokens per second
      */
-    float GetDecodeTimings();
+    float GetDecodeTimings() const;
 
     /**
      * Function to reset the ONNX timing
@@ -67,10 +68,16 @@ public:
     void ResetContext();
 
     /**
-     * Encode a payload containing text.
-     * @param payload Input payload containing text.
+     * Build the prompt payload using the backend chat template or the default fallback.
+     * @param payload Input payload containing text and an optional image.
      */
-    void Encode(LlmChat::Payload& payload);
+    void QueryBuilder(LlmChat::Payload& payload) override;
+
+    /**
+     * Encode a payload containing text and an optional image.
+     * @param payload Input payload containing text and an optional image.
+     */
+    void Encode(const LlmChat::Payload& payload);
 
     /** @return The next token id, or no value when generation stops. */
     std::optional<TextTokenId> NextTokenId();
@@ -82,7 +89,7 @@ public:
     TerminationReason GetLastTerminationReason() const { return m_lastTerminationReason; }
 
     /** Override the reason reported for the most recent termination. */
-    void SetLastTerminationReason(TerminationReason reason) { m_lastTerminationReason = reason; }
+    void SetLastTerminationReason(const TerminationReason reason) { m_lastTerminationReason = reason; }
 
     /**
     * Method to request the cancellation of a ongoing operation / functional call
@@ -93,7 +100,7 @@ public:
      * The method return the percentage of chat context filled
      * @return chat capacity filled in cache as percentage number
      */
-    size_t GetChatProgress() const;
+    [[nodiscard]] size_t GetChatProgress() const;
 
     /**
      * Method to get framework type
@@ -103,9 +110,9 @@ public:
 
     /**
      * @brief List supported input modalities.
-     * @return A vector containing {"text", "vision"}.
+     * @return A vector containing {"text"} or {"text", "image"}.
      */
-    std::vector<std::string> SupportedInputModalities() const{  return {"text"};}
+    [[nodiscard]] std::vector<std::string> SupportedInputModalities() const;
 
     /**
     * Method to Cancel generation of response tokens. Can be used to stop response once query commences
@@ -131,6 +138,19 @@ public:
     std::string GeneratePromptWithNumTokens(size_t numPromptTokens);
 
 private:
+    enum class VisionPromptFormat {
+        None,
+        PhiInlineTags,
+        VisionPadTags,
+        StructuredJson
+    };
+
+    struct VisionTurn {
+        std::string formattedPrompt;
+        std::string imagePath;
+        std::string assistantResponse;
+    };
+
     // Pointer to the loaded OgaModel used for inference
     std::unique_ptr<OgaModel> m_llmModelPtr {nullptr};
     // Pointer to the OgaConfig instance containing model configuration settings.
@@ -185,6 +205,18 @@ private:
 
     // Used as a general signal in our LLM module to terminate response
     std::string m_eos = "<|endoftext|>";
+    // ORT GenAI model type string used to shape multimodal prompts.
+    std::string m_modelType{""};
+    // Prompt/content formatting style expected by the active multimodal model.
+    VisionPromptFormat m_visionPromptFormat{VisionPromptFormat::None};
+    // Whether this ONNX model should accept image inputs.
+    bool m_isVision{false};
+    // Formatted prompt chunks, image assets, and generated responses for vision replay.
+    std::vector<VisionTurn> m_visionTurns;
+    // Separate stream so replay capture does not affect the public detokenization stream.
+    std::unique_ptr<OgaTokenizerStream> m_visionReplayTokenizerStreamPtr{nullptr};
+    // Processor used to convert text and image payloads into ONNX named tensors.
+    std::unique_ptr<OgaMultiModalProcessor> m_multiModalProcessor{nullptr};
 
     /**
      * Function to initialize the LLM model sequence
@@ -217,6 +249,20 @@ private:
     void FreeGenerator();
 
     /**
+     * Create a generator using the current model and generator parameters.
+     */
+    [[nodiscard]] std::unique_ptr<OgaGenerator> CreateGenerator() const;
+
+    /** Build the complete formatted prompt required to replay vision turns. */
+    [[nodiscard]] std::string BuildVisionReplayPrompt(const std::vector<VisionTurn>& turns) const;
+
+    /**
+     * Replace the active generator with a generator populated from all vision turns.
+     * The existing generator is retained if replay setup fails.
+     */
+    void RebuildVisionGenerator(const std::vector<VisionTurn>& turns);
+
+    /**
      * Function to initialize a new tokenizer
      */
     void InitTokenizer();
@@ -227,6 +273,16 @@ private:
      void FreeTokenizer();
 
     /**
+     * Function to initialize the multimodal processor.
+     */
+    void InitMultiModalProcessor();
+
+    /**
+     * Frees the memory holding the multimodal processor.
+     */
+    void FreeMultiModalProcessor();
+
+    /**
      * Function to load the chosen ONNX model to memory
      */
     void LoadModel();
@@ -235,6 +291,30 @@ private:
      * Frees the memory holding the ONNX model
      */
     void FreeModel();
+
+    /**
+     * Clears encode/decode timing accumulators without logging.
+     */
+    void ClearTimingState();
+
+    /**
+     * Resolve the multimodal prompt format used by the current model.
+     */
+    [[nodiscard]] VisionPromptFormat ResolveVisionPromptFormat() const;
+
+    /**
+     * Build inline multimodal prompt text for models that use image markers.
+     */
+    [[nodiscard]] size_t NextVisionImageIndex() const;
+
+    [[nodiscard]] std::string BuildInlineVisionPrompt(const std::string& prompt,
+                                                      size_t numImages,
+                                                      size_t firstImageIndex = 1) const;
+
+    /**
+     * Build the user content payload passed to ApplyChatTemplate().
+     */
+    [[nodiscard]] nlohmann::json BuildUserContent(const LlmChat::Payload& payload) const;
 
 };
 

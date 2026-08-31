@@ -14,13 +14,13 @@ include(check-flag)
 
 # Disable GCC 14's range-loop-construct warning-as-error
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14)
-  message(STATUS "GCC >= 14 detected, disabling -Werror for range-loop-construct")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=range-loop-construct")
+    message(STATUS "GCC >= 14 detected, disabling -Werror for range-loop-construct")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=range-loop-construct")
 endif()
 
 # Disabled array-bounds warning-as-error since NDK clang triggers it in MLAS code.
 # Setting it at this project level to ensure we cover all onnx binaries
-# ONNX project probably don't compile with these flags because if they did they 
+# ONNX project probably don't compile with these flags because if they did they
 # probably would have seen this problem
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=array-bounds")
 
@@ -53,9 +53,9 @@ set(ONNX_BUILD_SHARED_LIBS                        OFF)
 
 set(ONNXRUNTIME_GIT_URL   "https://github.com/microsoft/onnxruntime.git"
         CACHE STRING "Git URL for onnxruntime repo")
-        
+
 # Latest stable tag (March 2026)
-set(ONNXRUNTIME_GIT_TAG   "v1.24.2"
+set(ONNXRUNTIME_GIT_TAG   "v1.29.0"
         CACHE STRING "Path where onnxruntime repo should be cloned")
 
 set(ONNXRUNTIME_SRC_DIR   "${CMAKE_BINARY_DIR}/onnxruntime"
@@ -67,19 +67,19 @@ set(ONNXRUNTIME_BUILD_DIR "${CMAKE_BINARY_DIR}/ort_build"
 file(MAKE_DIRECTORY "${ONNXRUNTIME_BUILD_DIR}")
 
 FetchContent_Declare(
-  onnxruntime
-    GIT_REPOSITORY ${ONNXRUNTIME_GIT_URL}
-    GIT_TAG        ${ONNXRUNTIME_GIT_TAG}
-    SOURCE_DIR     ${ONNXRUNTIME_SRC_DIR}
-    GIT_SHALLOW    1
-    EXCLUDE_FROM_ALL
+        onnxruntime
+        GIT_REPOSITORY ${ONNXRUNTIME_GIT_URL}
+        GIT_TAG        ${ONNXRUNTIME_GIT_TAG}
+        SOURCE_DIR     ${ONNXRUNTIME_SRC_DIR}
+        GIT_SHALLOW    1
+        EXCLUDE_FROM_ALL
 )
 
 FetchContent_MakeAvailable(onnxruntime)
 
 add_subdirectory(
-  ${ONNXRUNTIME_SRC_DIR}/cmake
-  ${ONNXRUNTIME_BUILD_DIR})
+        ${ONNXRUNTIME_SRC_DIR}/cmake
+        ${ONNXRUNTIME_BUILD_DIR})
 
 # ---------------------------------------------------------------------------
 # Temporary workaround:
@@ -128,7 +128,7 @@ set(ONNXRT_GENAI_GIT_URL "https://github.com/microsoft/onnxruntime-genai.git"
         CACHE STRING "Git URL for onnxruntime-genai repo")
 
 # Latest stable tag (March 2026)
-set(ONNXRT_GENAI_GIT_TAG "v0.12.0"
+set(ONNXRT_GENAI_GIT_TAG "v0.15.2"
         CACHE STRING "Git tag / commit SHA for onnxruntime-genai repo")
 
 # --------------------------------------------------------------------
@@ -144,17 +144,32 @@ set(ENABLE_PYTHON          OFF)
 set(ENABLE_JAVA            OFF)
 set(ENABLE_TESTS           OFF)
 
-# model-benchmark standalone application
-set(ENABLE_MODEL_BENCHMARK ${BUILD_BENCHMARK} CACHE BOOL  "Enable model benchmark binary")
+# LLM-Runner provides its own llm-bench-cli. The upstream benchmark is not
+# used here and assumes ONNX Runtime GenAI is the top-level CMake project.
+# Explicitly override its ON default, including in an existing CMake cache.
+set(ENABLE_MODEL_BENCHMARK OFF CACHE BOOL
+        "Build the upstream ONNX Runtime GenAI model benchmark" FORCE)
 
 # Fetch the dependency Git repo here
 FetchContent_Declare(onnxruntime-genai
-    GIT_REPOSITORY ${ONNXRT_GENAI_GIT_URL}
-    GIT_TAG ${ONNXRT_GENAI_GIT_TAG}
-    GIT_SHALLOW 1
-    SOURCE_DIR ${ONNXRT_GENAI_SRC_DIR})
+        GIT_REPOSITORY ${ONNXRT_GENAI_GIT_URL}
+        GIT_TAG ${ONNXRT_GENAI_GIT_TAG}
+        GIT_SHALLOW 1
+        SOURCE_DIR ${ONNXRT_GENAI_SRC_DIR})
 
 FetchContent_MakeAvailable(onnxruntime-genai)
+
+# onnxruntime-genai defines USE_CXX17=1 on Android, which provides a `std::span`
+# shim. This project builds with C++20 (see top-level CMakeLists.txt), and NDK
+# libc++ provides the real `std::span`. Keeping USE_CXX17 defined under C++20
+# causes ambiguous `std::span` references and breaks the build.
+if(ANDROID AND CMAKE_CXX_STANDARD GREATER_EQUAL 20)
+    foreach(ortgenai_target onnxruntime-genai onnxruntime-genai-obj)
+        if(TARGET ${ortgenai_target})
+            target_compile_options(${ortgenai_target} PRIVATE -UUSE_CXX17)
+        endif()
+    endforeach()
+endif()
 
 # Remove the created onnxruntime shared library
 file(REMOVE_RECURSE ${ORT_LIB_DIR})
@@ -171,22 +186,12 @@ elseif (NOT TARGET llm-log)
 endif()
 
 add_library(llm-framework STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/OnnxrtImpl.cpp LlmFactory.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/OnnxrtImpl.cpp LlmFactory.cpp)
 
 target_include_directories(llm-framework PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${ONNXRT_GENAI_SRC_DIR}/src)
-# List all libraries that we need to depend on here:
-target_link_libraries(llm-framework PUBLIC
-    onnxruntime-genai
-    onnxruntime)
-
-if(BUILD_BENCHMARK)
-    target_include_directories(model_benchmark PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${ONNXRT_GENAI_SRC_DIR}/src)
-
-    target_link_libraries(model_benchmark PRIVATE onnxruntime-genai ${ONNXRUNTIME_LIB})
-    target_link_directories(model_benchmark PRIVATE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-    add_dependencies(model_benchmark onnxruntime)
-endif()
+# List all libraries that we need to depend on here:
+target_link_libraries(llm-framework PUBLIC
+        onnxruntime-genai
+        onnxruntime)
