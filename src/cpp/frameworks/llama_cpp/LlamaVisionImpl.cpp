@@ -112,13 +112,18 @@ void LlamaVisionImpl::Encode(LlmChat::Payload& payload) {
     auto visionCtx = this->m_mtmdContext->ctx_vision.get();
     mtmd::bitmaps bitmaps;
     if (!payload.imagePath.empty()) {
-        mtmd::bitmap bmp{ mtmd_helper_bitmap_init_from_file(visionCtx, payload.imagePath.c_str()) };
-        bitmaps.entries.emplace_back(std::move(bmp));
+        auto loadedMedia =
+                mtmd_helper_bitmap_init_from_file(visionCtx, payload.imagePath.c_str(), false);
+        if (!loadedMedia.bitmap) {
+            THROW_ERROR("Encode: Failed to load image '%s'", payload.imagePath.c_str());
+        }
+        bitmaps.entries.emplace_back(loadedMedia.bitmap);
     }
 
-    // 2) Prepare text input
+    // 2) Prepare text input. QueryBuilder has already added the media marker.
     const mtmd_input_text textInput{
             /* text          = */ payload.textPrompt.c_str(),
+            /* text_len      = */ payload.textPrompt.size(),
             /* add_special   = */ payload.isFirstMessage,
             /* parse_special = */ true
     };
@@ -126,13 +131,16 @@ void LlamaVisionImpl::Encode(LlmChat::Payload& payload) {
     // 3) Tokenize text + image together
     auto bitmapData = bitmaps.c_ptr();
     mtmd::input_chunks chunks{ mtmd_input_chunks_init() };
-    mtmd_tokenize(
+    const auto tokenizeResult = mtmd_tokenize(
             visionCtx,
             chunks.ptr.get(),
             &textInput,
             bitmapData.data(),
             bitmapData.size()
     );
+    if (tokenizeResult != 0) {
+        THROW_ERROR("Encode: Failed to tokenize multimodal prompt (error=%d)", tokenizeResult);
+    }
 
     // 4) Clear any previously stored bitmaps in the context
     this->m_mtmdContext->bitmaps.entries.clear();

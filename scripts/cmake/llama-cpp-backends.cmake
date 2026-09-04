@@ -24,32 +24,6 @@ if (GGML_CPU_ALL_VARIANTS)
         file(COPY ${GGML_PUBLIC_HEADERS} DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
         set(GGML_SYSTEM_ARCH "ARM")
 
-        # Add the different variants.
-        if (NOT TARGET ggml-cpu-android_armv9.0_1_1)
-            ggml_add_cpu_backend_variant(android_armv9.0_1_1
-                DOTPROD
-                FP16_VECTOR_ARITHMETIC
-                NOSVE
-                MATMUL_INT8)
-        endif()
-
-        if (NOT TARGET ggml-cpu-android_armv9.2_1_1)
-            ggml_add_cpu_backend_variant(android_armv9.2_1_1
-                DOTPROD
-                FP16_VECTOR_ARITHMETIC
-                NOSVE
-                MATMUL_INT8
-                SME)
-        endif()
-        if (NOT TARGET ggml-cpu-android_armv9.2_2_1)
-            ggml_add_cpu_backend_variant(android_armv9.2_2_1 
-                DOTPROD
-                FP16_VECTOR_ARITHMETIC
-                NOSVE
-                MATMUL_INT8
-                SME)
-        endif()
-
         # Change target lib location for all
         list(APPEND TARGET_LIBS_FOR_ANDROID
             llama
@@ -60,9 +34,9 @@ if (GGML_CPU_ALL_VARIANTS)
             ggml-cpu-android_armv8.2_1
             ggml-cpu-android_armv8.2_2
             ggml-cpu-android_armv8.6_1
-            ggml-cpu-android_armv9.0_1_1
-            ggml-cpu-android_armv9.2_1_1
-            ggml-cpu-android_armv9.2_2_1
+            ggml-cpu-android_armv9.0_1
+            ggml-cpu-android_armv9.2_1
+            ggml-cpu-android_armv9.2_2
             )
 
         foreach(TAR ${TARGET_LIBS_FOR_ANDROID})

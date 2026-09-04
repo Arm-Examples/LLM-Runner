@@ -1,6 +1,6 @@
 ---
 name: llm-build-and-ctest
-description: Configure, build, and run CTest for this repository using CMake presets (native, x-android-aarch64, x-linux-aarch64), including common cache flags (LLM_FRAMEWORK, BUILD_JNI_LIB, USE_KLEIDIAI, BUILD_BENCHMARK, CPU_ARCH) and failure triage steps. Use when asked to run tests, reproduce build/CI failures, or diagnose CMake/CTest/JNI issues for this project.
+description: Configure, build, and run CTest for this repository using CMake presets (native, x-android-aarch64, x-linux-aarch64), including common cache flags (LLM_FRAMEWORK, BUILD_JNI_LIB, USE_KLEIDIAI, BUILD_BENCHMARK) and failure triage steps. Use when asked to run tests, reproduce build/CI failures, or diagnose CMake/CTest/JNI issues for this project.
 ---
 
 # Build and test (CMake + CTest)
@@ -45,7 +45,7 @@ cmake --preset=native -B build -DUSE_KLEIDIAI=OFF
 
 ```sh
 # AArch64 ISA selection (llama.cpp + linux-aarch64 target only)
-cmake --preset=native -B build -DCPU_ARCH=Armv8.2_4
+cmake --preset=native -B build
 ```
 
 ### 2) Build
@@ -73,7 +73,7 @@ ctest --test-dir ./build -R llm-cpp-ctest -V
 - Handle downloads: configure runs a downloads step (`scripts/cmake/download-resources.cmake` → `scripts/py/download_resources.py`); set `HF_TOKEN` (or `~/.netrc` for `huggingface.co`) for gated models.
 - Check logs: read `build/CMakeFiles/CMakeOutput.log` and `build/CMakeFiles/CMakeError.log`.
 - Isolate JNI: retry with `-DBUILD_JNI_LIB=OFF` to separate C++ failures from Java/JNI toolchain issues.
-- Confirm cache: inspect `build/CMakeCache.txt` for `LLM_FRAMEWORK`, `BUILD_JNI_LIB`, `USE_KLEIDIAI`, `CPU_ARCH`.
+- Confirm cache: inspect `build/CMakeCache.txt` for `LLM_FRAMEWORK`, `BUILD_JNI_LIB`, `USE_KLEIDIAI`.
 
 ## Optional automation
 

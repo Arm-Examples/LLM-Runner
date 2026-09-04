@@ -6,7 +6,7 @@
     "userTemplate"   : "user: %s\nassistant:"
   },
   "model" : {
-    "llmModelName" : "llama.cpp/phi-2/phi2_Q4_model.gguf",
+    "llmModelName" : "llama.cpp/phi-2/phi-2.Q4_0.gguf",
     "isVision"  : false
   },
   "runtime" : {

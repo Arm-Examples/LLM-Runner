@@ -8,9 +8,8 @@
 
 ## `llama.cpp`
 
-- Typically uses `.gguf` models.
+- Typically, uses `.gguf` models.
 - Prompt formatting and stop tokens matter; validate that `LLM::NextToken()` stop token behavior matches the model’s expected stop words.
-- For AArch64 feature tuning, `CPU_ARCH` can matter (linux-aarch64 + llama.cpp only).
 
 ## `onnxruntime-genai`
 

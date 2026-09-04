@@ -10,8 +10,6 @@
 # defined to add new targets for different build variants, we
 # copy the source tree so the relative paths from this
 # directory scope resolve correctly.
-# It also disables SVE & SVE2 acceleration on Android armv9x targets. 
-# This should be removed once upstream llama.cpp is fixed. 
 set(LLAMA_WORKAROUND_SRC_DIR ${CMAKE_BINARY_DIR}/llama-additional-backends-src)
 set(LLAMA_WORKAROUND_BIN_DIR ${CMAKE_BINARY_DIR}/llama-additional-backends-bin)
 file(MAKE_DIRECTORY ${LLAMA_WORKAROUND_SRC_DIR})

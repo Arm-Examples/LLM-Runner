@@ -111,6 +111,7 @@ foreach(CFG_FILE ${CONFIG_FILE_NAME})
     add_test(NAME llm-cpp-ctest-${CFG_FILE_EXT} COMMAND ${TEST_TARGET}
             --config ${CONFIG_FILE_SOURCE}
             --model-root ${TEST_MODELS_DIR}
+            --resource-root ${TEST_RESOURCE_DIR}
             --backend-shared-lib-dir "${CMAKE_BINARY_DIR}/bin")
 endforeach()
 

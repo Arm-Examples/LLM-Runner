@@ -26,7 +26,7 @@ See the section below for additional cross-compilation options.
 To build for aarch64 Linux system
 
 ```shell
-cmake -B build --preset=native -DCPU_ARCH=Armv8.2_4
+cmake -B build --preset=native
 cmake --build ./build
 ```
 
