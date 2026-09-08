@@ -124,7 +124,7 @@ Test project /home/user/llm/build
 | **llama.cpp**         | `phi-2`<br/>`qwen-2-VL`<br/>`qwen-3.5-VL-4B-Q4_0`<br/>`llama-3.2-1B`         | [mit](https://huggingface.co/microsoft/phi-2/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen3.5-4B/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)          |
 | **onnxruntime-genai** | `phi4-mini-instruct`<br/>`llama-3.2-1B`            | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)                                                                                  |
 | **mnn**               | `qwen-2.5-VL`<br/>`qwen-3.5-2B`<br/>`llama-3.2-1B` | [apache-2.0](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen3.5-2B/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
-| **executorch**        | `llama-3.2-1B`                                     | [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)                                                                                                                                                                     |
+| **executorch**        | `llama-3.2-1B`<br/>`gemma-4-e2b`                   | [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)<br/> [apache-2.0](https://ai.google.dev/gemma/docs/gemma_4_license)                                                                                                    |
 
 
 ## Supported Platforms
@@ -241,7 +241,7 @@ with the LLM/data-loader/module/tensor/runner utility extensions required for
 text-path bring-up, and it explicitly disables `pybind` because only the C++
 runtime integration is needed in this phase.
 
-> **NOTE**: This repository is currently pinned to ExecuTorch `v1.2.0`
+> **NOTE**: This repository is currently pinned to ExecuTorch `v1.4.1`
 for the runtime integration work.
 
 > **NOTE**: ExecuTorch runs Python code generation during CMake configure.
@@ -394,6 +394,11 @@ This project uses the **Llama 3.2 1B Instruct SpinQuant INT4** model as its defa
 The model is distributed as an ExecuTorch `.pte` program with SpinQuant INT4 quantization, which is recommended for efficient text generation on Arm® CPUs.
 
 - You can access the model from [Hugging Face](https://huggingface.co/executorch-community/Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8-ET)
+
+The **Gemma 4 E2B** text model is also supported using an ExecuTorch `.pte` program with 8da4w+emb4 quantization.
+
+- You can access the model from [Hugging Face](https://huggingface.co/Arm/gemma-4-e2b-text-executorch)
+- The model is licensed under the [Apache License 2.0](https://ai.google.dev/gemma/docs/gemma_4_license)
 - The model configuration is declared in the [`requirements.json`](scripts/py/requirements.json)
 
 However, any compatible text model exported for the ExecuTorch LLM runtime can be used.
@@ -402,7 +407,7 @@ To use an ExecuTorch model with this framework, the following files are required
 - `model_name.pte`: ExecuTorch model program
 - `tokenizer.model`, `tokenizer.json`, or `tokenizer.bin`: Tokenizer file placed in the same directory as the `.pte` model
 
-The default wrapper configuration is available in [`executorchTextConfig-llama-3.2-1B.json`](model_configuration_files/executorchTextConfig-llama-3.2-1B.json).
+Wrapper configurations are available in [`executorchTextConfig-llama-3.2-1B.json`](model_configuration_files/executorchTextConfig-llama-3.2-1B.json) and [`executorchTextConfig-gemma-4-e2b.json`](model_configuration_files/executorchTextConfig-gemma-4-e2b.json).
 
 > **NOTE**: The ExecuTorch backend currently supports text models only. If `runtime.contextSize` exceeds the context length exported into the `.pte` model, the backend cannot increase it at runtime; re-export the model with a larger context length.
 

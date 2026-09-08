@@ -175,16 +175,13 @@ public:
     }
 
     /**
-     * Stop the active generation and notify the ExecuTorch decoder.
+     * Stop the active generation.
      */
     void Stop()
     {
         m_stopped = true;
         m_active = false;
         m_hasPendingPrefillToken = false;
-        if (m_decoder) {
-            m_decoder->stop();
-        }
     }
 
     /**
@@ -280,7 +277,7 @@ public:
 
         // TextPrefiller advances m_pos to the next KV-cache position and
         // returns the first sampled token, which belongs to the decode stream.
-        auto prefillResult = m_prefiller->prefill(tokens, m_pos);
+        auto prefillResult = m_prefiller->prefill(tokens, m_pos, m_temperature);
         if (prefillResult.error() != Error::Ok) {
             return prefillResult.error();
         }
@@ -296,8 +293,8 @@ public:
         promptTokens = static_cast<size_t>(m_numPromptTokens);
 
         m_maxNewTokens = config.resolve_max_new_tokens(
-            static_cast<int32_t>(maxContextLen),
-            static_cast<int32_t>(m_numPromptTokens));
+            metadataValue(kMaxContextLen),
+            m_pos);
         if (m_maxNewTokens <= 0) {
             return Error::InvalidArgument;
         }

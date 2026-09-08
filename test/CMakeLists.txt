@@ -41,6 +41,7 @@ elseif (${LLM_FRAMEWORK} STREQUAL "mnn")
 elseif (${LLM_FRAMEWORK} STREQUAL "executorch")
     set(CONFIG_FILE_NAME
             "executorchTextConfig-llama-3.2-1B.json"
+            "executorchTextConfig-gemma-4-e2b.json"
             CACHE STRING "Path to the ExecuTorch config file")
 else()
     message(FATAL_ERROR "${LLM_FRAMEWORK} is currently not supported.")

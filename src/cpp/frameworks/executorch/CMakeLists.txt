@@ -25,7 +25,7 @@ set(EXECUTORCH_GIT_URL "https://github.com/pytorch/executorch.git"
         CACHE STRING "Git URL for ExecuTorch repo")
 
 # Pinned release tag for deterministic runtime integration.
-set(EXECUTORCH_GIT_TAG "v1.2.0"
+set(EXECUTORCH_GIT_TAG "v1.4.1"
         CACHE STRING "Git tag / commit SHA for ExecuTorch repo")
 
 set(EXECUTORCH_BUILD_PRESET_FILE "${EXECUTORCH_SRC_DIR}/tools/cmake/preset/llm.cmake"
