@@ -23,6 +23,7 @@ static inline const char* to_string(const LlmConfig::ConfigParam key) {
     case LlmConfig::ConfigParam::BatchSize:               return "BatchSize";
     case LlmConfig::ConfigParam::ContextSize:             return "ContextSize";
     case LlmConfig::ConfigParam::MaxInputDimension:       return "MaxInputDimension";
+    case LlmConfig::ConfigParam::VisualTokenBudget:       return "VisualTokenBudget";
   }
   return "Unknown";
 }
@@ -58,6 +59,8 @@ LlmConfig::LlmConfig(const std::string& jsonStr)
         THROW_INVALID_ARGUMENT("config.runtime.batchSize must be positive");
     if (m_runtime.contextSize <= 0)
         THROW_INVALID_ARGUMENT("config.runtime.contextSize must be positive");
+    if (m_runtime.visualTokenBudget < 0)
+        THROW_INVALID_ARGUMENT("config.runtime.visualTokenBudget must be non-negative");
     if (m_model.maxInputDimension <= 0)
         THROW_INVALID_ARGUMENT("config.model.maxInputDimension must be positive");
 
@@ -121,6 +124,11 @@ void LlmConfig::SetConfigInt(const ConfigParam key, const int value) {
                 THROW_INVALID_ARGUMENT("MaxInputDimension must be > 0");
             }
             m_model.maxInputDimension = value; return;
+        case ConfigParam::VisualTokenBudget:
+            if (value < 0) {
+                THROW_INVALID_ARGUMENT("VisualTokenBudget must be >= 0");
+            }
+            m_runtime.visualTokenBudget = value; return;
         default: THROW_INVALID_ARGUMENT("Unknown int key: %s", to_string(key));
     }
 }
@@ -150,6 +158,7 @@ void LlmConfig::SetConfigInt(const ConfigParam key, const int value) {
         case ConfigParam::BatchSize:   return m_runtime.batchSize;
         case ConfigParam::ContextSize: return m_runtime.contextSize;
         case ConfigParam::MaxInputDimension: return m_model.maxInputDimension;
+        case ConfigParam::VisualTokenBudget: return m_runtime.visualTokenBudget;
         default: THROW_INVALID_ARGUMENT("Unknown int key: %s", to_string(key));
     }
 }

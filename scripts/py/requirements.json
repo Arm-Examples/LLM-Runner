@@ -41,6 +41,26 @@
           "filename": "Qwen2-VL-2B-Instruct-Q4_0.gguf",
           "sha256sum": "4154d891fd4ea54ce368c52031588a50493fa4c118faefb0ac23a9bfbc36c098"
           }
+      ],
+      "qwen35vl-4b": [
+        {
+          "name": "qwen3.5 mmproj model",
+          "purpose": "To enable basic testing",
+          "destination": "llama.cpp/qwen3.5-4b/mmproj-F16.gguf",
+          "repo_id": "unsloth/Qwen3.5-4B-GGUF",
+          "filename": "mmproj-F16.gguf",
+          "revision": "main",
+          "sha256sum": "cd88edcf8d031894960bb0c9c5b9b7e1fea6ebee02b9f7ce925a00d12891f864"
+        },
+        {
+          "name": "qwen3.5 model",
+          "purpose": "To enable basic testing",
+          "destination": "llama.cpp/qwen3.5-4b/Qwen3.5-4B-Q4_0.gguf",
+          "repo_id": "unsloth/Qwen3.5-4B-GGUF",
+          "filename": "Qwen3.5-4B-Q4_0.gguf",
+          "revision": "main",
+          "sha256sum": "298fcb5fe7a77ccc79745ae24751560c5ac56874caff4bb39b1f2055bd72b8bb"
+        }
       ]
     },
     "mnn": {

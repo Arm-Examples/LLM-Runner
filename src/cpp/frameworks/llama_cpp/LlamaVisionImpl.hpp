@@ -106,6 +106,8 @@ struct mtmd_app_context {
         mparams.print_timings = true;
         mparams.n_threads = params.cpuparams.n_threads;
         mparams.warmup = false;
+        mparams.image_min_tokens = params.image_min_tokens;
+        mparams.image_max_tokens = params.image_max_tokens;
         std::unordered_map<int,ggml_log_level> log_mapping{
             {0,GGML_LOG_LEVEL_ERROR},
             {1,GGML_LOG_LEVEL_WARN},
@@ -160,10 +162,7 @@ public:
     /**
      * @brief Reset both the LLM text context and the vision context state.
      */
-    void ResetContext() override {
-        LLM::LLMImpl::ResetContext();
-        ResetVisionContext();
-    }
+    void ResetContext() override;
 
     /** @return The next token id, or no value when generation stops. */
     std::optional<LLM::TextTokenId> NextTokenId() override;
@@ -227,6 +226,13 @@ public:
         }
         LlmChat::QueryBuilder(payload);
     }
+
+    /**
+     * Applies llama.cpp's common chat template path for multimodal prompts.
+     * This uses the model's Jinja template and disables template-level thinking
+     * so Qwen-style models prefill an empty closed thinking block before content.
+     */
+    bool ApplyAutoChatTemplate(LlmChat::Payload& payload) override;
 
 private:
     /** MTMD + llama application context. */

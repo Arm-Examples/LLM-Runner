@@ -31,7 +31,7 @@ bool s_debugResponses{false};
 std::string s_transcriptPath;
 
 static int maxTokenRetrievalAttempts = 10000;
-static int testCtxLength = 73;       // Arbitrary truncated value to emulate faster end  of context.
+static int testCtxLength = 80;       // Arbitrary truncated value to emulate faster end  of context.
 static int testBatchLength = 64;     // The test batch for text should be fixed to avoid errors,
                                      // when truncating Context length to low values
 static int testImgBatchLength = 256; // The mtmd requires text modality batch-sized to be fixed.
