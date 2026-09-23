@@ -389,15 +389,39 @@
         "name": "Llama-3.2-1B model (SpinQuant_INT4_EO8)",
         "purpose": ".pte model for basic Executorch testing",
         "destination": "executorch/llama-3.2-1b/Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8.pte",
-        "url": "https://huggingface.co/executorch-community/Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8-ET/resolve/main/Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8.pte?download=true",
+        "repo_id": "executorch-community/Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8-ET",
+        "filename": "Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8.pte",
+        "revision": "main",
         "sha256sum": "8715cdba9e91f6bede00cc5f2d6b12397b95225da5630c4972a8da03001cda3b"
         },
         {
         "name": "Llama-3.2-1B model tokenizer",
         "purpose": "tokenizer file for basic Executorch testing",
         "destination": "executorch/llama-3.2-1b/tokenizer.model",
-        "url": "https://huggingface.co/executorch-community/Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8-ET/resolve/main/tokenizer.model?download=true",
+        "repo_id": "executorch-community/Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8-ET",
+        "filename": "tokenizer.model",
+        "revision": "main",
         "sha256sum": "82e9d31979e92ab929cd544440f129d9ecd797b69e327f80f17e1c50d5551b55"
+        }
+      ],
+      "gemma-4-e2b": [
+        {
+          "name": "Gemma-4-E2B-IT model (8da4w+emb4)",
+          "purpose": ".pte model for ExecuTorch testing",
+          "destination": "executorch/gemma-4-e2b/gemma4_e2b_text_8da4w_emb4.pte",
+          "repo_id": "Arm/gemma-4-e2b-text-executorch",
+          "filename": "gemma4_e2b_text_8da4w_emb4.pte",
+          "revision": "main",
+          "sha256sum": "8e1b784256eea13a0caad42c17fca7fac46f94b830877032cc5d658c11be76cc"
+        },
+        {
+          "name": "Gemma-4-E2B-IT tokenizer",
+          "purpose": "tokenizer file for ExecuTorch testing",
+          "destination": "executorch/gemma-4-e2b/tokenizer.json",
+          "repo_id": "Arm/gemma-4-e2b-text-executorch",
+          "filename": "tokenizer.json",
+          "revision": "main",
+          "sha256sum": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f"
         }
       ]
     }

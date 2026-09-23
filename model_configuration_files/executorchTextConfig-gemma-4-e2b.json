@@ -1,0 +1,21 @@
+{
+    "chat": {
+        "systemPrompt": "You are a helpful and factual AI assistant. Answer directly and concisely.",
+        "applyDefaultChatTemplate": true,
+        "systemTemplate": "<|turn>system\n%s<turn|>\n",
+        "userTemplate": "<|turn>user\n%s<turn|>\n<|turn>model\n"
+    },
+    "model": {
+        "llmModelName": "executorch/gemma-4-e2b/gemma4_e2b_text_8da4w_emb4.pte",
+        "isVision": false
+    },
+    "runtime": {
+        "batchSize": 256,
+        "numThreads": 4,
+        "contextSize": 1024
+    },
+    "stopWords": [
+        "<turn|>",
+        "<eos>"
+    ]
+}
