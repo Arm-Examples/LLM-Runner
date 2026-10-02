@@ -68,7 +68,7 @@ public:
      * @brief Encode a multimodal payload (text + optional image).
      * @param payload Input payload containing text and/or image path.
      */
-    virtual void Encode(LlmChat::Payload& payload);
+    virtual void Encode(LlmChat::Payload& payload, InferenceStats* inferenceStats = nullptr);
 
     /** @return The next token id, or no value when generation stops. */
     virtual std::optional<TextTokenId> NextTokenId();
@@ -78,6 +78,9 @@ public:
 
     /** @return The reason the most recent generation terminated. */
     TerminationReason GetLastTerminationReason() const { return m_lastTerminationReason; }
+
+    /** @return Backend-specific metrics from the most recent request, when available. */
+    virtual InferenceStats GetLastInferenceStats() const { return m_lastInferenceStats; }
 
     /** Override the reason reported for the most recent termination. */
     void SetLastTerminationReason(TerminationReason reason) { m_lastTerminationReason = reason; }
@@ -143,6 +146,8 @@ protected:
     TerminationReason m_lastTerminationReason{TerminationReason::None}; /**< Reason the most recent generation terminated. */
     std::string m_eos = "<|endoftext|>";      /**< Used as a general signal in our LLM module to terminate response. */
     LlmConfig m_config;                       /**< Configuration for model. */
+    InferenceStats m_lastInferenceStats{};    /**< Metrics from the most recent request. */
+    bool m_collectInferenceStats{false};      /**< Whether the current request collects metrics. */
 
     /**
      * @brief Function to load the chosen llama model to memory
@@ -224,6 +229,16 @@ protected:
      * @brief Function to create a new sampler object
      */
     virtual void NewSampler();
+
+    /** Record a request-level llama prompt-evaluation time delta. */
+    static void RecordPrefillTime(const llama_perf_context_data& before,
+                                  const llama_perf_context_data& after,
+                                  InferenceStats& stats);
+
+    /** Accumulate a request-level llama generation-evaluation time delta. */
+    static void AccumulateDecodeTime(const llama_perf_context_data& before,
+                                     const llama_perf_context_data& after,
+                                     InferenceStats& stats);
 
     /**
      * @brief Taken from llama.cpp/examples/llama.android/llama/src/main/cpp/llama-android.cpp and

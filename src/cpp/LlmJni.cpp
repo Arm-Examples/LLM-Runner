@@ -96,6 +96,7 @@ inline BenchReport BuildBenchmarkReport(const BenchmarkSession& session)
     BenchReport report{};
     report.config = session.runConfig;
     report.modelSizeBytes = session.bench->GetModelSizeBytes();
+    report.workload = session.bench->GetWorkloadMetadata();
     report.results = session.results;
     report.summary = BenchRunner::ComputeSummaryStats(report.results);
     return report;

@@ -432,13 +432,31 @@ TEST_CASE("LLM Wrapper: End-to-end text and vision tests")
 
         LlmChat::Payload payload{question, "", true};
         CAPTURE(question);
-        llm.Encode(payload);
+        LLM::InferenceStats encodeStats{};
+        llm.Encode(payload, &encodeStats);
+
+        const std::string frameworkType = LLM::GetFrameworkType();
+        if (frameworkType == "onnxruntime-genai" || frameworkType == "executorch") {
+            const auto stats = llm.GetLastInferenceStats();
+            CHECK(stats.textPromptTokens == encodeStats.textPromptTokens);
+            REQUIRE(stats.textPromptTokens.has_value());
+            REQUIRE(stats.prefillTimeMs.has_value());
+            CHECK(stats.textPromptTokens.value() > 0);
+            CHECK_FALSE(stats.fusedPromptPositions.has_value());
+            CHECK(stats.prefillTimeMs.value() > 0.0);
+        }
 
         std::string response = DecodeTokens(llm, 6);
         INFO("Response: " << response);
         DebugPrint("Prompt: ", question);
         DebugPrint("Response: ", response);
         CHECK(response.find("Paris") != std::string::npos);
+
+        if (frameworkType == "onnxruntime-genai" || frameworkType == "executorch") {
+            const auto stats = llm.GetLastInferenceStats();
+            REQUIRE(stats.decodeTimeMs.has_value());
+            CHECK(stats.decodeTimeMs.value() > 0.0);
+        }
 
         llm.FreeLlm();
     }

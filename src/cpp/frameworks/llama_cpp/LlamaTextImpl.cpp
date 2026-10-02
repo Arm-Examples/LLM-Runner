@@ -112,6 +112,7 @@ void LLM::LLMImpl::LlmInit(const LlmConfig& config, std::string sharedLibraryPat
 
 void LLM::LLMImpl::FreeLlm()
 {
+    m_lastInferenceStats = InferenceStats{};
     if (this->m_llmInitialized) {
         FreeContext();
         FreeModel();
@@ -157,7 +158,28 @@ float LLM::LLMImpl::GetDecodeTimings()
 
 void LLM::LLMImpl::ResetTimings()
 {
+    m_lastInferenceStats = InferenceStats{};
     llama_perf_context_reset(this->m_llmContext);
+}
+
+void LLM::LLMImpl::RecordPrefillTime(const llama_perf_context_data& before,
+                                      const llama_perf_context_data& after,
+                                      InferenceStats& stats)
+{
+    const double prefillTimeMs = after.t_p_eval_ms - before.t_p_eval_ms;
+    if (prefillTimeMs > 0.0) {
+        stats.prefillTimeMs = prefillTimeMs;
+    }
+}
+
+void LLM::LLMImpl::AccumulateDecodeTime(const llama_perf_context_data& before,
+                                         const llama_perf_context_data& after,
+                                         InferenceStats& stats)
+{
+    const double decodeTimeMs = after.t_eval_ms - before.t_eval_ms;
+    if (decodeTimeMs > 0.0) {
+        stats.decodeTimeMs = stats.decodeTimeMs.value_or(0.0) + decodeTimeMs;
+    }
 }
 
 std::string LLM::LLMImpl::SystemInfo()
@@ -270,11 +292,20 @@ bool LLM::LLMImpl::ApplyAutoChatTemplate(LlmChat::Payload& payload)
     return true;
 }
 
-void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
+void LLM::LLMImpl::Encode(LlmChat::Payload& payload, InferenceStats* inferenceStats)
 {
+    m_lastInferenceStats = InferenceStats{};
+    m_collectInferenceStats = inferenceStats != nullptr;
     const auto prompt_tokens = common_tokenize(this->m_llmContext, payload.textPrompt, true);
 
     size_t promptLength = prompt_tokens.size();
+    if (m_collectInferenceStats) {
+        m_lastInferenceStats.textPromptTokens = promptLength;
+        m_lastInferenceStats.fusedPromptPositions = promptLength;
+    }
+    const auto prefillPerfBefore = m_collectInferenceStats
+                                      ? llama_perf_context(this->m_llmContext)
+                                      : llama_perf_context_data{};
     // check prompt size
     if (promptLength + this->m_nCur > this->m_nCtx - 4) {
         const auto msg = "Failed to evaluate current prompt, context is full";
@@ -291,6 +322,10 @@ void LLM::LLMImpl::Encode(LlmChat::Payload& payload)
         if (!sub_prompt.empty()) {
             CompletionInit(sub_prompt, lastBatch);
         }
+    }
+    if (m_collectInferenceStats) {
+        RecordPrefillTime(prefillPerfBefore, llama_perf_context(this->m_llmContext), m_lastInferenceStats);
+        *inferenceStats = m_lastInferenceStats;
     }
 }
 
@@ -352,7 +387,13 @@ std::optional<llama_token> LLM::LLMImpl::CompletionLoop()
 
 std::optional<LLM::TextTokenId> LLM::LLMImpl::NextTokenId()
 {
+    const auto decodePerfBefore = m_collectInferenceStats
+                                      ? llama_perf_context(this->m_llmContext)
+                                      : llama_perf_context_data{};
     const auto result = CompletionLoop();
+    if (m_collectInferenceStats) {
+        AccumulateDecodeTime(decodePerfBefore, llama_perf_context(this->m_llmContext), m_lastInferenceStats);
+    }
     if (!result.has_value() && (m_lastTerminationReason == TerminationReason::ContextFull)) {
         this->m_contextFilled = 100;
     } else {

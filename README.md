@@ -447,6 +447,7 @@ Instead of writing your own prompts or relying on framework-specific benchmarkin
 - `Decode time and decode tokens/s`
 - `Time-to-first-token (TTFT)`
 - `Total latency per iteration`
+- `Prepared image pixels/MP/s and backend processed image pixels/vision MP/s where available`
 - `Supports warm-up iterations (ignored in statistics)`
 
 **Usage**
@@ -457,6 +458,8 @@ Instead of writing your own prompts or relying on framework-specific benchmarkin
     --output    <tokens>              | -o <tokens> \
     --threads   <num_threads>         | -t <num_threads> \
     --iterations <num_iterations>     | -n <num_iterations> \
+    [ --scenario <json>               | -s <json> ] \
+    [ --model-root <dir> ] \
     [ --context <tokens>              | -c <tokens> ] \
     [ --json-output <path>            | -J <path> ] \
     [ --warmup <warmup_iterations>    | -w <warmup_iterations> ]
@@ -468,6 +471,24 @@ and ExecuTorch (`.pte`). Use the model package directory for backends that load 
 files from one folder, such as `onnxruntime-genai` and `MNN`. For ExecuTorch, place
 the tokenizer file in the same directory as the `.pte` model file. The loader searches
 for `tokenizer.model`, `tokenizer.json`, or `tokenizer.bin` in that directory.
+
+The `--scenario <json>` option runs a user-provided payload instead of a synthetic
+text prompt. The scenario JSON may contain `image` or `image_path`, optional `prompt`,
+and optional `max_output_tokens`. Relative image paths are resolved from the scenario
+file location. If an image is supplied, `--model` must point to a wrapper model config
+JSON with `model.isVision=true`. Relative model paths inside that config are resolved
+from `--model-root`, or from `./resources_downloaded/models` when that directory exists.
+Relative paths remain relative after resolution; absolute paths are preserved only when
+supplied explicitly. For image scenarios, `original_image_size` describes the source image and
+`prepared_image_size`/prepared image pixels describe the image passed from the
+wrapper to the backend after `model.maxInputDimension` preprocessing. Backends may additionally report
+`processed_image_pixels`, `vision_time_ms`, and `vision_megapixels_per_sec` when
+they expose the actual resized/tiled image tensor workload entering the vision
+encoder. Backend token accounting is reported separately as
+`text_prompt_tokens`, `vision_tokens`, and `fused_prompt_positions` when those
+values are available. Prepared image MP/s is computed from the full multimodal
+encode time; vision MP/s is reported only when backend processed pixels and
+vision time are known.
 
 > **NOTE**: On-device execution requires that `llm-bench-cli` and its backend shared libraries reside in the same directory. Builds using `GGML_OPENMP=ON` additionally require `libomp.so` to be placed in that directory as well.
 

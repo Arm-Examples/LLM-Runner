@@ -71,7 +71,7 @@ public:
      * Encode a payload containing text.
      * @param payload Input payload containing text.
      */
-    void Encode(LlmChat::Payload& payload);
+    void Encode(LlmChat::Payload& payload, InferenceStats* inferenceStats = nullptr);
 
     /** @return The next token id, or no value when generation stops. */
     std::optional<TextTokenId> NextTokenId();
@@ -81,6 +81,9 @@ public:
 
     /** @return The reason the most recent generation terminated. */
     TerminationReason GetLastTerminationReason() const { return m_lastTerminationReason; }
+
+    /** @return Backend-specific metrics from the most recent request, when available. */
+    InferenceStats GetLastInferenceStats() const { return m_lastInferenceStats; }
 
     /** Override the reason reported for the most recent termination. */
     void SetLastTerminationReason(TerminationReason reason) { m_lastTerminationReason = reason; }
@@ -151,6 +154,8 @@ private:
     double m_totalDecoderTime{0.0};
     double m_totalEncoderTime{0.0};
     TerminationReason m_lastTerminationReason{TerminationReason::None};
+    InferenceStats m_lastInferenceStats{};
+    bool m_collectInferenceStats{false};
     bool m_initialized{false};
     std::string m_eos{LLM::endToken};
 

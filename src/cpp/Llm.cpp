@@ -12,6 +12,8 @@
 #include <atomic>
 #include <chrono>
 #include <filesystem>
+#include <cstdint>
+#include <string>
 #include "Logger.hpp"
 #include "BuildInfo.hpp"
 #include "LlmBridge.hpp"
@@ -23,30 +25,65 @@
 
 namespace {
 
-void PrepareImagePayload(LlmChat::Payload& payload, const LlmConfig& config)
-{
-    if (payload.imagePath.empty()) {
-        return;
-    }
+struct PreparedImagePayload {
+    ImageUtils::ImageSize originalSize{};
+    ImageUtils::ImageSize preparedSize{};
+};
 
+std::uint64_t CountImagePixels(const ImageUtils::ImageSize& imageSize)
+{
+    return static_cast<std::uint64_t>(imageSize.width) * static_cast<std::uint64_t>(imageSize.height);
+}
+
+void MergeInferenceStats(LLM::InferenceStats& target, const LLM::InferenceStats& source)
+{
+    const auto mergeOptional = [](auto& targetField, const auto& sourceField) {
+        if (sourceField.has_value()) {
+            targetField = sourceField;
+        }
+    };
+
+    target.imageCount = std::max(target.imageCount, source.imageCount);
+    mergeOptional(target.originalImagePixels, source.originalImagePixels);
+    mergeOptional(target.originalImageWidth, source.originalImageWidth);
+    mergeOptional(target.originalImageHeight, source.originalImageHeight);
+    mergeOptional(target.preparedImagePixels, source.preparedImagePixels);
+    mergeOptional(target.preparedImageWidth, source.preparedImageWidth);
+    mergeOptional(target.preparedImageHeight, source.preparedImageHeight);
+    mergeOptional(target.processedImagePixels, source.processedImagePixels);
+    mergeOptional(target.textPromptTokens, source.textPromptTokens);
+    mergeOptional(target.visionTokens, source.visionTokens);
+    mergeOptional(target.fusedPromptPositions, source.fusedPromptPositions);
+    mergeOptional(target.visionTimeMs, source.visionTimeMs);
+    mergeOptional(target.prefillTimeMs, source.prefillTimeMs);
+    mergeOptional(target.decodeTimeMs, source.decodeTimeMs);
+    if (!source.processedImagePixelsSource.empty()) {
+        target.processedImagePixelsSource = source.processedImagePixelsSource;
+    }
+}
+
+PreparedImagePayload PrepareImagePayload(LlmChat::Payload& payload, const LlmConfig& config)
+{
     const auto maxInputDimension = config.GetConfigInt(LlmConfig::ConfigParam::MaxInputDimension);
     const auto imageSize = ImageUtils::ReadImageSize(payload.imagePath);
     const auto resizedImageSize = ImageUtils::ComputeResizedImageSize(imageSize, maxInputDimension);
     if (imageSize.width == resizedImageSize.width && imageSize.height == resizedImageSize.height) {
-        return;
+        return PreparedImagePayload{imageSize, imageSize};
     }
 
-    static std::atomic<uint64_t> imageCounter{0};
+    static std::atomic<std::uint64_t> imageCounter{0};
     const std::filesystem::path inputPath{payload.imagePath};
     const auto imageId = imageCounter.fetch_add(1, std::memory_order_relaxed);
     const auto outputPath = inputPath.parent_path() /
                             (inputPath.stem().string() + "-resized-" +
                              std::to_string(imageId) + ".png");
 
-    payload.imagePath = ImageUtils::ResizeImageToFile(
+    const auto preparedImage = ImageUtils::ResizeImageToFile(
         payload.imagePath,
         outputPath.string(),
-        maxInputDimension).path;
+        maxInputDimension);
+    payload.imagePath = preparedImage.path;
+    return PreparedImagePayload{imageSize, preparedImage.size};
 }
 
 } // namespace
@@ -106,6 +143,7 @@ void LLM::FreeLlm()
 #if defined(ENABLE_STREAMLINE)
     sl::Scope scope(sl::CH_CONTROL, ANNOTATE_DKGRAY, "LLM::FreeLlm");
 #endif
+    m_lastInferenceStats = InferenceStats{};
     if (!this->m_impl) {
         return;
     }
@@ -143,6 +181,7 @@ void LLM::ResetTimings()
 #if defined(ENABLE_STREAMLINE)
     sl::Scope scope(sl::CH_CONTROL, ANNOTATE_DKGRAY, "LLM::ResetTimings");
 #endif
+    m_lastInferenceStats = InferenceStats{};
     this->m_impl->ResetTimings();
 }
 
@@ -163,7 +202,9 @@ void LLM::ResetContext()
     this->m_impl->SetLastTerminationReason(TerminationReason::None);
 }
 
-void LLM::Encode(LlmChat::Payload& payload) {
+void LLM::Encode(LlmChat::Payload& payload, InferenceStats* inferenceStats) {
+    m_lastInferenceStats = InferenceStats{};
+    m_collectInferenceStats = inferenceStats != nullptr;
 #if defined(ENABLE_STREAMLINE)
     sl::Scope scope(sl::CH_ENCODE, ANNOTATE_GREEN, "LLM::Encode");
 
@@ -193,11 +234,24 @@ void LLM::Encode(LlmChat::Payload& payload) {
         if(!supportsVision) {
             THROW_ERROR("Error. Attempting to Encode an unsupported Image payload");
         }
-        PrepareImagePayload(payload, m_config);
+        const auto preparedImage = PrepareImagePayload(payload, m_config);
+        if (inferenceStats) {
+            m_lastInferenceStats.imageCount = 1;
+            m_lastInferenceStats.originalImagePixels = CountImagePixels(preparedImage.originalSize);
+            m_lastInferenceStats.originalImageWidth = preparedImage.originalSize.width;
+            m_lastInferenceStats.originalImageHeight = preparedImage.originalSize.height;
+            m_lastInferenceStats.preparedImagePixels = CountImagePixels(preparedImage.preparedSize);
+            m_lastInferenceStats.preparedImageWidth = preparedImage.preparedSize.width;
+            m_lastInferenceStats.preparedImageHeight = preparedImage.preparedSize.height;
+        }
     }
     this->m_impl->QueryBuilder(payload);
     this->m_impl->SetLastTerminationReason(TerminationReason::None);
-    this->m_impl->Encode(payload);
+    this->m_impl->Encode(payload, inferenceStats);
+    if (inferenceStats) {
+        MergeInferenceStats(m_lastInferenceStats, this->m_impl->GetLastInferenceStats());
+        *inferenceStats = m_lastInferenceStats;
+    }
 }
 
 bool LLM::SupportsModality(const std::vector<std::string> &inptMods, std::string modality) const {
@@ -224,7 +278,11 @@ std::optional<LLM::TextTokenId> LLM::NextTokenId()
     sl::Scope scope(sl::CH_DECODE, ANNOTATE_PURPLE, "LLM::NextTokenId");
 #endif
 
-    return this->m_impl->NextTokenId();
+    auto token = this->m_impl->NextTokenId();
+    if (m_collectInferenceStats) {
+        MergeInferenceStats(m_lastInferenceStats, this->m_impl->GetLastInferenceStats());
+    }
+    return token;
 }
 
 std::optional<LLM::TextTokenId> LLM::CancellableNextTokenId(long operationId) const
@@ -277,6 +335,16 @@ void LLM::Cancel(long operationId)
 size_t LLM::GetChatProgress() const
 {
     return this->m_impl->GetChatProgress();
+}
+
+LLM::InferenceStats LLM::GetLastInferenceStats() const
+{
+    return m_lastInferenceStats;
+}
+
+std::uint64_t LLM::NumImagePixelsProcessed() const
+{
+    return m_lastInferenceStats.processedImagePixels.value_or(m_lastInferenceStats.preparedImagePixels.value_or(0));
 }
 
 std::string LLM::GetFrameworkType()

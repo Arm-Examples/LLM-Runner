@@ -38,6 +38,31 @@ public:
     using TextTokenId = int32_t;
 
     /**
+     * @brief Metrics captured for the most recent request.
+     *
+     * Fields are optional unless the wrapper/backend can report them exactly.
+     * Pixel fields intentionally distinguish source image size, wrapper-prepared
+     * image size, and backend-internal processed image tensor size.
+     */
+    struct InferenceStats {
+        std::size_t imageCount = 0;
+        std::optional<std::uint64_t> originalImagePixels{};
+        std::optional<int> originalImageWidth{};
+        std::optional<int> originalImageHeight{};
+        std::optional<std::uint64_t> preparedImagePixels{};
+        std::optional<int> preparedImageWidth{};
+        std::optional<int> preparedImageHeight{};
+        std::optional<std::uint64_t> processedImagePixels{};
+        std::optional<std::size_t> textPromptTokens{};
+        std::optional<std::size_t> visionTokens{};
+        std::optional<std::size_t> fusedPromptPositions{};
+        std::optional<double> visionTimeMs{};
+        std::optional<double> prefillTimeMs{};
+        std::optional<double> decodeTimeMs{};
+        std::string processedImagePixelsSource{};
+    };
+
+    /**
      * @brief Construct an LLM instance.
      */
     explicit LLM();
@@ -98,8 +123,9 @@ public:
     /**
      * Encode a text query into the model. Call NextTokenId() to retrieve token ids.
      * @param payload The input payload containing text and optional image data.
+     * @param inferenceStats Optional output for inference statistics. Statistics are not collected when null.
      */
-    void Encode(LlmChat::Payload& payload);
+    void Encode(LlmChat::Payload& payload, InferenceStats* inferenceStats = nullptr);
 
     /** @return The next generated token id, or no value when generation stops. */
     [[nodiscard]] std::optional<TextTokenId> NextTokenId();
@@ -136,6 +162,16 @@ public:
      */
     [[nodiscard]] std::size_t GetChatProgress() const;
 
+    /**
+     * @return Metrics captured for the most recent request.
+     */
+    [[nodiscard]] InferenceStats GetLastInferenceStats() const;
+
+    /**
+     * @return Backend processed image pixels from the most recent request when available, otherwise prepared image pixels.
+     */
+    [[nodiscard]] std::uint64_t NumImagePixelsProcessed() const;
+
     /** @return Framework type string (e.g., backend name). */
     [[nodiscard]] static std::string GetFrameworkType();
 
@@ -161,6 +197,8 @@ protected:
 
 private:
     LlmConfig m_config{};
+    InferenceStats m_lastInferenceStats{};
+    bool m_collectInferenceStats{false};
     bool SupportsModality(const std::vector<std::string> &inptMods, std::string modality) const;
 
 };
