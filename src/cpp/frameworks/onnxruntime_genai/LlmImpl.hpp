@@ -202,11 +202,11 @@ private:
 
     // Map llm-log-level to Onnx log severity level
     std::unordered_map<int,int> m_onnxLogMap{
-        {/*LLM_LOG_ERROR*/   0 , /*ORT_LOGGING_LEVEL_ERROR*/ 3},
-        {/*LLM_LOG_WARN*/    3 ,/*ORT_LOGGING_LEVEL_WARN*/   2},
-        {/*LLM_LOG_INFO*/    2 ,/*ORT_LOGGING_LEVEL_INFO*/   1},
-        {/*LLM_LOG_DEBUG*/   3 ,/*ORT_LOGGING_LEVEL_DEBUG*/  0},
-        {/*LLM_LOG_VERBOSE*/ 4 ,/*ORT_LOGGING_LEVEL_DEBUG*/  0}
+        {/*LLM_LOG_ERROR*/   0, /*ORT_LOGGING_LEVEL_ERROR*/   3},
+        {/*LLM_LOG_WARN*/    1, /*ORT_LOGGING_LEVEL_WARNING*/ 2},
+        {/*LLM_LOG_INFO*/    2, /*ORT_LOGGING_LEVEL_INFO*/    1},
+        {/*LLM_LOG_DEBUG*/   3, /*ORT_LOGGING_LEVEL_VERBOSE*/ 0},
+        {/*LLM_LOG_VERBOSE*/ 4, /*ORT_LOGGING_LEVEL_VERBOSE*/ 0}
     };
 
     // Used as a general signal in our LLM module to terminate response

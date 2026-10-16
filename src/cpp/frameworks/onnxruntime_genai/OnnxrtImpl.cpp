@@ -72,13 +72,24 @@ void LLM::LLMImpl::InitConfigs()
     // This will fall back to default provider which is: CPU
     this->m_llmConfigsPtr->ClearProviders();
 
+    int logSeverityLevel = 3; // ORT_LOGGING_LEVEL_ERROR
+    const auto onnxLogLevelIt = m_onnxLogMap.find(ACTIVE_LOG_LEVEL);
+    if (onnxLogLevelIt != m_onnxLogMap.end())
+    {
+        logSeverityLevel = onnxLogLevelIt->second;
+    }
+    else
+    {
+        LOG_WARN("Unknown ACTIVE_LOG_LEVEL=%d; defaulting ORT log_severity_level to ERROR", ACTIVE_LOG_LEVEL);
+    }
+
     const json patchJson = {
         {"model", {
             {"decoder", {
                 {"session_options", {
                     {"intra_op_num_threads", this->m_numOfThreads},
                     {"inter_op_num_threads", 1},
-                    {"log_severity_level", m_onnxLogMap.at(ACTIVE_LOG_LEVEL)}
+                    {"log_severity_level", logSeverityLevel}
                 }}
             }}
         }}
