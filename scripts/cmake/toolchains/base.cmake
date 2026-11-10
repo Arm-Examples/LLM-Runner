@@ -25,6 +25,7 @@ message(STATUS "BUILD_DEBUG = ${BUILD_DEBUG}")
 message(STATUS "BUILD_BENCHMARK   = ${BUILD_BENCHMARK}")
 message(STATUS "BUILD_LLM_TESTING = ${BUILD_LLM_TESTING}")
 message(STATUS "BUILD_JNI_LIB     = ${BUILD_JNI_LIB}")
+message(STATUS "BUILD_REBAR       = ${BUILD_REBAR}")
 message(STATUS "CMAKE_BUILD_TYPE  = ${CMAKE_BUILD_TYPE}")
 
 # Only set (Global) LOG_LEVEL if not provided by user (CLI/presets)

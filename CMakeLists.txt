@@ -6,6 +6,14 @@
 
 cmake_minimum_required(VERSION 3.27)
 
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+    message(FATAL_ERROR
+        "In-source builds are not supported.\n"
+        "Use an out-of-source build directory, for example:\n"
+        "  cmake --preset=native -B build\n"
+        "  cmake --build ./build\n")
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 
 # If CMake toolchain is not defined, set it here.
@@ -101,6 +109,7 @@ if (USE_KLEIDIAI)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/scripts/cmake")
+include(origin-rpath)
 
 # Set the runtime and lib directories
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/archive)
@@ -125,11 +134,32 @@ include(configuration-options)
 # in the repository, they won't be downloaded again for each build.
 include(download-resources)
 
+# Optional component: the core LLM wrapper library. This can be disabled to build
+# only rebar-ml (and its tests) without fetching framework dependencies.
+option(BUILD_LLM_WRAPPER "Build LLM wrapper component" ON)
+
 # Add sources or interface files to the build.
-add_subdirectory(src)
+if(BUILD_LLM_WRAPPER)
+    add_subdirectory(src)
+endif()
 
 # Add tests if they are enabled.
 if(BUILD_LLM_TESTING)
     enable_testing()
-    add_subdirectory(test)
+    if(BUILD_LLM_WRAPPER)
+        add_subdirectory(test)
+    endif()
+endif()
+
+# Default to enabling Compute Flow integration when the CF wiring is present in the tree.
+# Users can still explicitly disable it via -DUSE_CF=OFF.
+if(BUILD_REBAR AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/rebar_ml/cf/CMakeLists.txt")
+    if(NOT DEFINED USE_CF)
+        set(USE_CF ON CACHE BOOL "Enable Compute Flow integration for rebar-ml")
+    endif()
+endif()
+
+# Optional component built on top of the core library.
+if(BUILD_REBAR)
+    add_subdirectory(rebar_ml)
 endif()

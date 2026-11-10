@@ -220,7 +220,7 @@
           "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
           "filename": "config.json",
           "revision": "main",
-          "sha256sum": "92853033efe602f95efca3e1c05cd8b108f973c8beed417843a9671f8147ed8d"
+          "sha256sum": "ab7bbc21166d66e4d9d4eb8731dd8518ac3afbfa96d23a032c9386a3024d53e2"
         },
         {
           "name": "mnn llm model",
@@ -229,7 +229,7 @@
           "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
           "filename": "llm.mnn",
           "revision": "main",
-          "sha256sum": "23df98f8b341b277365e0bbca025c1d192939e3d32d7f79776352c6f32e77960"
+          "sha256sum": "537118e2cd5228c87d05f7e32774625f4087e2cd4b14fc338f960951d695cfcd"
         },
         {
           "name": "mnn llm model json",
@@ -238,7 +238,7 @@
           "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
           "filename": "llm.mnn.json",
           "revision": "main",
-          "sha256sum": "7131ff4f1a441add1039d371815ad94652ae6801f579591cb2f9ad90b5954025"
+          "sha256sum": "fc9554092ac66bc37bcc9ab1ce2823d7dde6106c893d58f566ec16fbe5e6773b"
         },
         {
           "name": "mnn llm model weight",
@@ -247,7 +247,7 @@
           "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
           "filename": "llm.mnn.weight",
           "revision": "main",
-          "sha256sum": "c93f71a2dbecf9328782bd38861656d8faa82e95e7f99607350074768a482054"
+          "sha256sum": "74ae67e396eb5ca2620e64e8cd0060adf3cf2ebfc694dd89e97a2110b77c4e6e"
         },
         {
           "name": "llm config",
@@ -256,16 +256,16 @@
           "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
           "filename": "llm_config.json",
           "revision": "main",
-          "sha256sum": "a88234b36c2af0eff8e5c89667011badf71c15e30459eb0e21030a8f3f9ed240"
+          "sha256sum": "bdc74925f2fdd675257d1c16f37a8fdb921da838badb31263266b20c107b6e1c"
         },
         {
           "name": "tokenizer",
           "purpose": "tokenizer file",
-          "destination": "mnn/qwen35-2b/tokenizer.txt",
+          "destination": "mnn/qwen35-2b/tokenizer.mtok",
           "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
-          "filename": "tokenizer.txt",
+          "filename": "tokenizer.mtok",
           "revision": "main",
-          "sha256sum": "7e75de1f279a10b65bd9dc1a5207205cb8993823861c4c42bbbd74e48e1c23a4"
+          "sha256sum": "1c4f07daae481c0cd4118495f97ea9a9dd78fdef7867d4e56af76499150ef50b"
         },
         {
           "name": "vision model file",
@@ -274,7 +274,7 @@
           "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
           "filename": "visual.mnn",
           "revision": "main",
-          "sha256sum": "88fc40a7b676e90eb2cb86d854db15cb90b9eb1f34087ab0f48c5e43572c8dac"
+          "sha256sum":"ca94442d96bef3fe644dcd5a00803a8ee03cc3e3ce7be26f4bf905bd825abea2"
         },
         {
           "name": "vision model weights",
@@ -283,7 +283,7 @@
           "repo_id": "taobao-mnn/Qwen3.5-2B-MNN",
           "filename": "visual.mnn.weight",
           "revision": "main",
-          "sha256sum": "8f90e106f5b9ae9a939faed240305cfdd5c6740ae91d3fc418a990bee0cce36b"
+          "sha256sum": "c9bd9ee865062e83a0cb8bfb4f2ee3c96023be6ab11d4fe1725ee8f5abf58597"
         }
       ]
     },

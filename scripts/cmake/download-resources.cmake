@@ -9,10 +9,18 @@ include(configuration-options)
 
 include(python-deps)
 
-set(LLM_HF_HUB_PIP_PACKAGE "huggingface_hub")
-set(LLM_HF_HUB_PIP_CONSTRAINT ">=0.20.0")
-set(LLM_HF_HUB_PIP_SPEC "${LLM_HF_HUB_PIP_PACKAGE}${LLM_HF_HUB_PIP_CONSTRAINT}")
-llm_ensure_python_dependency("huggingface_hub" "${LLM_HF_HUB_PIP_SPEC}")
+llm_find_python_interpreter()
+
+if(DOWNLOAD_LLM_MODELS)
+    set(LLM_HF_HUB_PIP_PACKAGE "huggingface_hub")
+    set(LLM_HF_HUB_PIP_CONSTRAINT ">=0.20.0")
+    set(LLM_HF_HUB_PIP_SPEC "${LLM_HF_HUB_PIP_PACKAGE}${LLM_HF_HUB_PIP_CONSTRAINT}")
+    llm_ensure_python_dependency("huggingface_hub" "${LLM_HF_HUB_PIP_SPEC}")
+else()
+    message(STATUS
+        "Skipping Hugging Face Hub dependency install "
+        "(DOWNLOAD_LLM_MODELS=OFF).")
+endif()
 
 # If the downloads directory doesn't exist, create one
 if (NOT EXISTS ${DOWNLOADS_DIR})
