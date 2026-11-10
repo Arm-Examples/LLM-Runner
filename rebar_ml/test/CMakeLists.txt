@@ -93,6 +93,7 @@ if(TARGET rebar_ml_jni_core)
     add_jar(
             rebar_ml_jni_core_tests
             java/com/arm/rebarml/RebarTestJNI.java
+            java/com/arm/rebarml/RebarTeePipelineTestJNI.java
             INCLUDE_JARS
             ${_jarDependencies}
             ${_rebarJarFile})
@@ -117,6 +118,21 @@ if(TARGET rebar_ml_jni_core)
             org.junit.runner.JUnitCore
             com.arm.rebarml.RebarTestJNI)
     set_tests_properties(rebar_ml_jni_core_ctest PROPERTIES
+        ENVIRONMENT
+    "REBAR_ROOT_BIN_DIR=${REBAR_ROOT_BIN_DIR};REBAR_ROOT_LIB_DIR=${REBAR_ROOT_LIB_DIR}")
+
+    add_test(
+            NAME rebar_ml_jni_tee_pipeline_ctest
+            COMMAND
+            ${Java_JAVA_EXECUTABLE}
+            -Djava.library.path=${_jniLibPath}
+            -Dbackend.shared.lib.dir=${REBAR_ROOT_BIN_DIR}
+            -Drebar.root.bin.dir=${REBAR_ROOT_BIN_DIR}
+            -Drebar.root.lib.dir=${REBAR_ROOT_LIB_DIR}
+            -cp ${_jarDependenciesTests}:${_rebarJarFile}:${_jarFile}
+            org.junit.runner.JUnitCore
+            com.arm.rebarml.RebarTeePipelineTestJNI)
+    set_tests_properties(rebar_ml_jni_tee_pipeline_ctest PROPERTIES
         ENVIRONMENT
     "REBAR_ROOT_BIN_DIR=${REBAR_ROOT_BIN_DIR};REBAR_ROOT_LIB_DIR=${REBAR_ROOT_LIB_DIR}")
 
