@@ -1,0 +1,32 @@
+//
+// SPDX-FileCopyrightText: Copyright 2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+package com.arm.rebarml;
+
+import java.util.Objects;
+
+public final class AudioOutputPort extends NativeResource {
+    AudioOutputPort(long nativeHandle) { super(nativeHandle); }
+
+    public void connect(AudioInputPort destination) {
+        connect(destination, ConnectionOptions.DEFAULT);
+    }
+
+    public void connect(AudioInputPort destination, ConnectionOptions options) {
+        Objects.requireNonNull(destination, "destination");
+        Objects.requireNonNull(options, "options");
+        RebarML.connectAudioPorts(
+                nativeHandle(),
+                destination.getNativeHandle(),
+                options.queueCapacity(),
+                options.overflowPolicy().ordinal());
+    }
+
+    @Override
+    protected void releaseNativeHandle(long nativeHandle) {
+        RebarML.releaseAudioOutputPort(nativeHandle);
+    }
+}
