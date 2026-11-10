@@ -35,6 +35,7 @@ set(DOWNLOADS_LOCK_TIMEOUT 600
 option(BUILD_BENCHMARK     "Build benchmark binary"               ON)
 option(BUILD_LLM_TESTING   "Build unit tests"                     ON)
 option(BUILD_JNI_LIB       "Build JNI lib"                        ON)
+option(BUILD_REBAR         "Build rebar component"                ON)
 option(LLAMA_BUILD_COMMON  "Include LLAMA common"                 ON)
 option(ENABLE_STREAMLINE   "Enable Arm Streamline annotations"    OFF)
 option(DOWNLOAD_LLM_MODELS "Download LLM models during configure" ON)

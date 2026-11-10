@@ -12,6 +12,7 @@
 - [Overview](#overview)
 - [Documentation](#documentation)
 - [Quick start](#quick-start)
+- [rebar-ml (optional component)](#rebar-ml-optional-component)
 - [Supported Models](#supported-models)
 - [Supported Platforms](#supported-platforms)
 - [Framework specific configuration options](#framework-specific-configuration-options)
@@ -91,6 +92,37 @@ Test project /home/user/llm/build
 100% tests passed, 0 tests failed out of 2
 ```
 
+## rebar-ml
+
+This repository also contains a component called **rebar-ml** (`rebar_ml/` directory; C++
+namespace `rebar_ml::`; Java package `com.arm.rebarml`): a small native graph runtime (nodes + typed
+ports + pipeline sessions) with optional Java/JNI bindings.
+
+Build and run the rebar-ml tests:
+
+```sh
+cmake --preset=native -B build
+cmake --build ./build
+ctest --test-dir ./build -R rebar_ml --output-on-failure
+```
+
+Disable rebar-ml with `-DBUILD_REBAR=OFF`.
+
+Optional: when the Compute Flow integration is present (`rebar_ml/cf/`), build with CF enabled and run
+the CF-backed Moonshine STT smoketest:
+
+```sh
+cmake --preset=native -B build
+cmake --build ./build
+
+# Point this at the installed CF Moonshine model package dir (contains moonshine_manifest_base_en.json).
+export REBAR_CF_MOONSHINE_PACKAGE_DIR=/path/to/moonshine-base-en
+ctest --test-dir ./build -R rebar_ml --output-on-failure
+```
+
+See `rebar_ml/README.md` and `rebar_ml/docs/COMPUTE_FLOW_INTEGRATION.md` for details (SDK provisioning,
+Android builds, and environment variables).
+
 
 ## Documentation
 
@@ -103,6 +135,8 @@ Test project /home/user/llm/build
 | [`docs/integration.md`](docs/integration.md)                       | Configuration options and integration notes.                 |
 | [`docs/troubleshooting.md`](docs/troubleshooting.md)               | Common errors and fixes.                                     |
 | [`docs/contributing.md`](docs/contributing.md)                     | Contribution process and SPDX guidance.                      |
+| [`rebar_ml/README.md`](rebar_ml/README.md)                         | rebar-ml graph runtime (nodes + sessions) build/test and outputs. |
+| [`rebar_ml/docs/README.md`](rebar_ml/docs/README.md)               | rebar-ml docs index (architecture, Android integration, migration notes). |
 
 ## Repository Layout
 
@@ -115,6 +149,7 @@ Test project /home/user/llm/build
 | `model_configuration_files/` | Model configuration files used by the build system and runtime.                                 |
 | `resources_downloaded/`      | Default directory where models and example assets are downloaded.                               |
 | `test/`                      | C++/Java unit tests  and supporting test resources.                                             |
+| `rebar_ml/`                  | Optional graph runtime + nodes (rebar-ml) and optional Java/JNI surface.                        |
 
 
 ## Supported Models
@@ -124,7 +159,7 @@ Test project /home/user/llm/build
 | **llama.cpp**         | `phi-2`<br/>`qwen-2-VL`<br/>`qwen-3.5-VL-4B-Q4_0`<br/>`llama-3.2-1B`         | [mit](https://huggingface.co/microsoft/phi-2/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen3.5-4B/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)          |
 | **onnxruntime-genai** | `phi4-mini-instruct`<br/>`llama-3.2-1B`            | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)                                                                                  |
 | **mnn**               | `qwen-2.5-VL`<br/>`qwen-3.5-2B`<br/>`llama-3.2-1B` | [apache-2.0](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen3.5-2B/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
-| **executorch**        | `llama-3.2-1B`<br/>`gemma-4-e2b`                   | [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)<br/> [apache-2.0](https://ai.google.dev/gemma/docs/gemma_4_license)                                                                                                    |
+| **executorch**        | `llama-3.2-1B`                                     | [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)                                                                                                                                                                     |
 
 
 ## Supported Platforms
@@ -241,7 +276,7 @@ with the LLM/data-loader/module/tensor/runner utility extensions required for
 text-path bring-up, and it explicitly disables `pybind` because only the C++
 runtime integration is needed in this phase.
 
-> **NOTE**: This repository is currently pinned to ExecuTorch `v1.4.1`
+> **NOTE**: This repository is currently pinned to ExecuTorch `v1.2.0`
 for the runtime integration work.
 
 > **NOTE**: ExecuTorch runs Python code generation during CMake configure.
@@ -394,11 +429,6 @@ This project uses the **Llama 3.2 1B Instruct SpinQuant INT4** model as its defa
 The model is distributed as an ExecuTorch `.pte` program with SpinQuant INT4 quantization, which is recommended for efficient text generation on Arm® CPUs.
 
 - You can access the model from [Hugging Face](https://huggingface.co/executorch-community/Llama-3.2-1B-Instruct-SpinQuant_INT4_EO8-ET)
-
-The **Gemma 4 E2B** text model is also supported using an ExecuTorch `.pte` program with 8da4w+emb4 quantization.
-
-- You can access the model from [Hugging Face](https://huggingface.co/Arm/gemma-4-e2b-text-executorch)
-- The model is licensed under the [Apache License 2.0](https://ai.google.dev/gemma/docs/gemma_4_license)
 - The model configuration is declared in the [`requirements.json`](scripts/py/requirements.json)
 
 However, any compatible text model exported for the ExecuTorch LLM runtime can be used.
@@ -407,7 +437,7 @@ To use an ExecuTorch model with this framework, the following files are required
 - `model_name.pte`: ExecuTorch model program
 - `tokenizer.model`, `tokenizer.json`, or `tokenizer.bin`: Tokenizer file placed in the same directory as the `.pte` model
 
-Wrapper configurations are available in [`executorchTextConfig-llama-3.2-1B.json`](model_configuration_files/executorchTextConfig-llama-3.2-1B.json) and [`executorchTextConfig-gemma-4-e2b.json`](model_configuration_files/executorchTextConfig-gemma-4-e2b.json).
+The default wrapper configuration is available in [`executorchTextConfig-llama-3.2-1B.json`](model_configuration_files/executorchTextConfig-llama-3.2-1B.json).
 
 > **NOTE**: The ExecuTorch backend currently supports text models only. If `runtime.contextSize` exceeds the context length exported into the `.pte` model, the backend cannot increase it at runtime; re-export the model with a larger context length.
 
@@ -447,7 +477,6 @@ Instead of writing your own prompts or relying on framework-specific benchmarkin
 - `Decode time and decode tokens/s`
 - `Time-to-first-token (TTFT)`
 - `Total latency per iteration`
-- `Prepared image pixels/MP/s and backend processed image pixels/vision MP/s where available`
 - `Supports warm-up iterations (ignored in statistics)`
 
 **Usage**
@@ -458,8 +487,6 @@ Instead of writing your own prompts or relying on framework-specific benchmarkin
     --output    <tokens>              | -o <tokens> \
     --threads   <num_threads>         | -t <num_threads> \
     --iterations <num_iterations>     | -n <num_iterations> \
-    [ --scenario <json>               | -s <json> ] \
-    [ --model-root <dir> ] \
     [ --context <tokens>              | -c <tokens> ] \
     [ --json-output <path>            | -J <path> ] \
     [ --warmup <warmup_iterations>    | -w <warmup_iterations> ]
@@ -471,24 +498,6 @@ and ExecuTorch (`.pte`). Use the model package directory for backends that load 
 files from one folder, such as `onnxruntime-genai` and `MNN`. For ExecuTorch, place
 the tokenizer file in the same directory as the `.pte` model file. The loader searches
 for `tokenizer.model`, `tokenizer.json`, or `tokenizer.bin` in that directory.
-
-The `--scenario <json>` option runs a user-provided payload instead of a synthetic
-text prompt. The scenario JSON may contain `image` or `image_path`, optional `prompt`,
-and optional `max_output_tokens`. Relative image paths are resolved from the scenario
-file location. If an image is supplied, `--model` must point to a wrapper model config
-JSON with `model.isVision=true`. Relative model paths inside that config are resolved
-from `--model-root`, or from `./resources_downloaded/models` when that directory exists.
-Relative paths remain relative after resolution; absolute paths are preserved only when
-supplied explicitly. For image scenarios, `original_image_size` describes the source image and
-`prepared_image_size`/prepared image pixels describe the image passed from the
-wrapper to the backend after `model.maxInputDimension` preprocessing. Backends may additionally report
-`processed_image_pixels`, `vision_time_ms`, and `vision_megapixels_per_sec` when
-they expose the actual resized/tiled image tensor workload entering the vision
-encoder. Backend token accounting is reported separately as
-`text_prompt_tokens`, `vision_tokens`, and `fused_prompt_positions` when those
-values are available. Prepared image MP/s is computed from the full multimodal
-encode time; vision MP/s is reported only when backend processed pixels and
-vision time are known.
 
 > **NOTE**: On-device execution requires that `llm-bench-cli` and its backend shared libraries reside in the same directory. Builds using `GGML_OPENMP=ON` additionally require `libomp.so` to be placed in that directory as well.
 
