@@ -12,7 +12,6 @@ set(LLM_FRAMEWORK "llama.cpp" CACHE STRING
 # Available options:
 set(LLM_FRAMEWORK_VALUES
     "llama.cpp"
-    "onnxruntime-genai"
     "mnn"
     "executorch")
 set(CACHE LLM_FRAMEWORK PROPERTY STRINGS ${LLM_FRAMEWORK_VALUES})
