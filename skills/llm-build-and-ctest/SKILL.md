@@ -28,7 +28,6 @@ Common configuration flags:
 ```sh
 # Select backend
 cmake --preset=native -B build -DLLM_FRAMEWORK=llama.cpp
-cmake --preset=native -B build -DLLM_FRAMEWORK=onnxruntime-genai
 cmake --preset=native -B build -DLLM_FRAMEWORK=mnn
 cmake --preset=native -B build -DLLM_FRAMEWORK=executorch
 ```

@@ -17,13 +17,11 @@
 - [Supported Platforms](#supported-platforms)
 - [Framework specific configuration options](#framework-specific-configuration-options)
   - [llama cpp options](#llama-cpp-options)
-  - [onnxruntime genai options](#onnxruntime-genai-options)
   - [mnn options](#mnn-options)
   - [executorch options](#executorch-options)
 - [Shared libraries build parameter](#shared-libraries-build-parameter)
 - [llama cpp model](#llama-cpp-model)
   - [llama cpp multimodal](#llama-cpp-multimodal)
-- [onnxruntime genai model](#onnxruntime-genai-model)
 - [mnn model](#mnn-model)
   - [mnn multimodal](#mnn-multimodal)
 - [executorch model](#executorch-model)
@@ -44,7 +42,6 @@ enabled LLM library using CMake build system.
 Provides a single API (Java & C++) to various LLM frameworks
 that Arm® KleidiAI™ kernels have been integrated into.
 Currently, it supports [llama.cpp](https://github.com/ggml-org/llama.cpp),
-[onnxruntime-genai](https://github.com/microsoft/onnxruntime-genai),
 [MNN](https://github.com/alibaba/MNN), and
 [ExecuTorch](https://github.com/pytorch/executorch).
 The backend library (selected at CMake configuration stage) is wrapped by this project's thin
@@ -157,7 +154,6 @@ Android builds, and environment variables).
 | Framework / Backend   | Supported Models                                   | Licenses                                                                                                                                                                                                                                                 |
 |-----------------------|----------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **llama.cpp**         | `phi-2`<br/>`qwen-2-VL`<br/>`qwen-3.5-VL-4B-Q4_0`<br/>`llama-3.2-1B`         | [mit](https://huggingface.co/microsoft/phi-2/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen3.5-4B/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)          |
-| **onnxruntime-genai** | `phi4-mini-instruct`<br/>`llama-3.2-1B`            | [mit](https://huggingface.co/microsoft/Phi-4-mini-instruct/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)                                                                                  |
 | **mnn**               | `qwen-2.5-VL`<br/>`qwen-3.5-2B`<br/>`llama-3.2-1B` | [apache-2.0](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct/blob/main/LICENSE)<br/> [apache-2.0](https://huggingface.co/Qwen/Qwen3.5-2B/blob/main/LICENSE)<br/> [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt) |
 | **executorch**        | `llama-3.2-1B`                                     | [Llama-3.2-1B](https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/LICENSE.txt)                                                                                                                                                                     |
 
@@ -191,7 +187,7 @@ ctest --test-dir ./build
 LLM_FRAMEWORK can be used to select the LLM framework, e.g.
 
 ```shell
-cmake --preset=native -B build -DLLM_FRAMEWORK=onnxruntime-genai
+cmake --preset=native -B build -DLLM_FRAMEWORK=mnn
 cmake --build ./build
 ctest --test-dir ./build
 ```
@@ -200,7 +196,7 @@ Details of configurable build options are given below:
 
 | Flag name              | Default     | Values                                                           | Description                                                                                                                                       |
 |------------------------|-------------|------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| LLM_FRAMEWORK          | llama.cpp   | llama.cpp / onnxruntime-genai / mnn / executorch                 | Specifies the backend framework to be used.                                                                                                       |
+| LLM_FRAMEWORK          | llama.cpp   | llama.cpp / mnn / executorch                                     | Specifies the backend framework to be used.                                                                                                       |
 | BUILD_DEBUG            | OFF         | ON/OFF                                                           | If set to ON a debug build is configured.                                                                                                         |
 | ENABLE_STREAMLINE      | OFF         | ON/OFF                                                           | Enables Arm Streamline timeline annotations for analyzing LLM initialization, encode, decode, and control-path performance.                       |
 | BUILD_LLM_TESTING      | ON          | ON/OFF                                                           | Builds the project's functional tests when ON.                                                                                                    |
@@ -227,26 +223,12 @@ For `llama.cpp` as framework, these configuration parameters can be set:
 - `LLAMA_BUILD_COMMON`: Build llama's dependency Common, <b>enabled by default.</b>
 - `LLAMA_CURL`: Enable HTTP transport via libcurl for remote models or features requiring network communication, <b>disabled by default.</b>
 
-#### onnxruntime genai options
-
-When using `onnxruntime-genai`, the `onnxruntime` dependency will be built from source. To customize
-the versions of both `onnxruntime` and `onnxruntime-genai`, the following configuration parameters
-can be used:
-
-onnxruntime:
-- `ONNXRUNTIME_SRC_DIR`: Source directory path that will be populated by CMake
-  configuration.
-- `ONNXRUNTIME_GIT_URL`: Git URL to clone the sources from.
-- `ONNXRUNTIME_GIT_TAG`: Git SHA for checkout.
-
-onnxruntime-genai:
-- `ONNXRT_GENAI_SRC_DIR`: Source directory path that will be populated by CMake
-  configuration.
-- `ONNXRT_GENAI_GIT_URL`: Git URL to clone the sources from.
-- `ONNXRT_GENAI_GIT_TAG`: Git SHA for checkout.
-
-> **NOTE**: This repository has been tested with `onnxruntime` version `v1.29.0` and
-`onnxruntime-genai` version `v0.15.2`.
+> **NOTE:** ONNX Runtime GenAI build support is currently disabled because its
+> Microsoft-hosted source dependencies became unavailable on GitHub in November
+> 2026 ([upstream discussion](https://github.com/onnx/onnx/issues/8842)). CMake
+> fetches those sources to build the backend, so `LLM_FRAMEWORK=onnxruntime-genai`
+> is not an available option. The integration remains in the source tree for
+> possible re-enablement after upstream access and the build are verified.
 
 #### mnn options
 
@@ -355,37 +337,6 @@ You can find multimodal configuration examples in
 [`llamaVisionConfig-qwen2-vl-2B.json`](model_configuration_files/llamaVisionConfig-qwen2-vl-2B.json)
 and [`llamaVisionConfig-qwen3.5-vl-4B.json`](model_configuration_files/llamaVisionConfig-qwen3.5-vl-4B.json).
 
-### onnxruntime genai model
-
-For text-only `onnxruntime-genai` configurations, this project uses
-**Phi-4-mini-instruct-onnx** as its default network. It uses the CPU/mobile
-**int4 quantization format** with a **block size of 32**,
-which is recommended for effective inference performance.
-
-- Text model: [Phi-4-mini-instruct-onnx](https://huggingface.co/microsoft/Phi-4-mini-instruct-onnx/tree/main/cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4).
-- Model download definitions are declared in [`requirements.json`](scripts/py/requirements.json) file.
-
-However, any model supported by the backend library could be used.
-For vision inference, users must supply a compatible model package and wrapper
-configuration that they are licensed to use. Reasonable performance has been achieved with ONNXRT GenAI variants of the Qwen 3 VL model.
-
-To use an ONNX model with this framework, the following files are required:
-- `genai_config.json`: Configuration file
-- `model_name.onnx`: ONNX model
-- `model_name.onnx.data`: ONNX model data
-- `tokenizer.json`: Tokenizer file
-- `tokenizer_config.json`: Tokenizer config file
-
-These files are essential for loading and running ONNX models effectively.
-
-Vision model packages may also include separate text, embedding, and vision ONNX
-components, their external-data files, and `processor_config.json`.
-
-> **NOTE**: `llm-bench-cli` currently measures text-only workloads. Vision benchmarking
-> support will be added separately.
-
-> **NOTE**: Currently only int4 and block size 32 models are accelerated by Arm® KleidiAI™ kernels in `onnxruntime-genai`.
-
 ### mnn model
 
 This project uses the **Llama 3.2 1B model** as its default network for the MNN framework.
@@ -463,7 +414,6 @@ The Arm LLM Benchmark tool (llm-bench-cli) is a framework-agnostic, standalone e
 
 **Supported Frameworks**
 - `llama.cpp`
-- `onnxruntime-genai`
 - `MNN`
 - `ExecuTorch`
 
@@ -495,7 +445,7 @@ Instead of writing your own prompts or relying on framework-specific benchmarkin
 The `--model` path must match the model layout expected by the selected backend. Use the
 exact model file for backends that load a single artifact, such as `llama.cpp` (`.gguf`)
 and ExecuTorch (`.pte`). Use the model package directory for backends that load several
-files from one folder, such as `onnxruntime-genai` and `MNN`. For ExecuTorch, place
+files from one folder, such as `MNN`. For ExecuTorch, place
 the tokenizer file in the same directory as the `.pte` model file. The loader searches
 for `tokenizer.model`, `tokenizer.json`, or `tokenizer.bin` in that directory.
 

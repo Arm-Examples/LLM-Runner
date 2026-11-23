@@ -88,14 +88,6 @@ You can run either executable from command line and add your prompt for example 
 ```
 More information can be found at `llama.cpp/examples/main/README.md` on how this executable can be run.
 
-### onnxruntime genai
-
-You can run model_benchmark executable from command line:
-```
-./build/bin/model_benchmark -i resources_downloaded/models/onnxruntime-genai/phi-4-mini/
-```
-More information can be found at `onnxruntime-genai/benchmark/c/readme.md` on how this executable can be run.
-
 ### mnn
 
 You can run llm_bench executable from command line:
